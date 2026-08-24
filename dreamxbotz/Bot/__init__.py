@@ -1,7 +1,10 @@
 import logging
 import logging.config
+from importlib import import_module
+from pathlib import Path
 from typing import Union, Optional, AsyncGenerator
 from pyrogram import Client, types
+from pyrogram.handlers import Handler
 from info import API_ID, API_HASH, BOT_TOKEN, SESSION
 
 logging.config.fileConfig('logging.conf')
@@ -28,6 +31,34 @@ class dreamcinezoneXBot(Client):
             plugins=dict(root= "plugins"),
             sleep_threshold=5,
         )
+
+    def load_plugins(self):
+        if not self.plugins or not self.plugins.get("enabled", True):
+            return
+
+        root = self.plugins["root"]
+        plugin_root = Path(root.replace(".", "/"))
+        count = 0
+
+        for path in sorted(plugin_root.rglob("*.py")):
+            module_path = ".".join(path.with_suffix("").parts)
+            module = import_module(module_path)
+
+            for target in vars(module).values():
+                handler_groups = getattr(target, "handlers", None)
+                if not isinstance(handler_groups, (list, tuple)):
+                    continue
+
+                for handler, group in handler_groups:
+                    if isinstance(handler, Handler) and isinstance(group, int):
+                        self.add_handler(handler, group)
+                        count += 1
+
+        if count:
+            logging.info("[%s] Successfully loaded %d plugins from %s", self.name, count, root)
+        else:
+            logging.warning("[%s] No plugin loaded from %s", self.name, root)
+
     async def iter_messages(self, chat_id: Union[int, str], limit: int, offset: int = 0,) -> Optional[AsyncGenerator["types.Message", None]]:
         """Iterate through a chat sequentially.
         This convenience method does the same as repeatedly calling :meth:`~pyrogram.Client.get_messages` in a loop, thus saving

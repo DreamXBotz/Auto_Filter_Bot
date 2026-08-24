@@ -4,6 +4,7 @@ import re
 import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified
+from pyrogram.methods.utilities.listeners import ListenerTimeout
 from info import ADMINS, INDEX_REQ_CHANNEL as LOG_CHANNEL
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -112,16 +113,35 @@ async def send_for_index(bot, message):
 
 @Client.on_message(filters.command('setskip') & filters.user(ADMINS))
 async def set_skip_number(bot, message):
-    if ' ' in message.text:
-        _, skip = message.text.split(" ")
-        try:
-            skip = int(skip)
-        except Exception:
-            return await message.reply("Skip number should be an integer.")
-        await message.reply(f"Successfully set SKIP number as {skip}")
-        temp.CURRENT = int(skip)
+    command_args = message.text.split(maxsplit=1)
+    prompt = None
+    if len(command_args) > 1:
+        skip_text = command_args[1].strip()
     else:
-        await message.reply("Give me a skip number")
+        prompt = await message.reply("Give me a skip number")
+        try:
+            response = await bot.listen(
+                chat_id=message.chat.id,
+                user_id=message.from_user.id,
+                timeout=60,
+            )
+            skip_text = response.text.strip() if response.text else ""
+            await response.delete()
+        except ListenerTimeout:
+            return await prompt.edit("Timed out. Please run /setskip again.")
+
+    try:
+        skip = int(skip_text)
+        if skip < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return await message.reply("Skip number should be a non-negative integer.")
+
+    temp.CURRENT = skip
+    if prompt is not None:
+        await prompt.edit(f"Successfully set SKIP number as {skip}")
+    else:
+        await message.reply(f"Successfully set SKIP number as {skip}")
 
 def get_progress_bar(percent, length=10):
     """Creates an emoji-based progress bar."""

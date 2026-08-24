@@ -948,20 +948,17 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await query.message.edit_text(f"<b>ᴘʀᴏᴄᴇꜱꜱ ᴄᴏᴍᴘʟᴇᴛᴇᴅ ꜰᴏʀ ꜰɪʟᴇ ᴅᴇʟᴇᴛᴀᴛɪᴏɴ !\n\nꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ {str(deleted)} ꜰɪʟᴇꜱ ꜰʀᴏᴍ ᴅʙ ꜰᴏʀ ʏᴏᴜʀ ǫᴜᴇʀʏ {keyword}.</b>")
 
     elif query.data.startswith("opnsetgrp"):
-        ident, grp_id = query.data.split("#")
+        _, grp_id = query.data.split("#")
+        grp_id = int(grp_id)
         userid = query.from_user.id if query.from_user else None
-        st = await client.get_chat_member(grp_id, userid)
-        if (
-                st.status != enums.ChatMemberStatus.ADMINISTRATOR
-                and st.status != enums.ChatMemberStatus.OWNER
-                and str(userid) not in ADMINS
-        ):
-            await query.answer("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ʀɪɢʜᴛꜱ ᴛᴏ ᴅᴏ ᴛʜɪꜱ !", show_alert=True)
-            return
+        if not await is_check_admin(client, grp_id, userid):
+            return await query.answer("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ʀɪɢʜᴛꜱ ᴛᴏ ᴅᴏ ᴛʜɪꜱ !", show_alert=True)
+
+        await query.answer()
         title = query.message.chat.title
         settings = await get_settings(grp_id)
         if settings is not None:
-            btn = await group_setting_buttons(int(grp_id))
+            btn = await group_setting_buttons(grp_id)
             reply_markup = InlineKeyboardMarkup(btn)
             await query.message.edit_text(
                 text=await get_settings_text(grp_id, title),
@@ -971,16 +968,13 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await query.message.edit_reply_markup(reply_markup)
 
     elif query.data.startswith("opnsetpm"):
-        ident, grp_id = query.data.split("#")
+        _, grp_id = query.data.split("#")
+        grp_id = int(grp_id)
         userid = query.from_user.id if query.from_user else None
-        st = await client.get_chat_member(grp_id, userid)
-        if (
-                st.status != enums.ChatMemberStatus.ADMINISTRATOR
-                and st.status != enums.ChatMemberStatus.OWNER
-                and str(userid) not in ADMINS
-        ):
-            await query.answer("Yᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ sᴜғғɪᴄɪᴀɴᴛ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜɪs !", show_alert=True)
-            return
+        if not await is_check_admin(client, grp_id, userid):
+            return await query.answer("Yᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ sᴜғғɪᴄɪᴀɴᴛ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜɪs !", show_alert=True)
+
+        await query.answer()
         title = query.message.chat.title
         settings = await get_settings(grp_id)
         btn2 = [[
@@ -991,15 +985,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
         await query.message.edit_text(f"<b>ʏᴏᴜʀ sᴇᴛᴛɪɴɢs ᴍᴇɴᴜ ғᴏʀ {title} ʜᴀs ʙᴇᴇɴ sᴇɴᴛ ᴛᴏ ʏᴏᴜ ʙʏ ᴅᴍ.</b>")
         await query.message.edit_reply_markup(reply_markup)
         if settings is not None:
-            btn = await group_setting_buttons(int(grp_id))
+            btn = await group_setting_buttons(grp_id)
             reply_markup = InlineKeyboardMarkup(btn)
             await client.send_message(
                 chat_id=userid,
                 text=await get_settings_text(grp_id, title),
                 reply_markup=reply_markup,
                 disable_web_page_preview=True,
-                parse_mode=enums.ParseMode.HTML,
-                reply_to_message_id=query.message.id
+                parse_mode=enums.ParseMode.HTML
             )
 
     elif query.data.startswith("show_option"):
