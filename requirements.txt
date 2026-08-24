@@ -1,4 +1,4 @@
-kurigram
+
 tgcrypto
 pymongo==4.13.2
 motor==3.7.1
@@ -22,4 +22,4 @@ rapidfuzz
 
 # Git-based Packages
 git+https://github.com/DreamXBotz/IMDBKit.git@main
-
+git+https://github.com/alreadydead0/kurigram
