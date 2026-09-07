@@ -367,7 +367,6 @@ Special thanks to:
 - [⌯ Ꭺɴᴏɴʏᴍᴏᴜs | ×͜× |](https://t.me/BeingXAnonymous)
 - [⌯ ᴢɪsʜᴀɴ | ×͜× |](https://t.me/IM_JISSHU)
 - [⌯ ʙʜᴀʀᴀᴛʜ | ×͜× |](https://t.me/Bharath_boy)
-- [Harshal Purohit Edits](https://github.com/HarshalPurohitEdits)
 - [Support Group](https://t.me/Deendayal_Support_Group)
 
 Thanks to the DreamXBotz community and all contributors who worked on the original project and related modules.

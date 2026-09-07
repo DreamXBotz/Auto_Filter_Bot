@@ -392,10 +392,10 @@ async def get_movie_detailsx(query, id=False, file=None):
     try:
         data = await _fetch_tmdb_data(q, api_key=TMDB_API_KEY or None)
         if not data:
-            logger.warning(f"TMDB returned no results for '{q}' → switching to IMDb fallback")
+            logger.info(f"TMDB returned no results for '{q}' → switching to IMDb fallback")
             return await get_movie_details(q)
     except Exception as e:
-        logger.error(f"TMDB direct call failed → fallback IMDb: {e}")
+        logger.info(f"TMDB direct call failed → fallback IMDb: {e}")
         return await get_movie_details(q)
 
     # Normalize fields

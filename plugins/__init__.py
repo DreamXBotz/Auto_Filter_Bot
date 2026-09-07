@@ -30,7 +30,10 @@ async def check_expired_premium(client):
                 )
                 await client.send_message(PREMIUM_LOGS, text=f"<b>#Premium_Expire\n\nUser name: {user.mention}\nUser id: <code>{user_id}</code>")
             except Exception as e:
-                logger.error("Premium expire notification error: %s", e)
+                if "CHAT_ID_INVALID" in str(e) or "UserIsBlocked" in str(e) or "PEER_ID_INVALID" in str(e):
+                    logger.info("Premium expire notification: User %s has invalid chat or blocked the bot.", user_id)
+                else:
+                    logger.warning("Premium expire notification error for user %s: %s", user_id, e)
             await sleep(0.5)
         await sleep(1)
 
@@ -42,7 +45,7 @@ async def keep_alive():
             try:
                 async with session.get(URL) as resp:
                     if resp.status != 200:
-                        logger.warning(f"⚠️ Ping Error! Status: {resp.status}")
+                        logger.info(f"⚠️ Ping Error! Status: {resp.status}")
             except Exception as e:
-                logger.error(f"❌ Ping Failed: {e}")           
+                logger.info(f"❌ Ping Failed: {e}")           
 
