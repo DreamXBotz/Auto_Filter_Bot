@@ -31,7 +31,6 @@ BTN_URL_REGEX = re.compile(
 
 imdb = IMDBKit()
 
-
 BANNED = {}
 SMART_OPEN = '“'
 SMART_CLOSE = '”'
@@ -152,7 +151,6 @@ async def users_broadcast(user_id, message, is_pin):
         return False, "Deleted"
     except UserIsBlocked:
         logger.info(f"{user_id} -Blocked the bot.")
-        await db.delete_user(user_id)
         return False, "Blocked"
     except PeerIdInvalid:
         await db.delete_user(int(user_id))

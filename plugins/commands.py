@@ -39,9 +39,9 @@ async def start(client, message):
     try:
         if EMOJI_MODE:
             try:
-                await message.react(emoji=random.choice(REACTIONS), big=True)
+                asyncio.create_task(message.react(emoji=random.choice(REACTIONS), big=True))
             except Exception:
-                await message.react(emoji="⚡️")
+                asyncio.create_task(message.react(emoji="⚡️"))
                 pass
         m = message
         if len(m.command) == 2 and m.command[1].startswith(('notcopy', 'sendall')):
