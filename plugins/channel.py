@@ -461,7 +461,9 @@ async def update_movie_message(bot, base_name):
                     link_preview_options=LinkPreviewOptions(is_disabled=not LINK_PREVIEW, show_above_text=ABOVE_PREVIEW)
                 )
             return
-        except (MessageIdInvalid, MessageNotModified) as e:
+        except MessageNotModified:
+            pass
+        except MessageIdInvalid as e:
             logger.warning(f"Message update skipped due to error: {e}")
             pass
         except Exception:
