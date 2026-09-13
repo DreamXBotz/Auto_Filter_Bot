@@ -1224,30 +1224,33 @@ async def cb_handler(client: Client, query: CallbackQuery):
         )
 
     elif query.data == "about":
+        # FINAL ABOUT - Only HOME and CLOSE as you asked, same font
         buttons = [[
-            InlineKeyboardButton('‼ ᴅɪꜱᴄʟᴀɪᴍᴇʀ ‼', callback_data='disclaimer'),
-            InlineKeyboardButton ('🪔 sᴏᴜʀᴄᴇ', callback_data='source'),
-        ],[
-            InlineKeyboardButton('ᴅᴏɴᴀᴛɪᴏɴ 💰', callback_data='donation'),
-        ],[
-            InlineKeyboardButton('⇋ ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ ⇋', callback_data='start')
+            InlineKeyboardButton('🏠 Hᴏᴍᴇ', callback_data='start'),
+            InlineKeyboardButton('🔐 Cʟᴏsᴇ', callback_data='close_data')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        # FIXED ABOUT with hyperlink font as requested
         try:
             about_text = script.ABOUT_TXT.format(temp.U_NAME, temp.B_NAME, OWNER_LNK)
         except Exception:
-            # Fallback if ABOUT_TXT has new style {bot_name} etc
             try:
-                about_text = script.ABOUT_TXT.format(bot_name=temp.B_NAME, bot_username=temp.U_NAME, owner_link=OWNER_LNK)
+                about_text = script.ABOUT_TXT.format(temp.U_NAME)
             except Exception:
                 about_text = script.ABOUT_TXT
-        await query.message.edit_text(
-            text=about_text,
-            reply_markup=reply_markup,
-            disable_web_page_preview=True,
-            parse_mode=enums.ParseMode.HTML
-        )
+        try:
+            await query.message.edit_text(
+                text=about_text,
+                reply_markup=reply_markup,
+                disable_web_page_preview=True,
+                parse_mode=enums.ParseMode.HTML
+            )
+        except Exception:
+            # For newer Pyrogram where disable_web_page_preview not allowed in edit_text
+            await query.message.edit_text(
+                text=about_text,
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
 
     elif query.data == "give_trial":
         try:
