@@ -1,105 +1,85 @@
 import asyncio
 import re
-import ast
 import math
 import logging
 import random
 from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import MessageNotModified, FloodWait
 from Script import script
-from database.ia_filterdb import get_search_results, get_file_details, get_bad_files
+from database.ia_filterdb import get_search_results, get_file_details
 from database.users_chats_db import db
-from info import ADMINS, PICS, PICS_URL, AUTH_CHANNELS, DELETE_TIME, MAX_B_TN, IS_VERIFY, TUTORIAL, TUTORIAL_2, TUTORIAL_3, LOG_CHANNEL, SUPPORT_CHAT_ID
-from utils import get_settings, get_size, is_subscribed, is_req_subscribed, get_shortlink, temp, get_readable_time
+from info import PICS, PICS_URL, DELETE_TIME
+from utils import get_settings, get_size, temp
 
 logger = logging.getLogger(__name__)
 BUTTONS = {}
 CAP = {}
 
-# QUALITY AND LANGUAGE MAPS (same font as your bot)
 LANGUAGES = ["hindi", "english", "tamil", "telugu", "kannada", "malayalam", "bengali", "marathi", "gujarati", "punjabi"]
 QUALITIES = ["360p", "480p", "720p", "1080p", "1440p", "2160p"]
-SEASONS = ["season 1" , "season 2" , "season 3" , "season 4", "season 5" , "season 6" , "season 7" , "season 8" , "season 9" , "season 10"]
+SEASONS = ["season 1", "season 2", "season 3", "season 4", "season 5", "season 6", "season 7", "season 8", "season 9", "season 10"]
 
-@Client.on_message((filters.text & filters.group & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"])) | (filters.text & filters.private & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"])) )
+@Client.on_message((filters.text & filters.group & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"])) | (filters.text & filters.private & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"])))
 async def give_filter(client, message):
     await auto_filter(client, message)
 
 async def auto_filter(client, message):
     try:
         if message.text.startswith("/"):
-        return
-    if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
-        return
-    # FIX: allow longer queries, file show na korar bug fix
-    if len(message.text) < 2:
-        return
-    search = message.text.strip()
-    if len(search) > 100:
-        search = search[:100]
-    if True:
+            return
+        if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+            return
+        if len(message.text) < 2:
+            return
+        search = message.text.strip()
+        if len(search) > 100:
+            search = search[:100]
+
         files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
-        # fallback if filter=True returns nothing
         if not files:
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=False)
         if not files:
-            # No files found - don't return silently, try spell check or just return
-            logger.info(f"No files for search: {search}")
+            logger.info(f"No files for {search}")
             return
+
+        try:
+            settings = await get_settings(message.chat.id)
+        except:
+            settings = {'auto_delete': False}
+
+        req = message.from_user.id if message.from_user else 0
+        temp.GETALL[search] = files
+
+        btn = []
+        btn.append([
+            InlineKeyboardButton("ǫᴜᴀʟɪᴛɪᴇs", callback_data=f"qualities#{search}#{req}"),
+            InlineKeyboardButton("ʟᴀɴɢᴜᴀɢᴇs", callback_data=f"languages#{search}#{req}"),
+            InlineKeyboardButton("sᴇᴀsᴏɴs", callback_data=f"seasons#{search}#{req}")
+        ])
+        btn.append([InlineKeyboardButton("sᴇɴᴅ ᴀʟʟ ғɪʟᴇs", callback_data=f"sendall#{search}#{req}")])
+        for file in files:
+            f_name = file.file_name
+            f_size = get_size(file.file_size)
+            file_id = file.file_id
+            btn.append([InlineKeyboardButton(f"[{f_size}] {f_name[:40]}", callback_data=f"file#{file_id}#{req}")])
+        if offset != "":
+            btn.append([InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"next_{req}_{search}_{offset}")])
         else:
+            btn.append([InlineKeyboardButton("ɴᴏ ᴍᴏʀᴇ ᴘᴀɢᴇs", callback_data="pages")])
+
+        try:
+            pic_url = random.choice(PICS_URL) if PICS_URL else random.choice(PICS)
+        except:
             try:
-                settings = await get_settings(message.chat.id)
+                pic_url = random.choice(PICS)
             except:
-                settings = {'auto_delete': False}
-            # req = requester id - THIS IS THE FIX for quality/language/session
-            req = message.from_user.id if message.from_user else 0
-            temp.GETALL[search] = files
-            # store req for later use
-            if not hasattr(temp, 'REQ_CACHE'):
-                temp.REQ_CACHE = {}
-            temp.REQ_CACHE[search] = req
-            
-            # create buttons
-            btn = []
-            # group setting buttons - qualities, languages, seasons
-            btn.append([
-                InlineKeyboardButton("ǫᴜᴀʟɪᴛɪᴇs", callback_data=f"qualities#{search}#{req}"),
-                InlineKeyboardButton("ʟᴀɴɢᴜᴀɢᴇs", callback_data=f"languages#{search}#{req}"),
-                InlineKeyboardButton("sᴇᴀsᴏɴs", callback_data=f"seasons#{search}#{req}")
-            ])
-            btn.append([
-                InlineKeyboardButton("sᴇɴᴅ ᴀʟʟ ғɪʟᴇs", callback_data=f"sendall#{search}#{req}")
-            ])
-            for file in files:
-                f_name = file.file_name
-                f_size = get_size(file.file_size)
-                file_id = file.file_id
-                btn.append([
-                    InlineKeyboardButton(f"[{f_size}] {f_name[:40]}", callback_data=f"file#{file_id}#{req}")
-                ])
-            if offset != "":
-                btn.append([
-                    InlineKeyboardButton("ɴᴇxᴛ »", callback_data=f"next_{req}_{search}_{offset}")
-                ])
-            else:
-                btn.append([
-                    InlineKeyboardButton("ɴᴏ ᴍᴏʀᴇ ᴘᴀɢᴇs", callback_data="pages")
-                ])
-            
-            # fix: try pics url then pics
+                pic_url = None
+
+        imdb = await get_poster(search, file=(files[0].file_name if files else None))
+        if imdb and imdb.get('poster'):
             try:
-                pic_url = random.choice(PICS_URL) if PICS_URL else random.choice(PICS)
-            except:
-                try:
-                    pic_url = random.choice(PICS)
-                except:
-                    pic_url = None
-            
-            imdb = await get_poster(search, file=(files[0].file_name if files else None))
-            if imdb and imdb.get('poster'):
-                try:
-                    cap = script.IMDB_TEMPLATE.format(
+                cap = script.IMDB_TEMPLATE.format(
                     qurey=search,
                     title=imdb.get('title'),
                     votes=imdb.get('votes'),
@@ -129,35 +109,30 @@ async def auto_filter(client, message):
                     rating=imdb.get('rating'),
                     url=imdb.get('url'),
                 )
-                except Exception as e:
-                    cap = f"<b>Here is what I found for your query {search} :</b>"
-            else:
-                cap = f"<b>Here is what I found for your query {search} :</b>"
-            
-            BUTTONS[search] = cap
-            CAP[search] = cap
-            
-            try:
-                if pic_url:
-                    sent = await message.reply_photo(photo=pic_url, caption=cap, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
-                else:
-                    sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
-                # auto delete
-                try:
-                    if settings.get('auto_delete'):
-                        await asyncio.sleep(DELETE_TIME)
-                        await sent.delete()
-                        await message.delete()
-                except Exception:
-                    pass
             except Exception as e:
-                logger.exception(f"send error: {e}")
+                logger.exception(e)
+                cap = f"<b>Here is what I found for your query {search} :</b>"
+        else:
+            cap = f"<b>Here is what I found for your query {search} :</b>"
+
+        try:
+            if pic_url:
+                sent = await message.reply_photo(photo=pic_url, caption=cap, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
+            else:
+                sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML)
+            try:
+                if settings.get('auto_delete'):
+                    await asyncio.sleep(DELETE_TIME)
+                    await sent.delete()
+                    await message.delete()
+            except:
+                pass
+        except Exception as e:
+            logger.exception(f"send error: {e}")
     except Exception as e:
         logger.exception(f"auto_filter error for {message.text}: {e}")
 
-
 async def get_poster(query, bulk=False, id=False, file=None):
-    # import here to avoid circular
     from utils import get_poster as _get_poster, get_posterx
     try:
         return await _get_poster(query, bulk, id, file)
@@ -172,7 +147,6 @@ async def next_page(bot, query):
     try:
         _, req, key, offset = query.data.split("_")
         req = int(req)
-        # check req
         if req != 0 and query.from_user.id != req:
             return await query.answer("This is not for you!", show_alert=True)
         search = key
@@ -186,16 +160,12 @@ async def next_page(bot, query):
             InlineKeyboardButton("ʟᴀɴɢᴜᴀɢᴇs", callback_data=f"languages#{search}#{req}"),
             InlineKeyboardButton("sᴇᴀsᴏɴs", callback_data=f"seasons#{search}#{req}")
         ])
-        btn.append([
-            InlineKeyboardButton("sᴇɴᴅ ᴀʟʟ ғɪʟᴇs", callback_data=f"sendall#{search}#{req}")
-        ])
+        btn.append([InlineKeyboardButton("sᴇɴᴅ ᴀʟʟ ғɪʟᴇs", callback_data=f"sendall#{search}#{req}")])
         for file in files:
             f_name = file.file_name
             f_size = get_size(file.file_size)
             file_id = file.file_id
-            btn.append([
-                InlineKeyboardButton(f"[{f_size}] {f_name[:40]}", callback_data=f"file#{file_id}#{req}")
-            ])
+            btn.append([InlineKeyboardButton(f"[{f_size}] {f_name[:40]}", callback_data=f"file#{file_id}#{req}")])
         if n_offset != "":
             btn.append([
                 InlineKeyboardButton("« ʙᴀᴄᴋ", callback_data=f"next_{req}_{search}_{offset-10}" if offset-10 >=0 else f"next_{req}_{search}_0"),
@@ -222,7 +192,6 @@ async def qualities_cb(bot, query):
         req = int(req)
         if req != 0 and query.from_user.id != req:
             return await query.answer("This is not for you!", show_alert=True)
-        # create quality buttons
         btn = []
         for qual in QUALITIES:
             btn.append([InlineKeyboardButton(qual, callback_data=f"q_filter#{qual}#{key}#{req}")])
@@ -240,7 +209,7 @@ async def languages_cb(bot, query):
         if req != 0 and query.from_user.id != req:
             return await query.answer("This is not for you!", show_alert=True)
         btn = []
-        for lang in LANGUAGES[:12]:
+        for lang in LANGUAGES:
             btn.append([InlineKeyboardButton(lang, callback_data=f"l_filter#{lang}#{key}#{req}")])
         btn.append([InlineKeyboardButton("⇋ ʙᴀᴄᴋ ⇋", callback_data=f"filter_back#{key}#{req}")])
         await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(btn))
@@ -271,7 +240,6 @@ async def q_filter_cb(bot, query):
         req = int(req)
         if req != 0 and query.from_user.id != req:
             return await query.answer("This is not for you!", show_alert=True)
-        # filter by quality
         files = temp.GETALL.get(key)
         if not files:
             return await query.answer("No files found!", show_alert=True)
@@ -329,9 +297,9 @@ async def s_filter_cb(bot, query):
             return await query.answer("No files found!", show_alert=True)
         filtered = [f for f in files if seas.lower() in f.file_name.lower()]
         if not filtered:
-            # also check S01 etc
             num = ''.join(filter(str.isdigit, seas))
-            filtered = [f for f in files if f"S{int(num):02d}" in f.file_name or f"S{num}" in f.file_name]
+            if num:
+                filtered = [f for f in files if f"S{int(num):02d}" in f.file_name or f"S{num}" in f.file_name]
         if not filtered:
             return await query.answer(f"No files found for {seas}", show_alert=True)
         btn = []
@@ -376,24 +344,13 @@ async def filter_back_cb(bot, query):
 async def file_cb(bot, query):
     try:
         _, file_id, req = query.data.split("#")
-        req = int(req)
-        # allow anyone to get file, but req check optional
-        # if req !=0 and query.from_user.id != req:
-        #    return await query.answer("This is not for you!", show_alert=True)
         files_ = await get_file_details(file_id)
         if not files_:
             return await query.answer("No such file exist.", show_alert=True)
-        # channel check
-        settings = await get_settings(query.message.chat.id)
-        # for private file send
         try:
-            await bot.send_cached_media(
-                chat_id=query.from_user.id,
-                file_id=file_id,
-                caption=files_.file_name
-            )
+            await bot.send_cached_media(chat_id=query.from_user.id, file_id=file_id, caption=files_.file_name)
             await query.answer("Check PM, I have sent files in PM", show_alert=False)
-        except Exception as e:
+        except Exception:
             await query.answer("Failed to send in PM, make sure you started me in PM", show_alert=True)
     except Exception as e:
         logger.exception(e)
@@ -405,20 +362,14 @@ async def about_cb(bot, query):
     except:
         pass
     try:
-        # robust formatting - no crash, no {}
         b_name = getattr(temp, 'B_NAME', 'Boultflix') or 'Boultflix'
-        u_name = getattr(temp, 'U_NAME', 'BoultflixMovies_bot') or 'BoultflixMovies_bot'
+        u_name = getattr(temp, 'U_NAME', 'Boultflix') or 'Boultflix'
         about_text = script.ABOUT_TXT
-        # try normal format first
+        # fix bracket issue - replace {} with actual names
         try:
             about_text = about_text.format(b_name, u_name)
         except:
-            # fallback manual replace - fixes {} bracket issue
             about_text = about_text.replace("{}", b_name).replace("{0}", b_name).replace("{1}", u_name).replace("{2}", b_name)
-    except Exception as e:
-        about_text = getattr(script, 'ABOUT_TXT', 'About')
-        logger.exception(f"about_cb format error: {e}")
-    try:
         await query.message.edit_text(
             text=about_text,
             reply_markup=InlineKeyboardMarkup([
@@ -456,7 +407,7 @@ async def start_cb(bot, query):
         pass
     try:
         b_name = getattr(temp, 'B_NAME', 'Boultflix') or 'Boultflix'
-        u_name = getattr(temp, 'U_NAME', 'BoultflixMovies_bot') or 'BoultflixMovies_bot'
+        u_name = getattr(temp, 'U_NAME', 'Boultflix') or 'Boultflix'
         mention = query.from_user.mention if query.from_user else "User"
         try:
             start_text = script.START_TXT.format(mention, u_name, b_name)
@@ -464,15 +415,13 @@ async def start_cb(bot, query):
             try:
                 start_text = script.START_TXT.format(mention, b_name)
             except:
-                # manual replace for bracket issue
                 start_text = script.START_TXT
-                start_text = start_text.replace("{}", mention, 1)
-                # replace remaining {} with names in order
+                start_text = start_text.replace("{0}", mention).replace("{1}", u_name).replace("{2}", b_name)
+                # replace leftover {} sequentially
                 if "{}" in start_text:
-                    start_text = start_text.replace("{}", b_name, 1)
+                    start_text = start_text.replace("{}", mention, 1)
                 if "{}" in start_text:
                     start_text = start_text.replace("{}", b_name)
-                start_text = start_text.replace("{0}", mention).replace("{1}", u_name).replace("{2}", b_name)
         buttons = [[
             InlineKeyboardButton('🔰 ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 🔰', url=f'http://t.me/{u_name}?startgroup=true')
         ],[
@@ -482,10 +431,7 @@ async def start_cb(bot, query):
             InlineKeyboardButton('ᴛᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
             InlineKeyboardButton('ᴜᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
         ]]
-        await query.message.edit_text(
-            text=start_text,
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+        await query.message.edit_text(text=start_text, reply_markup=InlineKeyboardMarkup(buttons))
     except MessageNotModified:
         pass
     except Exception as e:
@@ -526,7 +472,7 @@ async def sendall_cb(bot, query):
                 await asyncio.sleep(1)
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-            except Exception:
+            except:
                 pass
     except Exception as e:
         logger.exception(e)
