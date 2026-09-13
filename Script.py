@@ -34,7 +34,7 @@ class script(object):
 🚀 ꜰᴏʟʟᴏᴡ ᴛʜᴇꜱᴇ ꜱᴛᴇᴘꜱ!
 </b>"""
 
-    ABOUT_TXT = """<b>╭────[ ᴍʏ ᴅᴇᴛᴀɪʟs ]────⍟
+    ABOUT_TXT = """<b>╭────[Mʏ Dᴇᴛᴀɪʟs ]────⍟
 ├⍟ Mʏ Nᴀᴍᴇ : <a href="https://t.me/{0}">Bᴏᴜʟᴛғʟɪx Mᴏᴠɪᴇs 🫧🫶🏼</a>
 ├⍟ Dᴇᴠᴇʟᴏᴘᴇʀ : <a href="https://t.me/BoultFlix">Oᴡɴᴇʀ</a>
 ├⍟ Lɪʙʀᴀʀʏ : <a href="https://docs.pyrogram.org/">Pʏʀᴏɢʀᴀᴍ</a>
