@@ -27,7 +27,8 @@ async def give_filter(client, message):
     await auto_filter(client, message)
 
 async def auto_filter(client, message):
-    if message.text.startswith("/"):
+    try:
+        if message.text.startswith("/"):
         return
     if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
         return
@@ -43,9 +44,8 @@ async def auto_filter(client, message):
         if not files:
             files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=False)
         if not files:
-            if temp.B_LINK:
-                return
-            # try with spell check - simplified
+            # No files found - don't return silently, try spell check or just return
+            logger.info(f"No files for search: {search}")
             return
         else:
             try:
@@ -151,7 +151,9 @@ async def auto_filter(client, message):
                 except Exception:
                     pass
             except Exception as e:
-                logger.exception(e)
+                logger.exception(f"send error: {e}")
+    except Exception as e:
+        logger.exception(f"auto_filter error for {message.text}: {e}")
 
 
 async def get_poster(query, bulk=False, id=False, file=None):
@@ -402,14 +404,20 @@ async def about_cb(bot, query):
         await query.answer()
     except:
         pass
-    # FINAL FIX: use ABOUT_TXT directly without format to prevent crash
-    about_text = script.ABOUT_TXT
-    # try to format safely if placeholders exist
     try:
-        if "{0}" in about_text or "{}" in about_text:
-            about_text = about_text.format(temp.B_NAME, temp.U_NAME)
-    except:
-        pass
+        # robust formatting - no crash, no {}
+        b_name = getattr(temp, 'B_NAME', 'Boultflix') or 'Boultflix'
+        u_name = getattr(temp, 'U_NAME', 'BoultflixMovies_bot') or 'BoultflixMovies_bot'
+        about_text = script.ABOUT_TXT
+        # try normal format first
+        try:
+            about_text = about_text.format(b_name, u_name)
+        except:
+            # fallback manual replace - fixes {} bracket issue
+            about_text = about_text.replace("{}", b_name).replace("{0}", b_name).replace("{1}", u_name).replace("{2}", b_name)
+    except Exception as e:
+        about_text = getattr(script, 'ABOUT_TXT', 'About')
+        logger.exception(f"about_cb format error: {e}")
     try:
         await query.message.edit_text(
             text=about_text,
@@ -447,8 +455,26 @@ async def start_cb(bot, query):
     except:
         pass
     try:
+        b_name = getattr(temp, 'B_NAME', 'Boultflix') or 'Boultflix'
+        u_name = getattr(temp, 'U_NAME', 'BoultflixMovies_bot') or 'BoultflixMovies_bot'
+        mention = query.from_user.mention if query.from_user else "User"
+        try:
+            start_text = script.START_TXT.format(mention, u_name, b_name)
+        except:
+            try:
+                start_text = script.START_TXT.format(mention, b_name)
+            except:
+                # manual replace for bracket issue
+                start_text = script.START_TXT
+                start_text = start_text.replace("{}", mention, 1)
+                # replace remaining {} with names in order
+                if "{}" in start_text:
+                    start_text = start_text.replace("{}", b_name, 1)
+                if "{}" in start_text:
+                    start_text = start_text.replace("{}", b_name)
+                start_text = start_text.replace("{0}", mention).replace("{1}", u_name).replace("{2}", b_name)
         buttons = [[
-            InlineKeyboardButton('🔰 ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 🔰', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
+            InlineKeyboardButton('🔰 ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 🔰', url=f'http://t.me/{u_name}?startgroup=true')
         ],[
             InlineKeyboardButton(' ʜᴇʟᴘ 📢', callback_data='help'),
             InlineKeyboardButton(' ᴀʙᴏᴜᴛ 📖', callback_data='about')
@@ -456,20 +482,14 @@ async def start_cb(bot, query):
             InlineKeyboardButton('ᴛᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
             InlineKeyboardButton('ᴜᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
         ]]
-        # safe format for START_TXT
-        try:
-            start_text = script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME)
-        except:
-            try:
-                start_text = script.START_TXT.format(query.from_user.mention, temp.B_NAME)
-            except:
-                start_text = script.START_TXT
         await query.message.edit_text(
             text=start_text,
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     except MessageNotModified:
         pass
+    except Exception as e:
+        logger.exception(e)
 
 @Client.on_callback_query(filters.regex(r"^close_data"))
 async def close_cb(bot, query):
