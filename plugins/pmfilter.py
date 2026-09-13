@@ -22,7 +22,7 @@ LANGUAGES = ["malayalam", "mal", "tamil", "tam" ,"english", "eng", "hindi", "hin
 QUALITIES = ["360p", "480p", "720p", "1080p", "1440p", "2160p"]
 SEASONS = ["season 1" , "season 2" , "season 3" , "season 4", "season 5" , "season 6" , "season 7" , "season 8" , "season 9" , "season 10"]
 
-@Client.on_message(filters.text & filters.group & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"]))
+@Client.on_message((filters.text & filters.group & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"])) | (filters.text & filters.private & filters.incoming & ~filters.command(["start", "help", "about", "id", "settings", "fsub", "post", "delete", "del"])) )
 async def give_filter(client, message):
     await auto_filter(client, message)
 
@@ -48,7 +48,10 @@ async def auto_filter(client, message):
             # try with spell check - simplified
             return
         else:
-            settings = await get_settings(message.chat.id)
+            try:
+                settings = await get_settings(message.chat.id)
+            except:
+                settings = {'auto_delete': False}
             # req = requester id - THIS IS THE FIX for quality/language/session
             req = message.from_user.id if message.from_user else 0
             temp.GETALL[search] = files
