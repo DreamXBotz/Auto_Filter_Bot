@@ -12,12 +12,11 @@ from shortzy import Shortzy
 from info import (
     SHORTENER_API,
     SHORTENER_WEBSITE,
-    UPDATES_CHANNEL_URL if 'UPDATES_CHANNEL_URL' in globals() else 'UPDATE_CHNL_LNK',
     LOG_CHANNEL
 )
 from utils import temp, get_size, clean_filename
 from database.users_chats_db import db
-from database.ia_filterdb import get_file_details, get_search_results
+from database.ia_filterdb import get_file_details
 
 logger = logging.getLogger(__name__)
 
@@ -72,17 +71,17 @@ async def fix_start_delivery_interceptor(client: Client, message: Message):
                 await set_user_verified_24h(user_id)
                 await message.reply_text(
                     "<b>✅ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ Sᴜᴄᴄᴇssғᴜʟ!</b>\n\n"
-                    "Yᴏᴜ ɴᴏᴡ ʜᴀᴠᴇ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇss ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ ғɪʟᴇs ғᴏʀ ᴛʜᴇ ɴᴇxᴛ <b>24 Hᴏᴜʀs</b>! 🍿⚡",
-                    quote=True
+                    "Yᴏᴜ ɴᴏᴡ ʜᴀᴠᴇ ᴜɴʟɪᴍɪᴛᴇᴅ ᴀᴄᴄᴇss ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ ғɪʟᴇs ғᴏʀ ᴛʜᴇ ɴᴇxᴛ <b>24 Hᴏᴜʀs</b>! 🍿⚡"
                 )
+                message.stop_propagation()
                 return
             else:
-                await message.reply_text("<b>❌ Iɴᴠᴀʟɪᴅ ᴏʀ Exᴘɪʀᴇᴅ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ Lɪɴᴋ!</b>", quote=True)
+                await message.reply_text("<b>❌ Iɴᴠᴀʟɪᴅ ᴏʀ Exᴘɪʀᴇᴅ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ Lɪɴᴋ!</b>")
+                message.stop_propagation()
                 return
 
         # 2. Handle File Delivery (Deep Links)
         if param.startswith("file_") or param.startswith("getfile-"):
-            # Check 24 Hours Verification Status
             is_verified = await is_user_verified_24h(user_id)
             has_prem = await db.has_premium_access(user_id)
             
@@ -106,8 +105,7 @@ async def fix_start_delivery_interceptor(client: Client, message: Message):
                     f"⚠️ <b>Aᴄᴄᴇss Dᴇɴɪᴇᴅ: Vᴇʀɪғɪᴄᴀᴛɪᴏɴ Rᴇǫᴜɪʀᴇᴅ!</b>\n\n"
                     f"Pʟᴇᴀsᴇ ᴠᴇʀɪғʏ ʏᴏᴜʀ ᴛᴏᴋᴇɴ ᴛᴏ ɢᴇᴛ <b>24 Hᴏᴜʀs Uɴʟɪᴍɪᴛᴇᴅ Fɪʟᴇ Aᴄᴄᴇss</b>. "
                     f"Cʟɪᴄᴋ ᴛʜᴇ ʙᴜᴛᴛᴏɴ ʙᴇʟᴏᴡ ᴛᴏ ᴠᴇʀɪғʏ 👇",
-                    reply_markup=v_btn,
-                    quote=True
+                    reply_markup=v_btn
                 )
                 message.stop_propagation()
                 return
@@ -130,7 +128,7 @@ async def fix_start_delivery_interceptor(client: Client, message: Message):
                         reply_markup=file_btn
                     )
                     
-                    # Auto-Delete Warning Banner
+                    # Kurigram safe reply
                     warn_text = (
                         "⚠️ <b>THIS MOVIE FILE/VIDEO WILL BE DELETED IN 5 MINUTE\n\n"
                         "<i>PLEASE FORWARD THIS FILE TO SOMEWHERE ELSE & START DOWNLOADING THERE</i></b>"
