@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import MessageNotModified, FloodWait
 from info import IS_VERIFY, LOG_CHANNEL
 from utils import get_settings, save_group_settings, delete_group_setting, is_check_admin
@@ -478,7 +478,7 @@ async def set_shortener(client, query):
     await save_group_settings(int(grp_id), f'api{suffix}', key_msg.text)
     log_message = f"#New_Shortner_Set\n\n ꜱʜᴏʀᴛɴᴇʀ ɴᴏ - {shortner_num}\nɢʀᴏᴜᴘ ʟɪɴᴋ - `{invite_link}`\n\nɢʀᴏᴜᴘ ɪᴅ : `{grp_id}`\nᴀᴅᴅᴇᴅ ʙʏ - `{user_id}`\nꜱʜᴏʀᴛɴᴇʀ ꜱɪᴛᴇ - {url_msg.text}\nꜱʜᴏʀᴛɴᴇʀ ᴀᴘɪ - `{key_msg.text}`"
     try: 
-        await client.send_message(LOG_CHANNEL, log_message, disable_web_page_preview=True)
+        await client.send_message(LOG_CHANNEL, log_message, link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logger.error(e)
 
@@ -611,7 +611,7 @@ async def set_time(client, query):
     await save_group_settings(int(grp_id), key, int(time_msg.text))
     log_message = f"#New_Time_Set\n\n ᴛɪᴍᴇ ɴᴏ - {time_num}\nɢʀᴏᴜᴘ ʟɪɴᴋ - `{invite_link}`\n\nɢʀᴏᴜᴘ ɪᴅ : `{grp_id}`\nᴀᴅᴅᴇᴅ ʙʏ - `{user_id}`\nᴛɪᴍᴇ - {time_msg.text}"
     try:
-        await client.send_message(LOG_CHANNEL, log_message, disable_web_page_preview=True)
+        await client.send_message(LOG_CHANNEL, log_message, link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logger.error(e)
 
@@ -719,7 +719,7 @@ async def set_tutorial(client, query):
     await save_group_settings(int(grp_id), f'tutorial{suffix}', tutorial_msg.text)
     log_message = f"#New_Tutorial_Set\n\n ᴛᴜᴛᴏʀɪᴀʟ ɴᴏ - {tutorial_num}\nɢʀᴏᴜᴘ ʟɪɴᴋ - `{invite_link}`\n\nɢʀᴏᴜᴘ ɪᴅ : `{grp_id}`\nᴀᴅᴅᴇᴅ ʙʏ - `{user_id}`\nᴛᴜᴛᴏʀɪᴀʟ - {tutorial_msg.text}"
     try:
-        await client.send_message(LOG_CHANNEL, log_message, disable_web_page_preview=True)
+        await client.send_message(LOG_CHANNEL, log_message, link_preview_options=LinkPreviewOptions(is_disabled=True))
     except Exception as e:
         logger.error(e)
 

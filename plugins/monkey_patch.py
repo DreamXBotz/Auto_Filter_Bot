@@ -325,7 +325,7 @@ async def custom_copy(
             text=self.text,
             entities=self.entities,
             parse_mode=enums.ParseMode.DISABLED,
-            disable_web_page_preview=not self.web_page_preview,
+            link_preview_options=LinkPreviewOptions(is_disabled=not self.web_page_preview),
             disable_notification=disable_notification,
             message_thread_id=message_thread_id,
             reply_to_message_id=reply_to_message_id,
@@ -542,7 +542,7 @@ CopyMessage.copy_message = custom_copy_message
 log.info("Custom Pyrogram methods have been applied.")
 
 import asyncio
-from pyrogram.types import Message
+from pyrogram.types import LinkPreviewOptions, Message
 from pyrogram import StopPropagation
 
 if not getattr(Message, "_listen_patched", False):

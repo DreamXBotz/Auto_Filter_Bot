@@ -4,7 +4,7 @@ import pytz
 import string
 import random
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
 from database.users_chats_db import db
 from info import ADMINS, PREMIUM_LOGS
 from utils import get_seconds, temp
@@ -83,7 +83,7 @@ async def redeem_code(client, message):
                             f"⏳ <b>Cᴜʀʀᴇɴᴛ Pʀᴇᴍɪᴜᴍ Exᴘɪʀʏ:</b> {expiry_str_in_ist}\n\n"
                             f"<i>Yᴏᴜ ᴄᴀɴɴᴏᴛ ʀᴇᴅᴇᴇᴍ ᴀɴᴏᴛʜᴇʀ ᴄᴏᴅᴇ ᴜɴᴛɪʟ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ᴇxᴘɪʀᴇs.</i>\n\n"
                             f"<b>Tʜᴀɴᴋ ʏᴏᴜ ғᴏʀ ᴜsɪɴɢ ᴏᴜʀ sᴇʀᴠɪᴄᴇ! 🔥</b>",
-                            disable_web_page_preview=True
+                            link_preview_options=LinkPreviewOptions(is_disabled=True)
                         )
                         return
                     expiry_time = now_aware + timedelta(seconds=seconds)
@@ -97,7 +97,7 @@ async def redeem_code(client, message):
                         f"⚡ <b>User ID:</b> <code>{user_id}</code>\n"
                         f"⏳ <b>Premium Access Duration:</b> <code>{time}</code>\n"
                         f"⌛️ <b>Expiry Date:</b> {expiry_str_in_ist}",
-                        disable_web_page_preview=True
+                        link_preview_options=LinkPreviewOptions(is_disabled=True)
                     )
                     log_message = f"""
                         #Redeem_Premium 🔓
@@ -112,7 +112,7 @@ async def redeem_code(client, message):
                     await client.send_message(
                         PREMIUM_LOGS,
                         text=log_message,
-                        disable_web_page_preview=True
+                        link_preview_options=LinkPreviewOptions(is_disabled=True)
                     )
                 else:
                     await message.reply_text("Invalid time format in redeem code.")

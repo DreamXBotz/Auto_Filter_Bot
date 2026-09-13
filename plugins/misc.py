@@ -20,8 +20,7 @@ async def showid(client, message):
         username = message.from_user.username
         dc_id = message.from_user.dc_id or ""
         await message.reply_text(
-            f"<b>➲ First Name:</b> {first}\n<b>➲ Last Name:</b> {last}\n<b>➲ Username:</b> {username}\n<b>➲ Telegram ID:</b> <code>{user_id}</code>\n<b>➲ Data Centre:</b> <code>{dc_id}</code>",
-            quote=True
+            f"<b>➲ First Name:</b> {first}\n<b>➲ Last Name:</b> {last}\n<b>➲ Username:</b> {username}\n<b>➲ Telegram ID:</b> <code>{user_id}</code>\n<b>➲ Data Centre:</b> <code>{dc_id}</code>"
         )
     elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         _id = ""
@@ -49,8 +48,7 @@ async def showid(client, message):
                 f"<code>{file_info.file_id}</code>\n"
             )
         await message.reply_text(
-            _id,
-            quote=True
+            _id
         )
 
 @Client.on_message(filters.command(["info"]))
@@ -104,7 +102,6 @@ async def who_is(client, message):
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
             photo=local_user_photo,
-            quote=True,
             reply_markup=reply_markup,
             caption=message_out_str,
             parse_mode=enums.ParseMode.HTML,
@@ -119,7 +116,6 @@ async def who_is(client, message):
         await message.reply_text(
             text=message_out_str,
             reply_markup=reply_markup,
-            quote=True,
             parse_mode=enums.ParseMode.HTML,
             disable_notification=True
         )

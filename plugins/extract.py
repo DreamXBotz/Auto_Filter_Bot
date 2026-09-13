@@ -79,7 +79,7 @@ async def extract_data_handler(client: Client, query: CallbackQuery):
     try:
         files_ = await get_file_details(file_id)
         if not files_:
-            await query.message.reply_text("❌ File not found in DB.", quote=True)
+            await query.message.reply_text("❌ File not found in DB.")
             return
 
         if query.message and query.message.media:
@@ -205,7 +205,7 @@ async def extract_data_handler(client: Client, query: CallbackQuery):
                 author_name="DreamxBotz"
             )
         except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-            await query.message.reply_text("⚠️ Telegraph is busy. Try again later.", quote=True)
+            await query.message.reply_text("⚠️ Telegraph is busy. Try again later.")
             return
 
         telegraph_url = response["url"]
@@ -229,7 +229,7 @@ async def extract_data_handler(client: Client, query: CallbackQuery):
 
     except Exception as e:
         logger.exception(e)
-        await query.message.reply_text(f"Error: {e}", quote=True)
+        await query.message.reply_text(f"Error: {e}")
 
     finally:
         if os.path.exists(temp_path):

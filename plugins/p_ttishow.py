@@ -3,7 +3,7 @@ import asyncio
 import psutil
 from time import time
 from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pyrogram.types import LinkPreviewOptions, InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong, PeerIdInvalid
 from pyrogram.errors import ChatAdminRequired
 from info import ADMINS, MULTIPLE_DB, LOG_CHANNEL, OWNER_LNK, MELCOW_PHOTO
@@ -332,9 +332,9 @@ async def list_chats(bot, message):
 
 @Client.on_message(filters.command('group_cmd'))
 async def group_commands(client, message):
-    await message.reply_text(script.GROUP_CMD, disable_web_page_preview=True)
+    await message.reply_text(script.GROUP_CMD, link_preview_options=LinkPreviewOptions(is_disabled=True))
 
 @Client.on_message(filters.command('admin_cmd') & filters.user(ADMINS))
 async def admin_commands(client, message):
-    await message.reply_text(script.ADMIN_CMD, disable_web_page_preview=True)
+    await message.reply_text(script.ADMIN_CMD, link_preview_options=LinkPreviewOptions(is_disabled=True))
     
