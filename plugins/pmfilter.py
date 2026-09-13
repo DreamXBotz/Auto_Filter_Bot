@@ -31,9 +31,17 @@ async def auto_filter(client, message):
         return
     if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
         return
-    if 2 < len(message.text) < 100:
-        search = message.text
+    # FIX: allow longer queries, file show na korar bug fix
+    if len(message.text) < 2:
+        return
+    search = message.text.strip()
+    if len(search) > 100:
+        search = search[:100]
+    if True:
         files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=True)
+        # fallback if filter=True returns nothing
+        if not files:
+            files, offset, total_results = await get_search_results(search.lower(), offset=0, filter=False)
         if not files:
             if temp.B_LINK:
                 return
@@ -388,9 +396,20 @@ async def about_cb(bot, query):
         await query.answer()
     except:
         pass
+    # FIX: ABOUT_TXT may have 0,1,2 placeholders - handle all
+    try:
+        try:
+            about_text = script.ABOUT_TXT.format(temp.B_NAME, temp.U_NAME)
+        except IndexError:
+            try:
+                about_text = script.ABOUT_TXT.format(temp.B_NAME)
+            except:
+                about_text = script.ABOUT_TXT
+    except Exception:
+        about_text = script.ABOUT_TXT
     try:
         await query.message.edit_text(
-            text=script.ABOUT_TXT.format(temp.B_NAME),
+            text=about_text,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start"),
                  InlineKeyboardButton("🔐 ᴄʟᴏsᴇ", callback_data="close_data")]
@@ -410,7 +429,7 @@ async def help_cb(bot, query):
         pass
     try:
         await query.message.edit_text(
-            text=script.HELP_TXT.format(temp.B_NAME),
+            text=script.HELP_TXT.format(temp.B_NAME) if "{0}" in script.HELP_TXT or "{}" in script.HELP_TXT else script.HELP_TXT,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start"),
                  InlineKeyboardButton("🔐 ᴄʟᴏsᴇ", callback_data="close_data")]
@@ -437,7 +456,7 @@ async def start_cb(bot, query):
             InlineKeyboardButton('ᴜᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
         ]]
         await query.message.edit_text(
-            text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME),
+            text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME) if script.START_TXT.count("{")>=2 else script.START_TXT,
             reply_markup=InlineKeyboardMarkup(buttons),
             disable_web_page_preview=True
         )
