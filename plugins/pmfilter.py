@@ -18,7 +18,7 @@ BUTTONS = {}
 CAP = {}
 
 # QUALITY AND LANGUAGE MAPS (same font as your bot)
-LANGUAGES = ["malayalam", "mal", "tamil", "tam" ,"english", "eng", "hindi", "hin" ,"telugu", "tel" ,"kannada", "kan", "bengali", "ben", "marathi", "mar", "gujarati", "guj", "punjabi", "pun"]
+LANGUAGES = ["hindi", "english", "tamil", "telugu", "kannada", "malayalam", "bengali", "marathi", "gujarati", "punjabi"]
 QUALITIES = ["360p", "480p", "720p", "1080p", "1440p", "2160p"]
 SEASONS = ["season 1" , "season 2" , "season 3" , "season 4", "season 5" , "season 6" , "season 7" , "season 8" , "season 9" , "season 10"]
 
@@ -98,7 +98,8 @@ async def auto_filter(client, message):
             
             imdb = await get_poster(search, file=(files[0].file_name if files else None))
             if imdb and imdb.get('poster'):
-                cap = script.IMDB_TEMPLATE.format(
+                try:
+                    cap = script.IMDB_TEMPLATE.format(
                     qurey=search,
                     title=imdb.get('title'),
                     votes=imdb.get('votes'),
@@ -128,6 +129,8 @@ async def auto_filter(client, message):
                     rating=imdb.get('rating'),
                     url=imdb.get('url'),
                 )
+                except Exception as e:
+                    cap = f"<b>Here is what I found for your query {search} :</b>"
             else:
                 cap = f"<b>Here is what I found for your query {search} :</b>"
             
@@ -399,25 +402,21 @@ async def about_cb(bot, query):
         await query.answer()
     except:
         pass
-    # FIX: ABOUT_TXT may have 0,1,2 placeholders - handle all
+    # FINAL FIX: use ABOUT_TXT directly without format to prevent crash
+    about_text = script.ABOUT_TXT
+    # try to format safely if placeholders exist
     try:
-        try:
-            about_text = script.ABOUT_TXT.format(temp.B_NAME, temp.U_NAME)
-        except IndexError:
-            try:
-                about_text = script.ABOUT_TXT.format(temp.B_NAME)
-            except:
-                about_text = script.ABOUT_TXT
-    except Exception:
-        about_text = script.ABOUT_TXT
+        if "{0}" in about_text or "{}" in about_text:
+            about_text = about_text.format(temp.B_NAME, temp.U_NAME)
+    except:
+        pass
     try:
         await query.message.edit_text(
             text=about_text,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start"),
                  InlineKeyboardButton("🔐 ᴄʟᴏsᴇ", callback_data="close_data")]
-            ]),
-            disable_web_page_preview=True
+            ])
         )
     except MessageNotModified:
         pass
@@ -432,12 +431,11 @@ async def help_cb(bot, query):
         pass
     try:
         await query.message.edit_text(
-            text=script.HELP_TXT.format(temp.B_NAME) if "{0}" in script.HELP_TXT or "{}" in script.HELP_TXT else script.HELP_TXT,
+            text=script.HELP_TXT,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start"),
                  InlineKeyboardButton("🔐 ᴄʟᴏsᴇ", callback_data="close_data")]
-            ]),
-            disable_web_page_preview=True
+            ])
         )
     except MessageNotModified:
         pass
@@ -458,10 +456,17 @@ async def start_cb(bot, query):
             InlineKeyboardButton('ᴛᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
             InlineKeyboardButton('ᴜᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
         ]]
+        # safe format for START_TXT
+        try:
+            start_text = script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME)
+        except:
+            try:
+                start_text = script.START_TXT.format(query.from_user.mention, temp.B_NAME)
+            except:
+                start_text = script.START_TXT
         await query.message.edit_text(
-            text=script.START_TXT.format(query.from_user.mention, temp.U_NAME, temp.B_NAME) if script.START_TXT.count("{")>=2 else script.START_TXT,
-            reply_markup=InlineKeyboardMarkup(buttons),
-            disable_web_page_preview=True
+            text=start_text,
+            reply_markup=InlineKeyboardMarkup(buttons)
         )
     except MessageNotModified:
         pass
