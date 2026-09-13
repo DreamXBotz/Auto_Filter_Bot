@@ -1512,7 +1512,7 @@ async def auto_filter(client, msg, spoll=False):
         else:
             message = msg.message.reply_to_message
             search, files, offset, total_results = spoll
-            m = await message.reply_text(f'🔎 sᴇᴀʀᴄʜɪɴɢ {search}', reply_to_message_id=message.id)
+            m = await message.reply_text(f'🔎 sᴇᴀʀᴄʜɪɴɢ {search}')
             settings = await get_settings(message.chat.id)
             await msg.message.delete()
         key = f"{message.chat.id}-{message.id}"
@@ -1773,7 +1773,7 @@ async def advantage_spell_chok(client, message):
 
     buttons.append([InlineKeyboardButton(
         text="🚫 ᴄʟᴏsᴇ 🚫", callback_data='close_data', style=enums.ButtonStyle.DANGER)])
-    d = await message.reply_text(text=script.CUDNT_FND.format(message.from_user.mention), reply_markup=InlineKeyboardMarkup(buttons), reply_to_message_id=message.id)
+    d = await message.reply_text(text=script.CUDNT_FND.format(message.from_user.mention), reply_markup=InlineKeyboardMarkup(buttons))
     await asyncio.sleep(60)
     try:
         await d.delete()
