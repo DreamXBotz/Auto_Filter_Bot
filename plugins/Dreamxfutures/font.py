@@ -42,7 +42,7 @@ async def style_buttons(c, m, cb=False):
     if not cb:
         if ' ' in m.text:
             title = m.text.split(" ", 1)[1]
-            await m.reply_text(title, reply_markup=InlineKeyboardMarkup(buttons), reply_to_message_id=m.id)                     
+            await m.reply_text(title, reply_markup=InlineKeyboardMarkup(buttons))                     
         else:
             await m.reply_text(text="Ente Any Text Eg:- `/font [text]`")    
     else:

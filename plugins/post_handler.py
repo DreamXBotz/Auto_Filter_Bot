@@ -409,7 +409,7 @@ async def show_selection_menu(query: CallbackQuery, session_id: int, menu_type: 
 
 
 async def get_user_input(client, query, session, prompt_text):
-    ask_msg = await query.message.reply_text(prompt_text, reply_to_message_id=session.get("original_message_id"))
+    ask_msg = await client.send_message(chat_id=query.message.chat.id, text=prompt_text, reply_to_message_id=session.get("original_message_id"))
     try:
         response = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id, timeout=300)
         await ask_msg.delete()
@@ -596,10 +596,6 @@ async def finalize_and_post(client: Client, query: CallbackQuery, session_id: in
         return await status_msg.edit("Could not fetch movie details to post. Aborting.")
 
     mode = "Photo" if session["photo_mode"] and poster_to_use else "Text"
-    logger.info(f"Finalizing post for '{session['movie_name']}'. Mode: {mode}")
-    logger.info(f"Poster to use: {poster_to_use}")
-    logger.info(f"Final Caption Length: {len(final_caption)} characters.")
-
     try:
         if mode == "Photo":
             await client.send_photo(
@@ -628,4 +624,3 @@ async def finalize_and_post(client: Client, query: CallbackQuery, session_id: in
         logger.error(
             f"An unexpected error occurred while posting '{session['movie_name']}':", exc_info=True)
 
-#code is created by @bharath_boy for public use so atleast don't remove credits

@@ -983,8 +983,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 text=await get_settings_text(grp_id, title),
                 reply_markup=reply_markup,
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
-                parse_mode=enums.ParseMode.HTML,
-                reply_to_message_id=query.message.id
+                parse_mode=enums.ParseMode.HTML
             )
 
     elif query.data.startswith("show_option"):

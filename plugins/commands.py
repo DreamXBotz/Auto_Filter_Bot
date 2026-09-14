@@ -388,11 +388,7 @@ async def start(client, message):
 
         settings = await get_settings(int(grp_id))
         if not files_:
-            raw = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
-            sep = raw.find(b"_")
-            if sep == -1:
-                raise ValueError("Invalid encoded data")
-            file_id = raw[sep + 1:].decode("latin1")
+            file_id = decoded_file_id
             try:
                 cover = None
                 if COVERX:
@@ -637,8 +633,7 @@ async def settings(client, message):
                 text="<b>ᴡʜᴇʀᴇ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴏᴘᴇɴ ꜱᴇᴛᴛɪɴɢꜱ ᴍᴇɴᴜ ? ⚙</b>",
                 reply_markup=InlineKeyboardMarkup(btn),
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
-                parse_mode=enums.ParseMode.HTML,
-                reply_to_message_id=message.id
+                parse_mode=enums.ParseMode.HTML
         )
     elif chat_type == enums.ChatType.PRIVATE:
         connected_groups = await db.get_connected_grps(user_id)
