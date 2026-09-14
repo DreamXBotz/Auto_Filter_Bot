@@ -61,36 +61,137 @@ async def start(client, message):
             current_time = datetime.now(tz=ist_timezone)
             await db.update_notcopy_user(user_id, {key:current_time})
             await db.update_verify_id_info(user_id, verify_id, {"verified":True})
+            
             if key == "third_time_verified": 
                 num = 3 
+                msg = script.THIRDT_VERIFY_COMPLETE_TEXT
             else: 
                 num =  2 if key == "second_time_verified" else 1 
-            if key == "third_time_verified": 
-                msg = script.THIRDT_VERIFY_COMPLETE_TEXT
-            else:
                 msg = script.SECOND_VERIFY_COMPLETE_TEXT if key == "second_time_verified" else script.VERIFY_COMPLETE_TEXT
             
-            await client.send_message(settings['log'], script.VERIFIED_LOG_TEXT.format(m.from_user.mention, user_id, datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%d %B %Y'), num))
+            log_channel = settings.get('log') if settings.get('log') else LOG_CHANNEL
+            try:
+                await client.send_message(log_channel, script.VERIFIED_LOG_TEXT.format(m.from_user.mention, user_id, datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%d %B %Y'), num))
+            except Exception as e:
+                logger.error(f"Failed to log verification: {e}")
             
-            dlt=await m.reply_photo(
+            # Send Verification Complete message
+            dlt = await m.reply_photo(
                 photo=(VERIFY_IMG),
                 caption=msg.format(message.from_user.mention, get_readable_time(TWO_VERIFY_GAP)),
                 parse_mode=enums.ParseMode.HTML
             )
-
+            
             async def _delete_msg(msg_to_delete, delay):
                 await asyncio.sleep(delay)
                 try:
                     await msg_to_delete.delete()
                 except Exception:
                     pass
+            
             asyncio.create_task(_delete_msg(dlt, 300))
+
+            # Send files automatically
+            is_sendall = m.command[1].startswith('sendall')
+            decoded_file_id = file_id
+            if not is_sendall:
+                try:
+                    raw = base64.urlsafe_b64decode(file_id + "=" * (-len(file_id) % 4))
+                    sep = raw.find(b"_")
+                    if sep != -1:
+                        decoded_file_id = raw[sep + 1:].decode("latin1")
+                except Exception:
+                    pass
+
+            filesarr = []
             
-            if message.command[1].startswith('sendall'):
-                message.command[1] = f"allfiles_{grp_id}_{file_id}"
+            if is_sendall:
+                files = temp.GETALL.get(file_id)
+                if not files:
+                    await message.reply('<b><i>ɴᴏ ꜱᴜᴄʜ ꜰɪʟᴇ ᴇxɪꜱᴛꜱ !</b></i>')
+                    return
+                for file in files:
+                    file_id_item = file.file_id
+                    files_ = await get_file_details(file_id_item)
+                    if not files_:
+                        continue
+                    files1 = files_[0]
+                    title = clean_filename(files1.file_name)
+                    cover = files1.cover
+                    size = get_size(files1.file_size)
+                    f_caption = files1.caption
+                    
+                    DREAMX_CAPTION = settings.get('caption', CUSTOM_FILE_CAPTION)
+                    if DREAMX_CAPTION:
+                        try:
+                            f_caption = DREAMX_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+                        except Exception as e:
+                            logger.exception(e)
+                    
+                    if f_caption is None:
+                        f_caption = f"{clean_filename(files1.file_name)}"
+                        
+                    btn = await stream_buttons(message.from_user.id, file_id_item)
+                    sent_msg = await client.send_cached_media(
+                        chat_id=message.from_user.id,
+                        cover=cover,
+                        file_id=file_id_item,
+                        caption=f_caption,
+                        protect_content=settings.get('file_secure', PROTECT_CONTENT),
+                        reply_markup=InlineKeyboardMarkup(btn)
+                    )
+                    filesarr.append(sent_msg)
             else:
-                message.command[1] = f"file_{grp_id}_{file_id}"
-            
+                files_ = await get_file_details(decoded_file_id)
+                if not files_:
+                    await message.reply('ɴᴏ ꜱᴜᴄʜ ꜰɪʟᴇ ᴇxɪꜱᴛꜱ !')
+                    return
+                files1 = files_[0]
+                title = clean_filename(files1.file_name)
+                size = get_size(files1.file_size)
+                cover = files1.cover if files1.cover else None
+                f_caption = files1.caption
+                
+                DREAMX_CAPTION = settings.get('caption', CUSTOM_FILE_CAPTION)
+                if DREAMX_CAPTION:
+                    try:
+                        f_caption = DREAMX_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+                    except Exception as e:
+                        logger.exception(e)
+                
+                if f_caption is None:
+                    f_caption = clean_filename(files1.file_name)
+                
+                btn = await stream_buttons(message.from_user.id, decoded_file_id)
+                sent_msg = await client.send_cached_media(
+                    chat_id=message.from_user.id,
+                    file_id=decoded_file_id,
+                    cover=cover,
+                    caption=f_caption,
+                    protect_content=settings.get('file_secure', PROTECT_CONTENT),
+                    reply_markup=InlineKeyboardMarkup(btn)
+                )
+                filesarr.append(sent_msg)
+
+            # Auto-Delete Logic
+            if settings.get('auto_delete', True) and filesarr:
+                k = await client.send_message(chat_id=message.from_user.id, text=script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
+                
+                async def _delete_files(msgs, notif_msg, delay):
+                    await asyncio.sleep(delay)
+                    for x in msgs:
+                        try:
+                            await x.delete()
+                        except Exception:
+                            pass
+                    try:
+                        await notif_msg.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏꜱ/ꜰɪʟᴇꜱ ᴀʀᴇ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ !\nᴋɪɴᴅʟʏ ꜱᴇᴀʀᴄʜ ᴀɢᴀɪɴ</b>")
+                    except Exception:
+                        pass
+                
+                asyncio.create_task(_delete_files(filesarr, k, DELETE_TIME))
+                
+            return         
         if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
             buttons = [[
                         InlineKeyboardButton('❤ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ❤', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
@@ -418,6 +519,7 @@ async def start(client, message):
                     except Exception:
                         return
                 await msg.edit_caption(f_caption, reply_markup=InlineKeyboardMarkup(btn))
+                # FIXED: removed 
                 k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
                 await asyncio.sleep(DELETE_TIME)
                 await msg.delete()
@@ -466,7 +568,27 @@ async def start(client, message):
         pass
 
 async def stream_buttons(user_id: int, file_id: str):
-    return [[InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
+    if STREAM_MODE and not PREMIUM_STREAM_MODE:
+        return [
+            [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', callback_data=f'generate_stream_link:{file_id}')],
+            [InlineKeyboardButton('ℹ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ', callback_data=f'extract_data:{file_id}')],
+            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
+        ]
+    elif STREAM_MODE and PREMIUM_STREAM_MODE:
+        if not await db.has_premium_access(user_id):
+            return [
+                [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', callback_data='prestream')],
+                [InlineKeyboardButton('ℹ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ', callback_data='prestream')],
+                [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
+            ]
+        else:
+            return [
+                [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', callback_data=f'generate_stream_link:{file_id}')],
+                [InlineKeyboardButton('ℹ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ', callback_data=f'extract_data:{file_id}')],
+                [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
+            ]
+    else:
+        return [[InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
     
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
 async def log_file(bot, message):
