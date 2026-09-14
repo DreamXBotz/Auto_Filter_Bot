@@ -69,25 +69,28 @@ async def start(client, message):
                 msg = script.THIRDT_VERIFY_COMPLETE_TEXT
             else:
                 msg = script.SECOND_VERIFY_COMPLETE_TEXT if key == "second_time_verified" else script.VERIFY_COMPLETE_TEXT
-            if message.command[1].startswith('sendall'):
-                verifiedfiles = f"https://telegram.me/{temp.U_NAME}?start=allfiles_{grp_id}_{file_id}"
-            else:
-                verifiedfiles = f"https://telegram.me/{temp.U_NAME}?start=file_{grp_id}_{file_id}"
+            
             await client.send_message(settings['log'], script.VERIFIED_LOG_TEXT.format(m.from_user.mention, user_id, datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%d %B %Y'), num))
-            btn = [[
-                InlineKeyboardButton("✅ ᴄʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ɢᴇᴛ ꜰɪʟᴇ ✅", url=verifiedfiles),
-            ]]
-            reply_markup=InlineKeyboardMarkup(btn)
+            
             dlt=await m.reply_photo(
                 photo=(VERIFY_IMG),
                 caption=msg.format(message.from_user.mention, get_readable_time(TWO_VERIFY_GAP)),
-                reply_markup=reply_markup,
                 parse_mode=enums.ParseMode.HTML
             )
 
-            await asyncio.sleep(300)
-            await dlt.delete()
-            return         
+            async def _delete_msg(msg_to_delete, delay):
+                await asyncio.sleep(delay)
+                try:
+                    await msg_to_delete.delete()
+                except Exception:
+                    pass
+            asyncio.create_task(_delete_msg(dlt, 300))
+            
+            if message.command[1].startswith('sendall'):
+                message.command[1] = f"allfiles_{grp_id}_{file_id}"
+            else:
+                message.command[1] = f"file_{grp_id}_{file_id}"
+            
         if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
             buttons = [[
                         InlineKeyboardButton('❤ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ❤', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
@@ -415,7 +418,6 @@ async def start(client, message):
                     except Exception:
                         return
                 await msg.edit_caption(f_caption, reply_markup=InlineKeyboardMarkup(btn))
-                # FIXED: removed 
                 k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
                 await asyncio.sleep(DELETE_TIME)
                 await msg.delete()
@@ -464,27 +466,7 @@ async def start(client, message):
         pass
 
 async def stream_buttons(user_id: int, file_id: str):
-    if STREAM_MODE and not PREMIUM_STREAM_MODE:
-        return [
-            [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', callback_data=f'generate_stream_link:{file_id}')],
-            [InlineKeyboardButton('ℹ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ', callback_data=f'extract_data:{file_id}')],
-            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
-        ]
-    elif STREAM_MODE and PREMIUM_STREAM_MODE:
-        if not await db.has_premium_access(user_id):
-            return [
-                [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', callback_data='prestream')],
-                [InlineKeyboardButton('ℹ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ', callback_data='prestream')],
-                [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
-            ]
-        else:
-            return [
-                [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', callback_data=f'generate_stream_link:{file_id}')],
-                [InlineKeyboardButton('ℹ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ', callback_data=f'extract_data:{file_id}')],
-                [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
-            ]
-    else:
-        return [[InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
+    return [[InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
     
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
 async def log_file(bot, message):
