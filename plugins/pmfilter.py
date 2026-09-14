@@ -8,7 +8,7 @@ from database.ia_filterdb import Media, Media2, get_search_results, get_bad_file
 from database.config_db import mdb
 from pyrogram.errors import MessageIdInvalid, UserIsBlocked, MessageNotModified, PeerIdInvalid, MessageDeleteForbidden
 from pyrogram import Client, filters, enums
-from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
 from info import (
     ADMINS, AUTH_CHANNELS, AUTH_REQ_CHANNELS, BIN_CHANNEL, DELETE_TIME,
     EMOJI_MODE, GRP_LNK, LANDSCAPE_POSTER, LANGUAGES, LOG_CHANNEL, MAX_B_TN, MSG_ALRT,
@@ -327,12 +327,12 @@ async def next_page(bot, query):
                         logger.exception(e)
                 else:
                     try:
-                        await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+                        await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
                     except (MessageNotModified, MessageIdInvalid):
                         pass
             else:
                 cap = await get_cap(settings, remaining_seconds, files, query, total, dreamx_title, offset+1)
-                await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+                await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
         except (MessageNotModified, MessageIdInvalid):
             pass
         except Exception as e:
@@ -518,7 +518,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
         dreamx_title = clean_search_text(search)
         cap = await get_cap(settings, remaining_seconds, files, query, total_results, dreamx_title, offset=1)
         try:
-            await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+            await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
         except (MessageNotModified, MessageIdInvalid):
             pass
     else:
@@ -669,7 +669,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
         dreamx_title = clean_search_text(search)
         cap = await get_cap(settings, remaining_seconds, files, query, total_results, dreamx_title, offset=1)
         try:
-            await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+            await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
         except (MessageNotModified, MessageIdInvalid):
             pass
     else:
@@ -806,7 +806,7 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
             await query.message.edit_text(
                 text=cap,
                 reply_markup=InlineKeyboardMarkup(btn),
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                disable_web_page_preview=True,
             )
         except (MessageNotModified, MessageIdInvalid):
             pass
@@ -950,7 +950,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             reply_markup = InlineKeyboardMarkup(btn)
             await query.message.edit_text(
                 text=await get_settings_text(grp_id, title),
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                disable_web_page_preview=True,
                 parse_mode=enums.ParseMode.HTML
             )
             await query.message.edit_reply_markup(reply_markup)
@@ -982,7 +982,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 chat_id=userid,
                 text=await get_settings_text(grp_id, title),
                 reply_markup=reply_markup,
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                disable_web_page_preview=True,
                 parse_mode=enums.ParseMode.HTML,
                 reply_to_message_id=query.message.id
             )
@@ -1110,9 +1110,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await asyncio.sleep(1)
             await log_msg.reply_text(
                 text=f"•• ʟɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• ᖴᎥᒪᗴ Nᗩᗰᗴ : {fileName}",
-                link_preview_options=LinkPreviewOptions(is_disabled=True),
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),  # we download Link
-                                                    InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)]])  # web stream Link
+                quote=True,
+                disable_web_page_preview=True,
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),
+                                                    InlineKeyboardButton('🖥 ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥', url=dreamx_stream)]])
             )
             dreamcinezone = await query.edit_message_reply_markup(
                 reply_markup=InlineKeyboardMarkup([
@@ -1229,12 +1230,27 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('🔐 Cʟᴏsᴇ', callback_data='close_data')
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        await query.message.edit_text(
-            text=script.ABOUT_TXT.format(temp.U_NAME, temp.B_NAME, OWNER_LNK),
-            reply_markup=reply_markup,
-            link_preview_options=LinkPreviewOptions(is_disabled=True),
-            parse_mode=enums.ParseMode.HTML
-        )
+        try:
+            about_text = script.ABOUT_TXT.format(temp.U_NAME, temp.B_NAME, OWNER_LNK)
+        except Exception:
+            try:
+                about_text = script.ABOUT_TXT.format(temp.U_NAME)
+            except Exception:
+                about_text = script.ABOUT_TXT
+        try:
+            await query.message.edit_text(
+                text=about_text,
+                reply_markup=reply_markup,
+                disable_web_page_preview=True,
+                parse_mode=enums.ParseMode.HTML
+            )
+        except Exception:
+            # For newer Pyrogram where disable_web_page_preview not allowed in edit_text
+            await query.message.edit_text(
+                text=about_text,
+                reply_markup=reply_markup,
+                parse_mode=enums.ParseMode.HTML
+            )
 
     elif query.data == "give_trial":
         try:
@@ -1669,9 +1685,9 @@ async def auto_filter(client, msg, spoll=False):
                         await m.delete()
                 except Exception as e:
                     logger.exception(e)
-                    sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+                    sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
             else:
-                sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+                sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), disable_web_page_preview=True, parse_mode=enums.ParseMode.HTML)
                 if m:
                     await m.delete()
         except Exception as e:
