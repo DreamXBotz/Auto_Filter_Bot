@@ -221,7 +221,7 @@ async def start(client, message):
                         InlineKeyboardButton('🔰 Aᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ 🔰', url=f'http://t.me/{temp.U_NAME}?startgroup=true')
                     ],[
                         InlineKeyboardButton(' Hᴇʟᴘ 📢', callback_data='help'),
-                        InlineKeyboardButton(' Aʙᴏᴜᴛ 📖', callback_data='about')
+                        InlineKeyboardButton(' ᴀʙᴏᴜᴛ 📖', callback_data='about')
                     ],[
                         InlineKeyboardButton('Tᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
                         InlineKeyboardButton('Uᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
@@ -230,13 +230,13 @@ async def start(client, message):
             current_time = datetime.now(pytz.timezone(TIMEZONE))
             curr_time = current_time.hour        
             if curr_time < 12:
-                gtxt = "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞" 
+                gtxt = "Gᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞" 
             elif curr_time < 17:
-                gtxt = "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ 🌓" 
+                gtxt = "Gᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ 🌓" 
             elif curr_time < 21:
-                gtxt = "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ 🌘"
+                gtxt = "Gᴏᴏᴅ ᴇᴠᴇɴɪɴɢ 🌘"
             else:
-                gtxt = "ɢᴏᴏᴅ ɴɪɢʜᴛ 🌑"
+                gtxt = "Gᴏᴏᴅ ɴɪɢʜᴛ 🌑"
             if len(PICS) == 1:
                 PIC = PICS[0]
             else:
@@ -266,13 +266,13 @@ async def start(client, message):
             current_time = datetime.now(pytz.timezone(TIMEZONE))
             curr_time = current_time.hour        
             if curr_time < 12:
-                gtxt = "ɢᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞" 
+                gtxt = "Gᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞" 
             elif curr_time < 17:
-                gtxt = "ɢᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ 🌓" 
+                gtxt = "Gᴏᴏᴅ ᴀғᴛᴇʀɴᴏᴏɴ 🌓" 
             elif curr_time < 21:
-                gtxt = "ɢᴏᴏᴅ ᴇᴠᴇɴɪɴɢ 🌘"
+                gtxt = "Gᴏᴏᴅ ᴇᴠᴇɴɪɴɢ 🌘"
             else:
-                gtxt = "ɢᴏᴏᴅ ɴɪɢʜᴛ 🌑"
+                gtxt = "Gᴏᴏᴅ ɴɪɢʜᴛ 🌑"
             if len(PICS) == 1:
                 PIC = PICS[0]
             else:
@@ -332,12 +332,12 @@ async def start(client, message):
 
         if len(message.command) == 2 and message.command[1] in ["premium"]:
             buttons = [[
-                        InlineKeyboardButton('📲 ꜱᴇɴᴅ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ', url=OWNER_LNK)
+                        InlineKeyboardButton('📲 Sᴇɴᴅ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ', url=OWNER_LNK)
                       ],[
                         InlineKeyboardButton('📷 Qʀ Cᴏᴅᴇ', url=QR_CODE)
                       ],[
-                        InlineKeyboardButton('⇋ ʙᴀᴄᴋ ⇋', callback_data='start'),
-                        InlineKeyboardButton('❌ ᴄʟᴏꜱᴇ ❌', callback_data='close_data')
+                        InlineKeyboardButton('⇋ Bᴀᴄᴋ ⇋', callback_data='start'),
+                        InlineKeyboardButton('❌ Cʟᴏꜱᴇ ❌', callback_data='close_data')
                       ]]
             reply_markup = InlineKeyboardMarkup(buttons)
             await message.reply_photo(
@@ -530,7 +530,11 @@ async def start(client, message):
                 k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
                 await asyncio.sleep(DELETE_TIME)
                 await msg.delete()
-                await k.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!</b>")
+                await k.edit_text(
+            "<b>Yᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!\n"
+            "Tᴏ ᴘʀᴏᴛᴇᴄᴛ ᴏᴜʀ ʙᴏᴛ ғʀᴏᴍ ᴄᴏᴘʏʀɪɢʜᴛ 🥀\n"
+            "Iғ ʏᴏᴜ ᴅɪᴅɴ'ᴛ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴀɴʏᴡʜᴇʀᴇ ᴇʟsᴇ, ᴋɪɴᴅʟʏ ʀᴇǫᴜᴇsᴛ ᴛʜᴇ ғɪʟᴇ ᴏɴᴄᴇ ᴀɢᴀɪɴ 🫶🏻🩵</b>"
+        )
                 return
             except Exception as e:
                 logger.exception(e)
@@ -566,7 +570,11 @@ async def start(client, message):
         k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
         await asyncio.sleep(DELETE_TIME)
         await msg.delete()
-        await k.edit_text("<b>ʏᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!</b>")
+        await k.edit_text(
+            "<b>Yᴏᴜʀ ᴠɪᴅᴇᴏ / ꜰɪʟᴇ ɪꜱ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ !!\n"
+            "Tᴏ ᴘʀᴏᴛᴇᴄᴛ ᴏᴜʀ ʙᴏᴛ ғʀᴏᴍ ᴄᴏᴘʏʀɪɢʜᴛ 🥀\n"
+            "Iғ ʏᴏᴜ ᴅɪᴅɴ'ᴛ ғᴏʀᴡᴀʀᴅ ɪᴛ ᴀɴʏᴡʜᴇʀᴇ ᴇʟsᴇ, ᴋɪɴᴅʟʏ ʀᴇǫᴜᴇsᴛ ᴛʜᴇ ғɪʟᴇ ᴏɴᴄᴇ ᴀɢᴀɪɴ 🫶🏻🩵</b>"
+        )
         return
     except StopPropagation:
         raise
@@ -575,7 +583,7 @@ async def start(client, message):
         pass
 
 async def stream_buttons(user_id: int, file_id: str):
-    return [[InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
+    return [[InlineKeyboardButton('📌 Jᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
     
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
 async def log_file(bot, message):
@@ -819,7 +827,7 @@ async def requests(bot, message):
             InlineKeyboardButton('ᴠɪᴇᴡ ʀᴇǫᴜᴇꜱᴛ', url=msg_link),
             InlineKeyboardButton('ꜱʜᴏᴡ ᴏᴘᴛɪᴏɴꜱ', callback_data=f'show_option#{reporter}')
         ]]
-        req_text = f"<b>📝 ʀᴇǫᴜᴇꜱᴛ : <u>{content}</u>\n\n📚 ʀᴇᴘᴏʀᴛᴇᴅ ʙʏ : {mention}\n📖 ʀᴇᴘᴏʀᴛᴇʀ ɪᴅ : {reporter}\n\n</b>"
+        req_text = f"<b>📝 ʀᴇǫᴜᴇꜱᴛ : <u>{content}</u>\n\n📚 Rᴇᴘᴏʀᴛᴇᴅ ʙʏ : {mention}\n📖 Rᴇᴘᴏʀᴛᴇʀ ɪᴅ : {reporter}\n\n</b>"
         warning_text = "<b>⚠ ʀᴇǫᴜᴇꜱᴛ ᴄʜᴀɴɴᴇʟ ɪꜱ ɴᴏᴛ ꜱᴇᴛ.</b>"
         if REQST_CHANNEL is not None:
             try:
@@ -834,7 +842,7 @@ async def requests(bot, message):
                 reported_post = await bot.send_message(chat_id=admin, text=req_text, reply_markup=InlineKeyboardMarkup(btn))
     except Exception:
         logger.exception("Request failed")
-        return await message.reply_text( "<b>⚠ ꜱᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ. ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.</b>")
+        return await message.reply_text( "<b>⚠ Sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ. ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.</b>")
 
     if reported_post and REQST_CHANNEL is not None:
         try:
@@ -1065,7 +1073,7 @@ async def set_movie_update_notification(client, message):
 async def stop_button(bot, message):
     msg = await bot.send_message(text="<b><i>ʙᴏᴛ ɪꜱ ʀᴇꜱᴛᴀʀᴛɪɴɢ</i></b>", chat_id=message.chat.id)
     await asyncio.sleep(3)
-    await msg.edit("<b><i><u>ʙᴏᴛ ɪꜱ ʀᴇꜱᴛᴀʀᴛᴇᴅ</u> ✅</i></b>")
+    await msg.edit("<b><i><u>Bᴏᴛ ɪꜱ ʀᴇꜱᴛᴀʀᴛᴇᴅ</u> ✅</i></b>")
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 @Client.on_message(filters.command("del_msg") & filters.user(ADMINS))
@@ -1551,10 +1559,3 @@ async def clean_groups_handler(client, message):
         except Exception as e:
             logger.error("Error in clean_groups loop: %s", e)
     await msg.edit(f'**Clean Groups Complete**\n\nTotal Processed: {processed}\nDeleted: {deleted_count}')
-
-
-
-
-
-
-================================================
