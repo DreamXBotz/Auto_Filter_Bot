@@ -139,6 +139,7 @@ async def start(client, message):
                     
                     if f_caption is None:
                         f_caption = f"{clean_filename(files1.file_name)}"
+                        
                     sent_msg = await client.send_cached_media(
                         chat_id=message.from_user.id,
                         cover=cover,
@@ -174,6 +175,7 @@ async def start(client, message):
                     cover=cover,
                     caption=f_caption,
                     protect_content=settings.get('file_secure', PROTECT_CONTENT),
+                    reply_markup=InlineKeyboardMarkup(btn)
                 )
                 filesarr.append(sent_msg)
 
