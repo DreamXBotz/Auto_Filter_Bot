@@ -85,7 +85,7 @@ async def start(client, message):
                 InlineKeyboardButton("🫶🏻 Cʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ɢᴇᴛ ғɪʟᴇ 🕊", url=verifiedfiles),
             ]]
             dlt = await m.reply_photo(
-                photo="https://i.ibb.co/wrB2JMjG/movie-poster-verification-banner.jpg",
+                photo="https://i.ibb.co/RkXnCM07/Chat-GPT-Image-Sep-15-2026-10-11-43-AM.jpg",
                 caption=msg.format(m.from_user.mention),
                 reply_markup=InlineKeyboardMarkup(btn_complete),
                 parse_mode=enums.ParseMode.HTML
