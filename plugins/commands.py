@@ -85,7 +85,7 @@ async def start(client, message):
                 InlineKeyboardButton("🫶🏻 Cʟɪᴄᴋ ʜᴇʀᴇ ᴛᴏ ɢᴇᴛ ғɪʟᴇ 🕊", url=verifiedfiles),
             ]]
             dlt = await m.reply_photo(
-                photo="https://i.ibb.co/1tDXygyb/image.webp",
+                photo="https://i.ibb.co/wrB2JMjG/movie-poster-verification-banner.jpg",
                 caption=msg.format(m.from_user.mention),
                 reply_markup=InlineKeyboardMarkup(btn_complete),
                 parse_mode=enums.ParseMode.HTML
@@ -1550,3 +1550,6 @@ async def clean_groups_handler(client, message):
         except Exception as e:
             logger.error("Error in clean_groups loop: %s", e)
     await msg.edit(f'**Clean Groups Complete**\n\nTotal Processed: {processed}\nDeleted: {deleted_count}')
+
+
+
