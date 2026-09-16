@@ -184,7 +184,7 @@ async def next_page(bot, query):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
 
@@ -204,7 +204,7 @@ async def next_page(bot, query):
                    ]
                    )
         btn.insert(0, [
-            InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+            InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
             InlineKeyboardButton("Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
         ])
     if ULTRA_FAST_MODE:
@@ -455,7 +455,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                    ])
@@ -473,7 +473,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
 
@@ -608,7 +608,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                    ]
@@ -626,7 +626,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
                    ])
         btn.insert(0,
                    [
-                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                       InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                    ])
@@ -756,7 +756,7 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
     btn.insert(
         0,
         [
-            InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+            InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
             InlineKeyboardButton("Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS),
         ],
     )
@@ -1203,7 +1203,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     ),
                     parse_mode=enums.ParseMode.HTML,
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🚀 Buy Premium 🚀", callback_data="premium_info")
+                        InlineKeyboardButton("🚀 Bᴜʏ ᴘʀᴇᴍɪᴜᴍ 🚀", callback_data="premium_info")
                     ]])
                 )
                 await asyncio.sleep(DELETE_TIME)
@@ -1474,7 +1474,7 @@ async def auto_filter(client, msg, spoll=False):
                        )
             btn.insert(0,
                        [
-                           InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                           InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                            InlineKeyboardButton(
                                "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
 
@@ -1493,7 +1493,7 @@ async def auto_filter(client, msg, spoll=False):
                        )
             btn.insert(0,
                        [
-                           InlineKeyboardButton("ʀᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info"),
+                           InlineKeyboardButton("Rᴇᴍᴏᴠᴇ ᴀᴅs", callback_data="premium_info", style=enums.ButtonStyle.PRIMARY),
                            InlineKeyboardButton(
                                "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                        ])
