@@ -414,6 +414,16 @@ async def start(client, message):
                 settings = await get_settings(grp_id)
                 is_second_shortener = await db.use_second_shortener(user_id, settings.get('verify_time', TWO_VERIFY_GAP)) 
                 is_third_shortener = await db.use_third_shortener(user_id, settings.get('third_verify_time', THREE_VERIFY_GAP))
+                # reset after 3rd expires -> back to 1st
+                if is_third_shortener:
+                    try:
+                        await db.update_notcopy_user(user_id, {"last_verified": None, "second_time_verified": None, "third_time_verified": None})
+                        user_verified = False
+                        is_second_shortener = False
+                        is_third_shortener = False
+                    except Exception:
+                        pass
+                
                 if settings.get("is_verify", IS_VERIFY) and (not user_verified or is_second_shortener or is_third_shortener):
                     verify_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
                     await db.create_verify_id(user_id, verify_id)
@@ -1245,7 +1255,7 @@ async def set_log(client, message):
     except Exception as e:
         return await message.reply_text(f'<b><u>😐 ᴍᴀᴋᴇ sᴜʀᴇ ᴛʜɪs ʙᴏᴛ ᴀᴅᴍɪɴ ɪɴ ᴛʜᴀᴛ ᴄʜᴀɴɴᴇʟ...</u>\n\n💔 ᴇʀʀᴏʀ - <code>{e}</code></b>')
     await save_group_settings(grp_id, 'log', log)
-    await message.reply_text(f"<b>✅ sᴜᴄᴄᴇssꜰᴜʟʟʏ sᴇᴛ ʏᴏᴜʀ ʟᴏɢ ᴄʜᴀɴɴᴇʟ ꜰᴏʀ {title}\n\nɪᴅ - `{log}`</b>", link_preview_options=LinkPreviewOptions(is_disabled=True))
+    await message.reply_text(f"<b>✅ sᴜᴄᴄᴇssғᴜʟʟʏ sᴇᴛ ʏᴏᴜʀ ʟᴏɢ ᴄʜᴀɴɴᴇʟ ꜰᴏʀ {title}\n\nɪᴅ - `{log}`</b>", link_preview_options=LinkPreviewOptions(is_disabled=True))
     user_id = message.from_user.id
     user_info = f"@{message.from_user.username}" if message.from_user.username else f"{message.from_user.mention}"
     link = (await client.get_chat(message.chat.id)).invite_link
