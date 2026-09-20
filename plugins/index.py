@@ -3,7 +3,7 @@ import time
 import re
 import asyncio
 from pyrogram import Client, filters, enums
-from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified
+from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified, ChannelPrivate
 from info import ADMINS, INDEX_REQ_CHANNEL as LOG_CHANNEL
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -67,7 +67,7 @@ async def send_for_index(bot, message):
         return
     try:
         await bot.get_chat(chat_id)
-    except ChannelInvalid:
+    except (ChannelInvalid, ChannelPrivate):
         return await message.reply('This may be a private channel / group. Make me an admin over there to index the files.')
     except (UsernameInvalid, UsernameNotModified):
         return await message.reply('Invalid Link specified.')
