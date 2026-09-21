@@ -99,8 +99,9 @@ async def start(client, message):
                     pass
             
             asyncio.create_task(_delete_msg(dlt, 300))
+            return
 
-            # Send files automatically
+            # Send files automatically - DISABLED, file will be sent only after button click
             is_sendall = m.command[1].startswith('sendall')
             decoded_file_id = file_id
             if not is_sendall:
