@@ -168,7 +168,7 @@ async def start(client, message):
                 
                 if f_caption is None:
                     f_caption = clean_filename(files1.file_name)
-                
+                btn = await stream_buttons(message.from_user.id, decoded_file_id)
                 sent_msg = await client.send_cached_media(
                     chat_id=message.from_user.id,
                     file_id=decoded_file_id,
@@ -305,13 +305,13 @@ async def start(client, message):
             try:
                 uss = await client.get_users(user_id)
             except Exception:
-                return 	    
+                return      
             referdb.add_user(message.from_user.id)
             fromuse = referdb.get_refer_points(user_id) + 10
             if fromuse == 100:
                 referdb.add_refer_points(user_id, 0) 
-                await message.reply_text(script.REFER_INVITED_ALRT.format(uss.mention))		    
-                await client.send_message(chat_id=user_id, text=script.REFER_CONGRATS_ALRT.format(message.from_user.mention)) 	
+                await message.reply_text(script.REFER_INVITED_ALRT.format(uss.mention))             
+                await client.send_message(chat_id=user_id, text=script.REFER_CONGRATS_ALRT.format(message.from_user.mention))   
                 seconds = 2592000
                 if seconds > 0:
                     expiry_time = datetime.now() + timedelta(seconds=seconds)
@@ -323,7 +323,7 @@ async def start(client, message):
                         link_preview_options=LinkPreviewOptions(is_disabled=True)              
                     )
                 for admin in ADMINS:
-                    await client.send_message(chat_id=admin, text=f"Sᴜᴄᴄᴇss ғᴜʟʟʏ ᴛᴀsᴋ ᴄᴏᴍᴘʟᴇᴛᴇᴅ ʙʏ ᴛʜɪs ᴜsᴇʀ:\n\nuser Nᴀᴍᴇ: {uss.mention}\n\nUsᴇʀ ɪᴅ: {uss.id}!")	
+                    await client.send_message(chat_id=admin, text=f"Sᴜᴄᴄᴇss ғᴜʟʟʏ ᴛᴀsᴋ ᴄᴏᴍᴘʟᴇᴛᴇᴅ ʙʏ ᴛʜɪs ᴜsᴇʀ:\n\nuser Nᴀᴍᴇ: {uss.mention}\n\nUsᴇʀ ɪᴅ: {uss.id}!")      
             else:
                 referdb.add_refer_points(user_id, fromuse)
                 await message.reply_text(script.REFER_INVITED_ALRT.format(uss.mention))
