@@ -1,7 +1,7 @@
 import re
 import logging
 from pyrogram import Client, filters
-from info import DELETE_CHANNELS
+from info import DELETE_CHANNELS, MULTIPLE_DB
 from database.ia_filterdb import Media, Media2, unpack_new_file_id
 
 logger = logging.getLogger(__name__)
@@ -21,14 +21,9 @@ async def deletemultiplemedia(bot, message):
         return
 
     file_id, file_ref = unpack_new_file_id(media.file_id)
-    if await Media.count_documents({'file_id': file_id}):
-        result = await Media.collection.delete_one({
-            '_id': file_id,
-        })
-    else:
-        result = await Media2.collection.delete_one({
-            '_id': file_id,
-        })
+    result = await Media.collection.delete_one({'_id': file_id})
+    if not result.deleted_count and MULTIPLE_DB:
+        result = await Media2.collection.delete_one({'_id': file_id})
     if result.deleted_count:
         logger.info('File is successfully deleted from database.')
     else:

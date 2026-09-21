@@ -45,7 +45,8 @@ async def save_group(bot, message):
             text=script.BOT_ADD_TXT.format(message.chat.title),
             reply_markup=reply_markup)
         try:
-            await db.connect_group(message.chat.id, message.from_user.id)
+            if message.from_user:
+                await db.connect_group(message.chat.id, message.from_user.id)
         except Exception as e:
             logger.error(f"DB error connecting group: {e}")
     else:
@@ -123,7 +124,8 @@ async def disable_chat(bot, message):
     if cha_t['is_disabled']:
         return await message.reply(f"This chat is already disabled:\nReason-<code> {cha_t['reason']} </code>")
     await db.disable_chat(int(chat_), reason)
-    temp.BANNED_CHATS.append(int(chat_))
+    if int(chat_) not in temp.BANNED_CHATS:
+        temp.BANNED_CHATS.append(int(chat_))
     await message.reply('Chat Successfully Disabled')
     try:
         buttons = [[
@@ -154,7 +156,8 @@ async def re_enable_chat(bot, message):
     if not sts.get('is_disabled'):
         return await message.reply('This chat is not yet disabled.')
     await db.re_enable_chat(int(chat_))
-    temp.BANNED_CHATS.remove(int(chat_))
+    if int(chat_) in temp.BANNED_CHATS:
+        temp.BANNED_CHATS.remove(int(chat_))
     await message.reply("Chat Successfully re-enabled")
 
 
@@ -228,7 +231,7 @@ async def gen_invite(bot, message):
     try:
         link = await bot.create_chat_invite_link(chat)
     except ChatAdminRequired:
-        return await message.reply("Invite Link Generation Failed, Iam Not Having Sufficient Rights")
+        return await message.reply("Invite Link Generation Failed, I do not have sufficient rights.")
     except Exception as e:
         return await message.reply(f'Error {e}')
     await message.reply(f'Here is your Invite Link {link.invite_link}')
@@ -263,7 +266,8 @@ async def ban_a_user(bot, message):
         if jar['is_banned']:
             return await message.reply(f"{k.mention} is already banned\nReason: {jar['ban_reason']}")
         await db.ban_user(k.id, reason)
-        temp.BANNED_USERS.append(k.id)
+        if k.id not in temp.BANNED_USERS:
+            temp.BANNED_USERS.append(k.id)
         await message.reply(f"Successfully banned {k.mention}")
 
 
@@ -280,9 +284,9 @@ async def unban_a_user(bot, message):
     try:
         k = await bot.get_users(chat)
     except PeerIdInvalid:
-        return await message.reply("This is an invalid user, make sure ia have met him before.")
+        return await message.reply("This is an invalid user, make sure I have met him before.")
     except IndexError:
-        return await message.reply("Thismight be a channel, make sure its a user.")
+        return await message.reply("This might be a channel, make sure its a user.")
     except Exception as e:
         return await message.reply(f'Error - {e}')
     else:
@@ -290,7 +294,8 @@ async def unban_a_user(bot, message):
         if not jar['is_banned']:
             return await message.reply(f"{k.mention} is not yet banned.")
         await db.remove_ban(k.id)
-        temp.BANNED_USERS.remove(k.id)
+        if k.id in temp.BANNED_USERS:
+            temp.BANNED_USERS.remove(k.id)
         await message.reply(f"Successfully unbanned {k.mention}")
 
 
@@ -308,7 +313,7 @@ async def list_users(bot, message):
     try:
         await dreamxbotz.edit_text(out)
     except MessageTooLong:
-        with open('users.txt', 'w+') as outfile:
+        with open('users.txt', 'w+', encoding='utf-8') as outfile:
             outfile.write(out)
         await message.reply_document('users.txt', caption="List Of Users")
 
@@ -325,7 +330,7 @@ async def list_chats(bot, message):
     try:
         await dreamxbotz.edit_text(out)
     except MessageTooLong:
-        with open('chats.txt', 'w+') as outfile:
+        with open('chats.txt', 'w+', encoding='utf-8') as outfile:
             outfile.write(out)
         await message.reply_document('chats.txt', caption="List Of Chats")
 

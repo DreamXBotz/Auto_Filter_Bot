@@ -172,12 +172,15 @@ async def save_file(media):
     return True, 1
 
 async def get_search_results(chat_id, query, file_type=None, max_results=None, offset=0, filter=False):
-    if chat_id is not None and max_results is None:
-        settings = await get_settings(int(chat_id))
-        if "max_btn" not in settings:
-            await save_group_settings(int(chat_id), "max_btn", True)
-            settings["max_btn"] = True
-        max_results = 10 if settings["max_btn"] else int(MAX_B_TN)
+    if max_results is None:
+        if chat_id is not None:
+            settings = await get_settings(int(chat_id))
+            if "max_btn" not in settings:
+                await save_group_settings(int(chat_id), "max_btn", True)
+                settings["max_btn"] = True
+            max_results = 10 if settings["max_btn"] else int(MAX_B_TN)
+        else:
+            max_results = int(MAX_B_TN)
     if isinstance(query, list):
         raw_pattern = "|".join(re.escape(q.strip()) for q in query if q and q.strip())
         if not raw_pattern:

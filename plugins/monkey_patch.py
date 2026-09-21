@@ -12,6 +12,9 @@ from pyrogram.errors import FilePartMissing
 from pyrogram.file_id import FileType
 
 from pyrogram import Client
+import asyncio
+from pyrogram.types import LinkPreviewOptions, Message
+from pyrogram import StopPropagation
 
 pyro_log = logging.getLogger("pyrogram")
 pyro_log.setLevel(logging.WARNING)
@@ -541,9 +544,6 @@ CopyMessage.copy_message = custom_copy_message
 
 log.info("Custom Pyrogram methods have been applied.")
 
-import asyncio
-from pyrogram.types import LinkPreviewOptions, Message
-from pyrogram import StopPropagation
 
 if not getattr(Message, "_listen_patched", False):
     Message._listen_patched = True

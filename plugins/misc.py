@@ -1,10 +1,10 @@
 import logging
 import os
 from pyrogram import Client, filters, enums
-from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant, MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
+from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from utils import extract_user, get_file_id
 from datetime import datetime
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from database.ia_filterdb import dreamxbotz_get_movies, dreamxbotz_get_series
 from pyrogram.enums import ParseMode
 
@@ -141,7 +141,7 @@ async def dreamxbotz_list_series(client, message):
         series_data = await dreamxbotz_get_series()
         if not series_data:
             return await message.reply("❌ No Recent Series Found", parse_mode=ParseMode.HTML)       
-        msg = "<b>Latest Uploades List ✅</b>\n\n"
+        msg = "<b>Latest Uploads List ✅</b>\n\n"
         msg += "<b>📺 Series:</b>\n"
         for i, (title, seasons) in enumerate(series_data.items(), 1):
             season_list = ", ".join(f"{s}" for s in seasons)

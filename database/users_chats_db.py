@@ -240,7 +240,8 @@ class Database:
                 "last_verified": datetime.datetime(2020, 5, 17, 0, 0, 0, tzinfo=ist_timezone),
                 "second_time_verified": datetime.datetime(2019, 5, 17, 0, 0, 0, tzinfo=ist_timezone),
             }
-            user = await self.misc.insert_one(res)
+            await self.misc.insert_one(res)
+            return res
         return user
 
     async def update_notcopy_user(self, user_id, value:dict):
@@ -341,8 +342,12 @@ class Database:
             expiry_time = user_data.get("expiry_time")
             if expiry_time is None:
                 return False
-            elif isinstance(expiry_time, datetime.datetime) and datetime.datetime.now() <= expiry_time:
-                return True
+            elif isinstance(expiry_time, datetime.datetime):
+                now = datetime.datetime.now(expiry_time.tzinfo) if expiry_time.tzinfo else datetime.datetime.now()
+                if now <= expiry_time:
+                    return True
+                else:
+                    await self.users.update_one({"id": user_id}, {"$set": {"expiry_time": None}})
             else:
                 await self.users.update_one({"id": user_id}, {"$set": {"expiry_time": None}})
         return False

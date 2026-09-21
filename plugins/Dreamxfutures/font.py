@@ -44,7 +44,7 @@ async def style_buttons(c, m, cb=False):
             title = m.text.split(" ", 1)[1]
             await m.reply_text(title, reply_markup=InlineKeyboardMarkup(buttons))                     
         else:
-            await m.reply_text(text="Ente Any Text Eg:- `/font [text]`")    
+            await m.reply_text(text="Enter Any Text Eg:- `/font [text]`")    
     else:
         await m.answer()
         await m.message.edit_reply_markup(InlineKeyboardMarkup(buttons))
@@ -90,6 +90,7 @@ async def nxt(c, m):
 async def style(c, m):
     await m.answer()
     cmd, style = m.data.split('+')
+    cls = lambda x: x
 
     if style == 'typewriter':
         cls = Fonts.typewriter

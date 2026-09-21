@@ -41,6 +41,8 @@ SPELL_CHECK = {}
 
 @Client.on_message(filters.group & filters.text & filters.incoming & ~filters.regex(r"^/") )
 async def give_filter(client, message):
+    if not message.from_user:
+        return
     if EMOJI_MODE:
         try:
             await message.react(emoji=random.choice(REACTIONS), big=True)
@@ -78,7 +80,7 @@ async def give_filter(client, message):
 
 @Client.on_message(filters.private & filters.text & filters.incoming & ~filters.regex(r"^/") & ~filters.regex(r"(https?://)?(t\.me|telegram\.me|telegram\.dog)/"))
 async def pm_text(bot, message):
-    bot_id = bot.me.id
+    bot_id = temp.ME
     content = message.text
     user = message.from_user.first_name
     user_id = message.from_user.id
@@ -705,6 +707,7 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex(r"^fs#"))
 async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
+    start_t = datetime.now(pytz.timezone("Asia/Kolkata"))
     _, season_tag, req, key = query.data.split("#")
     search = FRESH.get(key).replace("_", " ")
     season_tag = season_tag.lower()
@@ -786,12 +789,7 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
                 "↭  Nᴏ ᴍᴏʀᴇ ᴘᴀɢᴇꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ↭", callback_data="pages")]
         )
     if not settings.get("button"):
-        curr_time = datetime.now(pytz.timezone("Asia/Kolkata")).time()
-        time_difference = timedelta(
-            hours=curr_time.hour,
-            minutes=curr_time.minute,
-            seconds=curr_time.second + curr_time.microsecond / 1_000_000,
-        )
+        time_difference = datetime.now(pytz.timezone("Asia/Kolkata")) - start_t
         remaining_seconds = f"{time_difference.total_seconds():.2f}"
         dreamx_title = clean_search_text(search_final)
         cap = await get_cap(settings, remaining_seconds, files, query, total_results, dreamx_title, offset=1)

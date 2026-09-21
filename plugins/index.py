@@ -77,9 +77,9 @@ async def send_for_index(bot, message):
     try:
         k = await bot.get_messages(chat_id, last_msg_id)
     except Exception:
-        return await message.reply('Make Sure That Iam An Admin In The Channel, if channel is private')
+        return await message.reply('Make sure that I am an admin in the channel, if channel is private.')
     if k.empty:
-        return await message.reply('This may be group and i am not a admin of the group.')
+        return await message.reply('This may be a group and I am not an admin of the group.')
 
     if message.from_user.id in ADMINS:
         buttons = [
@@ -106,16 +106,15 @@ async def send_for_index(bot, message):
     await bot.send_message(LOG_CHANNEL,
                            f'#IndexRequest\n\nBy : {message.from_user.mention} (<code>{message.from_user.id}</code>)\nChat ID/ Username - <code> {chat_id}</code>\nLast Message ID - <code>{last_msg_id}</code>\nInviteLink - {link}',
                            reply_markup=reply_markup)
-    await message.reply('ThankYou For the Contribution, Wait For My Moderators to verify the files.')
+    await message.reply('Thank you for the contribution, wait for our moderators to verify the files.')
 
 
 @Client.on_message(filters.command('setskip') & filters.user(ADMINS))
 async def set_skip_number(bot, message):
-    if ' ' in message.text:
-        _, skip = message.text.split(" ")
+    if len(message.command) > 1:
         try:
-            skip = int(skip)
-        except Exception:
+            skip = int(message.command[1])
+        except ValueError:
             return await message.reply("Skip number should be an integer.")
         await message.reply(f"Successfully set SKIP number as {skip}")
         temp.CURRENT = int(skip)
@@ -214,7 +213,7 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                 batch_times.append(batch_time)
                 elapsed = time.time() - start_time
                 progress = current - temp.CURRENT
-                percentage = (progress / total_fetch) * 100
+                percentage = (progress / total_fetch) * 100 if total_fetch > 0 else 100
                 avg_batch_time = sum(batch_times) / len(batch_times) if batch_times else 1
                 eta = (total_fetch - progress) / BATCH_SIZE * avg_batch_time
                 progress_bar = get_progress_bar(int(percentage))
@@ -234,8 +233,9 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data='index_cancel')]])
                 )
             elapsed = time.time() - start_time
+            status_title = "🛑 Indexing Cancelled!" if temp.CANCEL else "✅ Indexing Completed!"
             await msg.edit(
-                f"✅ Indexing Completed!\n"
+                f"{status_title}\n"
                 f"Total Messages: <code>{total_messages}</code>\n"
                 f"Total Fetched: <code>{total_fetch}</code>\n"
                 f"Fetched: <code>{current}</code>\n"

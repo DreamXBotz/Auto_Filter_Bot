@@ -105,7 +105,8 @@ if __name__ == '__main__':
         logger.info('Service started...')
         asyncio.run(dreamxbotz_start())
     except FloodWait as e:
-        logger.info(f"FloodWait! Sleeping for {e.value} seconds.")
+        logger.info(f"FloodWait! Sleeping for {e.value} seconds then restarting...")
         time.sleep(e.value)
+        asyncio.run(dreamxbotz_start())
     except KeyboardInterrupt:
         logger.info('Service stopped. Bye.')

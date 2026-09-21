@@ -7,9 +7,7 @@ from info import SUPPORT_CHAT, ADMINS
 import os
 
 async def banned_users(_, client, message: Message):
-    return (
-        message.from_user is not None or not message.sender_chat
-    ) and message.from_user.id in temp.BANNED_USERS
+    return bool(message.from_user and message.from_user.id in temp.BANNED_USERS)
 
 banned_user = filters.create(banned_users)
 
@@ -29,7 +27,7 @@ async def get_banned(client, message):
             text += f"Undefined (`{user_id}`)\n"
     
     if len(text) > 4096:
-        with open('banned_users.txt', 'w') as f:
+        with open('banned_users.txt', 'w', encoding='utf-8') as f:
             f.write(text)
         await message.reply_document('banned_users.txt')
         os.remove('banned_users.txt')
@@ -43,7 +41,7 @@ disabled_group=filters.create(disabled_chat)
 @Client.on_message(filters.private & banned_user & filters.incoming , group=-1)
 async def ban_reply(bot, message):
     ban = await db.get_ban_status(message.from_user.id)
-    await message.reply(f'Sorry Dude, You are Banned to use Me. \nBan Reason : {ban["ban_reason"]}')
+    await message.reply(f'Sorry Dude, You are Banned from using Me. \nBan Reason : {ban["ban_reason"]}')
     raise StopPropagation
 
 @Client.on_message(filters.group & disabled_group & filters.incoming , group=-1)
@@ -54,7 +52,7 @@ async def grp_bd(bot, message):
     reply_markup=InlineKeyboardMarkup(buttons)
     vazha = await db.get_chat(message.chat.id)
     k = await message.reply(
-        text=f"CHAT NOT ALLOWED 🐞\n\nMy admins has restricted me from working here ! If you want to know more about it contact support..\nReason : <code>{vazha['reason']}</code>.",
+        text=f"CHAT NOT ALLOWED 🐞\n\nMy admins have restricted me from working here ! If you want to know more about it contact support..\nReason : <code>{vazha['reason']}</code>.",
         reply_markup=reply_markup)
     try:
         await k.pin()

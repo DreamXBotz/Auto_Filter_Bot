@@ -40,7 +40,7 @@ async def broadcast_users(bot, message):
         await ask.delete()
         return await message.reply("❌ Timed out. Broadcast cancelled.")
     await ask.delete()
-    if dreamxbotz_user_response.text not in ("Yes", "No"):
+    if not dreamxbotz_user_response.text or dreamxbotz_user_response.text not in ("Yes", "No"):
         return await message.reply("❌ Invalid input. Broadcast cancelled.")
 
     is_pin = dreamxbotz_user_response.text == "Yes"
@@ -121,7 +121,7 @@ async def broadcast_group(bot, message):
         await ask.delete()
         return await message.reply("❌ Timed out. Broadcast cancelled.")
     await ask.delete()
-    if dreamxbotz_user_response.text not in ("Yes", "No"):
+    if not dreamxbotz_user_response.text or dreamxbotz_user_response.text not in ("Yes", "No"):
         return await message.reply("❌ Invalid input. Broadcast cancelled.")
     is_pin = dreamxbotz_user_response.text == "Yes"
     b_msg = message.reply_to_message
@@ -236,7 +236,7 @@ async def junk_clear_group(bot, message):
     time_taken = datetime.timedelta(seconds=int(time.time()-start_time))
     await sts.delete()
     try:
-        await bot.send_message(message.chat.id, f"Completed:\nCompleted in {time_taken} seconds.\n\nTotal Groups {total_groups}\nCompleted: {done} / {total_groups}\nDeleted: {deleted}\n\nFiled Reson:- {failed}")    
+        await bot.send_message(message.chat.id, f"Completed:\nCompleted in {time_taken} seconds.\n\nTotal Groups {total_groups}\nCompleted: {done} / {total_groups}\nDeleted: {deleted}\n\nFailed Reason:- {failed}")    
     except MessageTooLong:
         with open('junk.txt', 'w+') as outfile:
             outfile.write(failed)

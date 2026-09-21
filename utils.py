@@ -181,7 +181,7 @@ async def junk_group(chat_id, message):
     try:
         kk = await message.copy(chat_id=chat_id)
         await kk.delete(True)
-        return True, "Succes", 'mm'
+        return True, "Success", 'mm'
     except FloodWait as e:
         await asyncio.sleep(e.value)
         return await junk_group(chat_id, message)
@@ -675,8 +675,6 @@ async def group_setting_buttons(grp_id):
                 InlineKeyboardButton('ᴄᴜꜱᴛᴏᴍ ꜰꜱᴜʙ', callback_data=f'fsub_setgs#{grp_id}'),
             ],[
                 InlineKeyboardButton("Dᴇʟᴇᴛᴇ Gʀᴏᴜᴘ", callback_data=f"delete_group_check#{grp_id}", style=enums.ButtonStyle.DANGER)
-            ],[
-                InlineKeyboardButton("Rᴇᴍᴏᴠᴇ Gʀᴏᴜᴘ Cᴏɴɴᴇᴄᴛɪᴏɴ", callback_data=f"removegrp#{grp_id}", style=enums.ButtonStyle.DANGER)
             ],[
                 InlineKeyboardButton('⇋ ᴄʟᴏꜱᴇ ꜱᴇᴛᴛɪɴɢꜱ ᴍᴇɴᴜ ⇋', callback_data='close_data', style=enums.ButtonStyle.DANGER)
     ]]

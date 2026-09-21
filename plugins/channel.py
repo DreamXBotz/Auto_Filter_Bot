@@ -96,8 +96,9 @@ def normalize(s: str) -> str:
     s = NORMALIZE_PATTERN.sub(" ", s)
     return re.sub(r"\s+", " ", s).strip()
 
+IGNORE_WORDS_LOWER = {w.lower() for w in IGNORE_WORDS}
+
 def remove_ignored_words(text: str) -> str:
-    IGNORE_WORDS_LOWER = {w.lower() for w in IGNORE_WORDS}
     return " ".join(word for word in text.split() if word.lower() not in IGNORE_WORDS_LOWER)
 
 def get_qualities(text: str) -> str:
@@ -281,7 +282,7 @@ async def media_handler(bot, message):
 
     if success:
         try:
-            if await db.movie_update_status(bot.me.id):
+            if await db.movie_update_status(temp.ME):
                 await process_and_send_update(bot, file_name, message.caption)
         except Exception as e:
             logger.exception("Error in movie update")

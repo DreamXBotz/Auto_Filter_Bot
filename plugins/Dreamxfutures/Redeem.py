@@ -46,7 +46,7 @@ async def add_redeem_code(client, message):
             <b> <u>Click on the code above</u> to copy it instantly!</b>
             <b> <u>Send the copied code to the bot</u>\n to unlock your premium features!</b>
 
-            <b>🚀 Enjoy your premium access! 🔥</u></b>
+            <b>🚀 Enjoy your premium access! 🔥</b>
             """
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔑 Redeem Now 🔥", url=f"https://t.me/{temp.U_NAME}")]])
         await message.reply_text(text, reply_markup=keyboard)
@@ -62,7 +62,7 @@ async def redeem_code(client, message):
 
         if redeem_code in REDEEM_CODE:
             try:
-                time = REDEEM_CODE.pop(redeem_code)
+                time = REDEEM_CODE[redeem_code]
                 user = await client.get_users(user_id)
                 try:
                     seconds = await get_seconds(time)
@@ -86,6 +86,7 @@ async def redeem_code(client, message):
                             link_preview_options=LinkPreviewOptions(is_disabled=True)
                         )
                         return
+                    REDEEM_CODE.pop(redeem_code, None)
                     expiry_time = now_aware + timedelta(seconds=seconds)
                     user_data = {"id": user_id, "expiry_time": expiry_time}
                     await db.update_user(user_data)
