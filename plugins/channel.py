@@ -17,6 +17,15 @@ from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# FIXED: Added all quality/codec words to IGNORE for base_name grouping
+EXTRA_IGNORE = {
+    "x264", "x265", "h264", "h265", "hevc", "10bit", "8bit", "10-bit", "8-bit",
+    "10Bit", "8Bit", "x264", "x265", "X264", "X265", "HEVC", "10BIT",
+    "bluray", "blu-ray", "brrip", "bdrip", "webrip", "web-dl", "webdl", "hdrip",
+    "esub", "esubs", "subs", "sub", "aac", "ac3", "dts", "mp3", "flac",
+    "remux", "proper", "repack", "extended", "unrated", "directors", "cut"
+}
+
 IGNORE_WORDS = {
     "rarbg", "dub", "sub", "sample", "mkv", "aac", "combined",
     "action", "adventure", "animation", "biography", "comedy", "crime", 
@@ -32,7 +41,7 @@ IGNORE_WORDS = {
     "japanese", "nf", "netflix", "sonyliv", "sony", "sliv", "amzn", "prime", 
     "primevideo", "hotstar", "zee5", "jio", "jhs", "aha", "hbo", "paramount", 
     "apple", "hoichoi", "sunnxt", "viki"
-}|BAD_WORDS
+}|BAD_WORDS|EXTRA_IGNORE|{w.lower() for w in EXTRA_IGNORE}
 
 CAPTION_LANGUAGES = {
     "hin": "Hindi", "hindi": "Hindi",
@@ -65,10 +74,12 @@ STANDARD_GENRES = {
 }
 CLEAN_PATTERN = re.compile(r'@[^ \n\r\t\.,:;!?()\[\]{}<>\\/"\'=_%]+|\bwww\.[^\s\]\)]+|\([\@^]+\)|\[[\@^]+\]')
 NORMALIZE_PATTERN = re.compile(r"[._]+|[()\[\]{}:;'–!,.?_]")
+# FIXED: Quality pattern now includes codec and bluray etc
 QUALITY_PATTERN = re.compile(
     r"\b(?:HDCam|HDTC|CamRip|TS|TC|TeleSync|DVDScr|DVDRip|PreDVD|"
     r"WEBRip|WEB-DL|TVRip|HDTV|WEB DL|WebDl|BluRay|BRRip|BDRip|"
-    r"360p|480p|720p|1080p|2160p|4K|1440p|540p|240p|140p|HEVC|HDRip)\b", 
+    r"360p|480p|720p|1080p|2160p|4K|1440p|540p|240p|140p|HEVC|HDRip|"
+    r"x264|x265|h264|h265|10bit|8bit|10-bit|HEVC|BluRay|Bluray)\b", 
     re.IGNORECASE
 )
 YEAR_PATTERN = re.compile(r"(?<![A-Za-z0-9])(?:19|20)\d{2}(?![A-Za-z0-9])")
@@ -79,7 +90,6 @@ EP_ONLY_RANGE = re.compile(r'\b(?:EP|Episode)0*(\d{1,3})\s*-\s*0*(\d{1,3})\b',re
 
 locks = defaultdict(asyncio.Lock)
 pending_updates = {}
-error_tmdb = False
 
 def clean_mentions_links(text: str) -> str:
     return CLEAN_PATTERN.sub("", text or "").strip()
@@ -88,9 +98,12 @@ def normalize(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 def remove_ignored_words(text: str) -> str:
     IGNORE_WORDS_LOWER = {w.lower() for w in IGNORE_WORDS}
-    return " ".join(word for word in text.split() if word.lower() not in IGNORE_WORDS_LOWER)
+    # Also remove words like 10Bit, X265 case insensitive
+    return " ".join(word for word in text.split() if word.lower() not in IGNORE_WORDS_LOWER and word.lower() not in {w.lower() for w in EXTRA_IGNORE})
 def get_qualities(text: str) -> str:
     qualities = QUALITY_PATTERN.findall(text)
+    # Normalize to uppercase for final display but keep original case for detection
+    # Return as found, uppercasing will be done later
     return ", ".join(qualities) if qualities else "N/A"
 def extract_ott_platform(text: str) -> str:
     text = text.lower()
@@ -246,14 +259,10 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             genres = ", ".join(g for g in genre_list if g in STANDARD_GENRES) or "N/A"
         else:
             genres = ", ".join(g for g in raw_genres if g in STANDARD_GENRES) or "N/A"
-        
-        # FIX: Get runtime from TMDB/IMDB/OMDB
         runtime_raw = details.get("runtime", "N/A")
         if isinstance(runtime_raw, list):
             runtime_raw = ", ".join(str(x) for x in runtime_raw)
-        # Format runtime to 1h 51m style
         runtime_formatted = format_runtime(runtime_raw)
-
         movie_doc = {
             "_id": base_name,
             "files": [file_data],
@@ -285,30 +294,22 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         schedule_update(bot, base_name)
 
 def format_runtime(runtime_input):
-    """Convert runtime to HD PRO style: 1h 51m"""
     if not runtime_input or runtime_input == "N/A":
         return "N/A"
     runtime_str = str(runtime_input).strip()
-    # If already in 1h 51m format, return as is
     if "h" in runtime_str.lower() and "m" in runtime_str.lower():
         return runtime_str
-    # If format like "111 min" or "111"
     try:
-        # Extract numbers
         if "min" in runtime_str.lower():
             mins = int(re.search(r'\d+', runtime_str).group())
         else:
-            # Could be list like "120" or "120 min"
             nums = re.findall(r'\d+', runtime_str)
             if nums:
                 mins = int(nums[0])
-                # If runtime is like "2h 30m" already handled above, so mins is total minutes
-                # But if input is "120" it might be minutes
-                if mins < 10:  # likely hours?
+                if mins < 10:
                     return runtime_str
             else:
                 return runtime_str
-        
         h = mins // 60
         m = mins % 60
         if h > 0:
@@ -326,8 +327,14 @@ async def send_movie_update(bot, base_name):
             if not movie_doc:
                 return None
             text = generate_movie_message(movie_doc, base_name)
+            # BUTTON COLOR LOGIC: Movie = Green, Series = Blue
+            is_series = "#SERIES" in str(movie_doc.get("tag", "")) or any(f.get("season") for f in movie_doc.get("files", []))
+            if is_series:
+                btn_text = "🔵 ɢᴇᴛ ғɪʟᴇs"  # Blue for Series
+            else:
+                btn_text = "🟢 ɢᴇᴛ ғɪʟᴇs"  # Green for Movie
             buttons = InlineKeyboardMarkup([[
-                InlineKeyboardButton('ɢᴇᴛ ғɪʟᴇs',url=f"https://t.me/{temp.U_NAME}?start=getfile-{base_name.replace(' ', '-')}")
+                InlineKeyboardButton(btn_text, url=f"https://t.me/{temp.U_NAME}?start=getfile-{base_name.replace(' ', '-')}")
             ]])
             size=(2560, 1440) if LANDSCAPE_POSTER and TMDB_POSTER and movie_doc.get("is_backdrop") and not movie_doc.get("error_tmdb") else (853, 1280)
             if movie_doc.get("poster_url") and not LINK_PREVIEW:
@@ -361,8 +368,13 @@ async def update_movie_message(bot, base_name):
         if not movie_doc:
             return
         text = generate_movie_message(movie_doc, base_name)
+        is_series = "#SERIES" in str(movie_doc.get("tag", "")) or any(f.get("season") for f in movie_doc.get("files", []))
+        if is_series:
+            btn_text = "🔵 ɢᴇᴛ ғɪʟᴇs"
+        else:
+            btn_text = "🟢 ɢᴇᴛ ғɪʟᴇs"
         buttons = InlineKeyboardMarkup([[
-            InlineKeyboardButton('ɢᴇᴛ ғɪʟᴇs',url=f"https://t.me/{temp.U_NAME}?start=getfile-{base_name.replace(' ', '-')}")
+            InlineKeyboardButton(btn_text, url=f"https://t.me/{temp.U_NAME}?start=getfile-{base_name.replace(' ', '-')}")
         ]])
         message_id = movie_doc.get("message_id")
         is_photo = movie_doc.get("is_photo", False)
@@ -398,7 +410,9 @@ def generate_movie_message(movie_doc, base_name):
     episodes_by_season = defaultdict(set)
     for file in movie_doc["files"]:
         if file["quality"] != "N/A":
-            all_qualities.update(q.strip() for q in file["quality"].split(",") if q.strip())
+            # Split and uppercase for final display
+            quals = [q.strip().upper() for q in file["quality"].split(",") if q.strip()]
+            all_qualities.update(quals)
         if file["language"] != "N/A":
             all_languages.update(lang.strip() for lang in file["language"].split(",") if lang.strip())
         if file["ott_platform"] != "N/A":
@@ -456,7 +470,6 @@ def generate_movie_message(movie_doc, base_name):
     filename_display = base_name
     if year_val and filename_display.strip().endswith(year_val):
         filename_display = filename_display.strip()[:-len(year_val)].strip()
-    # FIXED: Added runtime parameter
     return script.MOVIE_UPDATE_NOTIFY_TXT.format(
         poster_url=movie_doc.get("poster_url", ""),
         imdb_url=movie_doc.get("imdb_url", ""),
