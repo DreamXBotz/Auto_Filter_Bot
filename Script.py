@@ -265,18 +265,19 @@ Mᴇꜱꜱᴀɢᴇ : <b>{}</b>"""
     
     CAPTION = """<b><a href="https://t.me/dreamxbotz">{file_name}</a></b>\n\n<b>⚜ Powered By : <a href="https://t.me/dreamxbotz">[ ᴅʀᴇᴀᴍxʙᴏᴛᴢ ]</a></b>"""
 
-    # === UPDATED WITH DIVIDER AND RUNTIME - HD PRO STYLE ===
+    # === FINAL V3 - TITLE OUTSIDE QUOTE, DIVIDER LOGIC, RUNTIME FIX ===
     MOVIE_UPDATE_NOTIFY_TXT = """
 <b><a href={poster_url}>📥</a><a href={imdb_url}>New {tag} Added</a></b>
 
-<blockquote>✨ ᴛɪᴛʟᴇ : <code>{filename} {year}</code>
+✨ ᴛɪᴛʟᴇ : <code>{filename} {year}</code>
 ⚬────────✧────────⚬
-🎭 ɢᴇɴʀᴇs : <b>{genres}</b>
-📺 ᴏᴛᴛ        : <b>{ott}</b>
+
+<blockquote>🎭 ɢᴇɴʀᴇs : <b>{genres}</b>
+📺 ᴏᴛᴛ : <b>{ott}</b>
 ⏰ ʀᴜɴᴛɪᴍᴇ : <b>{runtime}</b>
 🎞 ǫᴜᴀʟɪᴛʏ : <b>{quality}</b>
-🎧 ᴀᴜᴅɪᴏ    : <b>{language}</b>
-🔥 ʀᴀᴛɪɴɢ   : <b>{rating}/10</b>
+🎧 ᴀᴜᴅɪᴏ : <b>{language}</b>
+🔥 ʀᴀᴛɪɴɢ : <b>{rating}/10</b>
 {episodes}
 </blockquote>
 ⚬────────✧────────⚬
