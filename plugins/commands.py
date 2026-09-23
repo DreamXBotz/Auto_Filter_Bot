@@ -14,7 +14,7 @@ from database.refer import referdb
 from database.config_db import mdb
 from pyrogram.types import LinkPreviewOptions, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup
 from pyrogram import Client, filters, enums, StopPropagation
-from pyrogram.errors import FloodWait, UserNotParticipant , ChannelInvalid, PeerIdInvalid
+from pyrogram.errors import FloodWait, UserNotParticipant, ChannelInvalid, PeerIdInvalid, UserIsBlocked, InputUserDeactivated
 from database.ia_filterdb import Media, Media2, get_file_details, unpack_new_file_id, get_bad_files, save_file
 from database.users_chats_db import db
 from info import (
@@ -881,9 +881,13 @@ async def requests(bot, message):
 @Client.on_message(filters.command("send") & filters.user(ADMINS))
 async def send_msg(bot, message):
     if message.reply_to_message:
-        target_id = message.text.split(" ", 1)[1]
-        out = "Users Saved In DB Are:\n\n"
-        success = False
+        parts = message.text.split(" ", 1)
+        if len(parts) < 2:
+            return await message.reply_text("<b>ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ᴀꜱ ᴀ ʀᴇᴘʟʏ ᴛᴏ ᴀɴʏ ᴍᴇꜱꜱᴀɢᴇ ᴜꜱɪɴɢ ᴛʜᴇ ᴛᴀʀɢᴇᴛ ᴄʜᴀᴛ ɪᴅ. ꜰᴏʀ ᴇɢ:  /send ᴜꜱᴇʀɪᴅ</b>")
+        try:
+            target_id = int(parts[1])
+        except ValueError:
+            target_id = parts[1]
         try:
             user = await bot.get_users(target_id)
             users = await db.get_all_users()
@@ -898,7 +902,13 @@ async def send_msg(bot, message):
             if success:
                 await message.reply_text(f"<b>ʏᴏᴜʀ ᴍᴇꜱꜱᴀɢᴇ ʜᴀꜱ ʙᴇᴇɴ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ꜱᴇɴᴛ ᴛᴏ {user.mention}.</b>")
             else:
-                await message.reply_text("<b>ᴛʜɪꜱ ᴜꜱᴇʀ ᴅɪᴅɴ'ᴛ ꜱᴛᴀʀᴛᴇᴅ ᴛʜɪꜱ ʙᴏᴛ ʏᴇᴛ !</b>")
+                await message.reply_text("<b>Tʜɪꜱ ᴜꜱᴇʀ ʜᴀꜱɴ'ᴛ ꜱᴛᴀʀᴛᴇᴅ ᴛʜɪꜱ ʙᴏᴛ ʏᴇᴛ !</b>")
+        except UserIsBlocked:
+            await message.reply_text("<b>Tʜɪꜱ ᴜꜱᴇʀ ʜᴀꜱ ʙʟᴏᴄᴋᴇᴅ ᴛʜᴇ ʙᴏᴛ !</b>")
+        except PeerIdInvalid:
+            await message.reply_text("<b>Iɴᴠᴀʟɪᴅ ᴜꜱᴇʀ ɪᴅ, ᴏʀ ᴛʜᴇ ʙᴏᴛ ʜᴀꜱɴ'ᴛ ᴍᴇᴛ ᴛʜɪꜱ ᴜꜱᴇʀ ʏᴇᴛ !</b>")
+        except InputUserDeactivated:
+            await message.reply_text("<b>Tʜɪꜱ ᴜꜱᴇʀ ᴀᴄᴄᴏᴜɴᴛ ɪꜱ ᴅᴇʟᴇᴛᴇᴅ / ᴅᴇᴀᴄᴛɪᴠᴀᴛᴇᴅ !</b>")
         except Exception as e:
             await message.reply_text(f"<b>Error: {e}</b>")
     else:
