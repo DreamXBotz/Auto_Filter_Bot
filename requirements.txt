@@ -33,5 +33,6 @@ fuzzywuzzy
 python-Levenshtein==0.27.1
 
 # Git-based Packages
-git+https://github.com/DreamXBotz/cinemagoer
+cinemagoer==2023.5.1
+SQLAlchemy==1.4.54
 
