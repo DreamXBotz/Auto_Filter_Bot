@@ -141,20 +141,23 @@ def is_good_title_match(query: str, found_title: str) -> bool:
     return False
 
 def get_qualities(text: str) -> str:
-    # Enhanced: keep original but uppercase and include x264/x265
     if not text:
         return "N/A"
-    quals = QUALITY_PATTERN.findall(text)
-    extra = re.findall(r'\b(?:x264|x265|hevc|10bit|bluray|blu-ray)\b', text, re.IGNORECASE)
-    all_q = quals + extra
-    # Uppercase and dedup
+    quals = re.findall(r'(?:480p|720p|1080p|2160p|4K|WEB-DL|WEBRip|BluRay|HDRip)', text, re.IGNORECASE)
     seen = set()
     result = []
-    for q in all_q:
+    for q in quals:
         q_up = q.upper()
+        # Normalize
+        if q_up == "WEBRIP":
+            q_up = "WEBRip"
+        if q_up == "WEB-DL":
+            q_up = "WEB-DL"
         if q_up.lower() not in seen:
             seen.add(q_up.lower())
             result.append(q_up)
+    order = {"480P":0, "720P":1, "1080P":2, "2160P":3, "4K":4, "WEB-DL":5, "WEBRIP":6, "BLURAY":7, "HDRIP":8}
+    result.sort(key=lambda x: order.get(x.upper(), 99))
     return ", ".join(result) if result else "N/A"
 
 def extract_ott_platform(text: str) -> str:
@@ -649,7 +652,7 @@ def generate_movie_message(movie_doc, grouping_id):
             episode_lines.append(f"S{int(season)}: {', '.join(all_ep_parts)}")
         epi_str = "\n".join(episode_lines)
         if epi_str:
-            epi_block = f"📺 ᴇᴘɪsᴏᴅᴇs : <b>\n{epi_str}</b>"
+            epi_block = f"📺 ᴇᴘɪsᴏᴅᴇs : <b>{epi_str}</b>"
     genres = movie_doc.get("genres", "N/A")
     quality_str = ", ".join(sorted(all_qualities)) if all_qualities else "N/A"
     language_str = ", ".join(sorted(all_languages)) if all_languages else "N/A"
