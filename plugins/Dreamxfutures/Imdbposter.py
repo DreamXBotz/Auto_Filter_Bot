@@ -607,7 +607,7 @@ async def get_movie_detailsx(query, id=False, file=None):
     # Season poster priority
     if data.get('season_poster'):
         poster_url = data.get('season_poster')
-    details['poster_url'] = poster_url.replace("/original/", "/w1280/") if poster_url else None
+    details['poster_url'] = poster_url  # keep original HD
 
     # If still no poster, try Blogger then PosterFlix
     if not details['poster_url']:
@@ -626,5 +626,5 @@ async def get_movie_detailsx(query, id=False, file=None):
         if key and backdrops.get(key):
             backdrop_url = backdrops[key][0]
             break
-    details['backdrop_url'] = backdrop_url.replace("/original/", "/w1280/") if backdrop_url else None
+    details['backdrop_url'] = backdrop_url  # keep original HD
     return details
