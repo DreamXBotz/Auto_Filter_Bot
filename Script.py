@@ -277,7 +277,6 @@ Mᴇꜱꜱᴀɢᴇ : <b>{}</b>"""
 
 ✨ ᴛɪᴛʟᴇ : <code>{filename} {year}</code>
 ⚬────────✧────────⚬
-
 <blockquote>🎭 ɢᴇɴʀᴇs : <b>{genres}</b>
 📺 ᴏᴛᴛ : <b>{ott}</b>
 ⏰ ʀᴜɴᴛɪᴍᴇ : <b>{runtime}</b>
@@ -287,7 +286,6 @@ Mᴇꜱꜱᴀɢᴇ : <b>{}</b>"""
 {episodes}
 </blockquote>
 ⚬────────✧────────⚬
-
 🔍 <b>Sᴇᴀʀᴄʜ →</b> {search_link}
 """
 
