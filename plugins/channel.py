@@ -12,6 +12,12 @@ from info import CHANNELS, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, ABOVE_PREVIEW, BA
 from Script import script
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, LinkPreviewOptions
+try:
+    from pyrogram.types import KeyboardButtonStyle
+    HAS_STYLED = True
+except ImportError:
+    KeyboardButtonStyle = None
+    HAS_STYLED = False
 from utils import temp
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from pyrogram.errors import MessageIdInvalid, MessageNotModified, FloodWait
@@ -486,14 +492,13 @@ async def send_movie_update(bot, grouping_id):
                 return None
             text = generate_movie_message(movie_doc, grouping_id)
             is_series = movie_doc.get("tag") == "#SERIES" or any(f.get("season") for f in movie_doc.get("files", []))
-            btn_text = "🔵 ɢᴇᴛ ғɪʟᴇs" if is_series else "🟢 ɢᴇᴛ ғɪʟᴇs"
-            buttons = InlineKeyboardMarkup([[
-                InlineKeyboardButton(
-                    btn_text,
-                    url=f"https://t.me/{temp.U_NAME}?start=getfile-{grouping_id.replace(' ', '-')}"
-                )
-            ]])
-            size=(2560, 1440) if LANDSCAPE_POSTER and TMDB_POSTER and movie_doc.get("is_backdrop") and not movie_doc.get("error_tmdb") else (853, 1280)
+            btn_text = "ɢᴇᴛ ғɪʟᴇs"
+            if HAS_STYLED and KeyboardButtonStyle:
+                bstyle = KeyboardButtonStyle(bg_primary=True) if is_series else KeyboardButtonStyle(bg_success=True)
+                buttons = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, url=f"https://t.me/{temp.U_NAME}?start=getfile-{grouping_id.replace(' ', '-')}", style=bstyle)]])
+            else:
+                buttons = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, url=f"https://t.me/{temp.U_NAME}?start=getfile-{grouping_id.replace(' ', '-')}")]])
+            size=(2560, 1440) if LANDSCAPE_POSTER else (1280, 1920)
             if movie_doc.get("poster_url") and not LINK_PREVIEW:
                 resized_poster = await fetch_image(movie_doc["poster_url"], size)
                 if resized_poster:
@@ -547,13 +552,12 @@ async def update_movie_message(bot, grouping_id):
             return
         text = generate_movie_message(movie_doc, grouping_id)
         is_series = movie_doc.get("tag") == "#SERIES" or any(f.get("season") for f in movie_doc.get("files", []))
-        btn_text = "🔵 ɢᴇᴛ ғɪʟᴇs" if is_series else "🟢 ɢᴇᴛ ғɪʟᴇs"
-        buttons = InlineKeyboardMarkup([[
-            InlineKeyboardButton(
-                btn_text,
-                url=f"https://t.me/{temp.U_NAME}?start=getfile-{grouping_id.replace(' ', '-')}"
-            )
-        ]])
+        btn_text = "ɢᴇᴛ ғɪʟᴇs"
+        if HAS_STYLED and KeyboardButtonStyle:
+            bstyle = KeyboardButtonStyle(bg_primary=True) if is_series else KeyboardButtonStyle(bg_success=True)
+            buttons = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, url=f"https://t.me/{temp.U_NAME}?start=getfile-{grouping_id.replace(' ', '-')}", style=bstyle)]])
+        else:
+            buttons = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, url=f"https://t.me/{temp.U_NAME}?start=getfile-{grouping_id.replace(' ', '-')}")]])
         message_id = movie_doc.get("message_id")
         is_photo = movie_doc.get("is_photo", False)
         if not message_id:
