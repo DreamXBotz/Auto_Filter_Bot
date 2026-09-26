@@ -248,28 +248,44 @@ def extract_media_info(filename: str, caption: str):
         "language": language
     }
 
-
-@Client.on_message(filters.chat(CHANNELS) & MEDIA_FILTER)
+@Client.on_message(filters.chat(CHANNELS) & (filters.document | filters.video | filters.audio))
 async def media_handler(bot, message):
-    media = next(
-        (getattr(message, ft) for ft in ("document", "video", "audio")
-         if getattr(message, ft, None)),
-        None
-    )
-    if not media:
-        return
-
-    media.file_type = next(ft for ft in ("document", "video", "audio") if getattr(message, ft, None))
-    media.caption = message.caption or ""
-    success, info = await save_file(media)
-    if not success:
-        return
-
+    success = False
     try:
-        if await db.movie_update_status(temp.ME):
-            await process_and_send_update(bot, media.file_name, media.caption)
-    except Exception:
-        logger.exception("Error processing media")
+        media = message.document or message.video or message.audio
+        if not media:
+            return
+
+        file_id = media.file_id
+        file_name = getattr(media, "file_name", "")
+        file_size = getattr(media, "file_size", 0)
+
+        logger.info(f"File from {message.chat.id}: {file_name}")
+
+        media.file_type = next((ft for ft in ("document", "video", "audio") if getattr(message, ft, None)), None)
+        media.caption = message.caption or ""
+
+        lock = locks[file_id]
+        async with lock:
+            success, info = await save_file(media)
+            if success:
+                print("File saved")
+
+    except DuplicateKeyError:
+        pass
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+    except PyMongoError as e:
+        logger.error(f"MongoDB Error in media_handler: {e}")
+    except Exception as e:
+        logger.exception(f"Error processing media: {e}")
+
+    if success:
+        try:
+            if await db.movie_update_status(temp.ME):
+                await process_and_send_update(bot, file_name, message.caption)
+        except Exception as e:
+            logger.exception("Error in movie update")
 
 async def process_and_send_update(bot, filename, caption):
     try:
@@ -325,6 +341,7 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             "poster_url": details.get("backdrop_url") if LANDSCAPE_POSTER and TMDB_POSTER and details.get("backdrop_url") and not error_tmdb else details.get("poster_url"),
             "genres": genres,
             "rating": details.get("rating", "N/A"),
+            "runtime": details.get("runtime", "N/A"),
             "imdb_url": details.get("url", "")if not TMDB_POSTER or error_tmdb else details.get("tmdb_url"),
             "year": details.get("year") or media_info["year"],
             "tag": media_info["tag"],
@@ -555,6 +572,7 @@ def generate_movie_message(movie_doc, base_name):
         r = 0.0
 
     rating_text = "-" if r == 0.0 else str(rating)
+    runtime = movie_doc.get("runtime", "N/A")
     year_val = str(movie_doc.get("year") or "")
     filename_display = base_name
     if year_val and filename_display.strip().endswith(year_val):
@@ -567,6 +585,7 @@ def generate_movie_message(movie_doc, base_name):
         year=year_val,
         genres=genres,
         ott=ott_str,
+        runtime=runtime,
         quality=quality_str,
         language=language_str,
         episodes=epi_block,
