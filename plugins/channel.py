@@ -341,6 +341,7 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             "poster_url": details.get("backdrop_url") if LANDSCAPE_POSTER and TMDB_POSTER and details.get("backdrop_url") and not error_tmdb else details.get("poster_url"),
             "genres": genres,
             "rating": details.get("rating", "N/A"),
+            "runtime": details.get("runtime", "N/A"),
             "imdb_url": details.get("url", "")if not TMDB_POSTER or error_tmdb else details.get("tmdb_url"),
             "year": details.get("year") or media_info["year"],
             "tag": media_info["tag"],
@@ -571,6 +572,7 @@ def generate_movie_message(movie_doc, base_name):
         r = 0.0
 
     rating_text = "-" if r == 0.0 else str(rating)
+    runtime = movie_doc.get("runtime", "N/A")
     year_val = str(movie_doc.get("year") or "")
     filename_display = base_name
     if year_val and filename_display.strip().endswith(year_val):
@@ -583,6 +585,7 @@ def generate_movie_message(movie_doc, base_name):
         year=year_val,
         genres=genres,
         ott=ott_str,
+        runtime=runtime,
         quality=quality_str,
         language=language_str,
         episodes=epi_block,
