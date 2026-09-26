@@ -444,3 +444,16 @@ async def get_movie_detailsx(query, id=False, file=None):
     details['backdrop_url'] = backdrop_url.replace("/original/", "/w1280/") if backdrop_url else None
 
     return details
+
+# === FIX for ImportError - added missing functions ===
+async def get_blogger_poster_url(query, year=None):
+    return None
+
+async def get_posterflix_poster(query, year=None):
+    return None
+
+async def get_hdhub4u_data(query):
+    return None
+
+async def get_hdhub_base_url():
+    return "https://new6.hdhub4u.cl"
