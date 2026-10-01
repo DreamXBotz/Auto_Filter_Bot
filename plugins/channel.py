@@ -255,7 +255,6 @@ def extract_ott_platform(text: str) -> str:
 async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str) -> str:
     platforms = set()
 
-    # 1. TMDb Watch Providers API (Region IN / US)
     tmdb_id = tmdb_details.get("id") if isinstance(tmdb_details, dict) else None
     media_type = "tv" if (tmdb_details and tmdb_details.get("first_air_date")) else "movie"
     api_key = TMDB_API_KEY
@@ -279,14 +278,12 @@ async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str
         except Exception:
             pass
 
-    # 2. IMDb Details fallback
     if not platforms and imdb_details and isinstance(imdb_details, dict):
         raw_ott = f"{imdb_details.get('distributors', '')} {imdb_details.get('ott', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
             if re.search(rf"\b{re.escape(key)}\b", raw_ott):
                 platforms.add(plat)
 
-    # 3. File & Caption Regex Fallback
     if not platforms:
         unified_text = f"{filename} {caption}".lower()
         for key, plat in OTT_PLATFORMS.items():
@@ -573,7 +570,8 @@ def _strip_season_episode_tokens(name: str) -> str:
         r"\b[vV]\d+\b", r"\b(?:version|ver)\.?\s*\d+\b",
         r"\b(?:dd|ddp|ac3|eac3|aac)?\s*[257]\s*[._]\s*[01]\b", r"\b(?:dd|ddp)\s*[257]\b",
         r"\b(?:hin|hindi|tam|tamil|tel|telugu|mal|malayalam|kan|kannada|ben|bengali|mar|marathi|guj|gujarati|pun|punjabi|eng|english|kor|korean|jpn|japanese|dual|multi|audio|dubbed)\b",
-        r"\b(?:reloaded|uncut)\b"
+        r"\b(?:reloaded|uncut)\b",
+        r"\b(?:[hH][\s._-]*26[45]|[xX][\s._-]*26[45])\b"
     ]
     for p in patterns: name = re.sub(p, " ", name, flags=re.IGNORECASE)
     return normalize(name).strip()
@@ -763,7 +761,15 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         else:
             runtime = str(imdb_r).strip() if (imdb_r and str(imdb_r).strip().upper() not in ("N/A", "0")) else (str(tmdb_r).strip() if tmdb_r else final_file_runtime)
 
-        genres = tmdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else imdb_details.get("genres", "Drama"))
+        raw_g = tmdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else imdb_details.get("genres", "Drama"))
+        if isinstance(raw_g, list):
+            genres = ", ".join([str(x).strip(" '\"") for x in raw_g])
+        elif isinstance(raw_g, str):
+            clean_g = re.sub(r"[\[\]'\"]", "", raw_g)
+            genres = ", ".join([p.strip() for p in clean_g.split(",") if p.strip()])
+        else:
+            genres = "Drama"
+
         movie_year = media_info.get("year") or imdb_details.get("year")
 
         new_doc = {
@@ -920,7 +926,15 @@ def generate_movie_message(movie_doc, base_name):
                 episode_lines.append(f"S{int(season)}: {', '.join(collapsed)}")
         if episode_lines: epi_block = f"\n📺 ᴇᴘɪsᴏᴅᴇs : <b>{chr(10).join(episode_lines)}</b>"
 
-    genres = movie_doc.get("genres", "Drama")
+    raw_g = movie_doc.get("genres", "Drama")
+    if isinstance(raw_g, list):
+        genres = ", ".join([str(x).strip(" '\"") for x in raw_g])
+    elif isinstance(raw_g, str):
+        clean_g = re.sub(r"[\[\]'\"]", "", raw_g)
+        genres = ", ".join([p.strip() for p in clean_g.split(",") if p.strip()])
+    else:
+        genres = "Drama"
+
     quality_str = format_movie_qualities(all_raw_qualities)
     language_str = ", ".join(sorted(all_languages)) if all_languages else "Hindi"
     ott_str = " | ".join(sorted(all_ott_platforms)) if all_ott_platforms else "N/A"
