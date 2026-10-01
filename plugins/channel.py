@@ -1,4 +1,6 @@
+import os
 import re
+import json
 import logging
 import asyncio
 import aiohttp
@@ -22,6 +24,12 @@ from typing import Optional, Tuple
 logger = logging.getLogger(__name__)
 
 DEFAULT_HDHUB_DOMAIN = "https://new1.hdhub4u.free"
+
+# Read Gemini API Key safely from info.py or environment variables
+try:
+    from info import GEMINI_API_KEY
+except ImportError:
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 _BASE_IGNORE_WORDS = {
     "rarbg", "dub", "sub", "sample", "mkv", "mp4", "avi", "aac", "ac3", "eac3", "ddp", "ddp5", "atmos", "dts",
@@ -168,6 +176,36 @@ def is_good_title_match(query: str, found_title: str) -> bool:
         return True
     return False
 
+# =========================================================================
+# STATELESS GEMINI AI SINGLE-REQUEST IDENTIFIER
+# =========================================================================
+async def identify_movie_with_gemini(filename: str) -> dict:
+    if not GEMINI_API_KEY:
+        return {}
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    prompt = (
+        f"You are a movie identification system. Given this filename: '{filename}', identify the official movie or series name, "
+        f"its release year, whether it is a series or movie, and which official OTT streaming platform(s) it streams on in India (e.g. Netflix, Amazon Prime Video, JioCinema, SonyLiv, Zee5, Disney+ Hotstar, etc.). "
+        f"Return ONLY valid raw JSON with keys: 'title' (string, main movie name only without junk), 'year' (string or null), 'is_series' (boolean), 'ott' (list of strings). No markdown formatting, no code blocks."
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
+    }
+    timeout = aiohttp.ClientTimeout(total=5)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(endpoint, json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                    raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
+                    parsed = json.loads(raw_text)
+                    return parsed
+    except Exception as e:
+        logger.warning(f"Gemini AI Identification failed: {e}")
+    return {}
+
 def get_qualities(text: str) -> str:
     if not text:
         return "N/A"
@@ -252,14 +290,21 @@ def extract_ott_platform(text: str) -> str:
     platforms = {plat for key, plat in OTT_PLATFORMS.items() if re.search(rf"\b{re.escape(key)}\b", text)}
     return " | ".join(sorted(platforms)) if platforms else "N/A"
 
-async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str) -> str:
+async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str, ai_ott: list = None) -> str:
     platforms = set()
+
+    if ai_ott and isinstance(ai_ott, list):
+        for item in ai_ott:
+            clean_item = str(item).lower()
+            for key, plat in OTT_PLATFORMS.items():
+                if re.search(rf"\b{re.escape(key)}\b", clean_item):
+                    platforms.add(plat)
 
     tmdb_id = tmdb_details.get("id") if isinstance(tmdb_details, dict) else None
     media_type = "tv" if (tmdb_details and tmdb_details.get("first_air_date")) else "movie"
     api_key = TMDB_API_KEY
 
-    if tmdb_id and api_key:
+    if not platforms and tmdb_id and api_key:
         try:
             prov_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/watch/providers?api_key={api_key}"
             timeout = aiohttp.ClientTimeout(total=5)
@@ -576,7 +621,7 @@ def _strip_season_episode_tokens(name: str) -> str:
     for p in patterns: name = re.sub(p, " ", name, flags=re.IGNORECASE)
     return normalize(name).strip()
 
-def extract_media_info(filename: str, caption: str):
+async def extract_media_info_ai(filename: str, caption: str):
     filename_clean = clean_mentions_links(filename)
     unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
@@ -589,15 +634,44 @@ def extract_media_info(filename: str, caption: str):
     lang_keys = {k for k in CAPTION_LANGUAGES if re.search(rf"\b{re.escape(k)}\b", unified)}
     language = ", ".join(sorted({CAPTION_LANGUAGES[k] for k in lang_keys})) if lang_keys else "N/A"
 
-    year_match = YEAR_PATTERN.search(unified)
-    year = year_match.group(0) if year_match else None
-
     base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
-    base_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
-    base_name = normalize(base_name).strip()
+    prelim_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
+    clean_search = get_clean_title(prelim_name)
 
-    if year and year not in base_name: base_name = f"{base_name} {year}"
-    if season is not None: base_name = f"{base_name} Season {season}"
+    # Database Cache First: Do not query Gemini if already exists in Mongo
+    cached_doc = None
+    if hasattr(db, "movie_updates"):
+        cached_doc = await db.movie_updates.find_one({"clean_title": clean_search})
+
+    ai_data = {}
+    if not cached_doc and GEMINI_API_KEY:
+        ai_data = await identify_movie_with_gemini(filename_clean)
+
+    ai_title = ai_data.get("title")
+    ai_year = ai_data.get("year")
+    ai_ott = ai_data.get("ott", [])
+
+    if ai_data.get("is_series"):
+        tag = "#SERIES"
+
+    year = str(ai_year) if ai_year else None
+    if not year:
+        year_match = YEAR_PATTERN.search(unified)
+        year = year_match.group(0) if year_match else None
+
+    if cached_doc:
+        base_name = cached_doc["_id"]
+    elif ai_title:
+        base_name = normalize(ai_title)
+        if year and year not in base_name and tag != "#SERIES":
+            base_name = f"{base_name} {year}"
+    else:
+        base_name = prelim_name
+        if year and year not in base_name: base_name = f"{base_name} {year}"
+
+    if season is not None and "Season" not in base_name:
+        base_name = f"{base_name} Season {season}"
+
     if not base_name: base_name = normalize(filename_clean)
 
     return {
@@ -609,7 +683,8 @@ def extract_media_info(filename: str, caption: str):
         "year": year,
         "quality": quality,
         "ott_platform": ott_platform,
-        "language": language
+        "language": language,
+        "ai_ott": ai_ott
     }
 
 async def is_admin_user(user_id):
@@ -651,7 +726,7 @@ async def media_handler(bot, message):
 
 async def process_and_send_update(bot, filename, caption, file_runtime_mins=None):
     try:
-        media_info = extract_media_info(filename, caption)
+        media_info = await extract_media_info_ai(filename, caption)
         base_name = media_info["base_name"]
         processed = media_info["processed"]
 
@@ -711,7 +786,7 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         tmdb_query = imdb_id if (imdb_id and imdb_id.startswith("tt")) else official_search_title
         tmdb_details = await fetch_tmdb_safely(tmdb_query, base_name, is_series)
 
-        ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption)
+        ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption, media_info.get("ai_ott"))
         file_data["ott_platform"] = ott_platform
 
         poster_url = ""
