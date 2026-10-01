@@ -23,47 +23,34 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HDHUB_DOMAIN = "https://new1.hdhub4u.free"
 
-# =========================================================================
-# INTELLIGENT JUNK & PIRACY STRIPPER (HANDLES 10K+ COMBINATIONS VIA PATTERNS)
-# =========================================================================
-PIRACY_JUNK_REGEX = re.compile(
-    r'\b(?:'
-    r'x264|x265|h264|h265|hevc|avc|xvid|divx|10bit|10-bit|8bit|8-bit|dovi|hdr10\+|hdr10|hdr|dv|sdr|'
-    r'aac|ac3|eac3|ddp5\.1|ddp5|dd5\.1|ddp|dd|atmos|dts-hd|dts|truehd|mp3|flac|opus|wav|5\.1ch|7\.1ch|2\.0ch|5\.1|7\.1|2\.0|'
-    r'dual[\s._-]*audio|multi[\s._-]*audio|dubbed|dub|sub|subs|esub|esubs|msub|hardsub|softsub|'
-    r'clean[\s._-]*audio|line[\s._-]*audio|hq[\s._-]*line|hq[\s._-]*mic|mic[\s._-]*audio|original[\s._-]*audio|org[\s._-]*audio|org|'
-    r'hdcam|hdtc|camrip|cam|hq-cam|hdts|hq-ts|tc|telesync|tele-sync|dvdscr|dvdrip|predvd|hq-predvd|'
-    r'webrip|web-dl|webdl|web|dl|tvrip|hdtv|bluray|blu-ray|brrip|bdrip|remux|imax|proper|repack|'
-    r'unrated|extended|directors[\s._-]*cut|special[\s._-]*edition|reloaded|uncut|censored|uncensored|the[\s._-]*rule|rule|'
-    r'140p|240p|360p|480p|540p|720p|1080p|1440p|2160p|4k|2k|uhd|fhd|sd|'
-    r'v1|v2|v3|v4|v5|v6|v7|v8|v9|ver1|ver2|version|ver|'
-    r'rarbg|yts|yify|ettv|galaxytv|tgx|psa|pahe|mkvcinemas|hdhub4u|moviesmod|skymovieshd|extraflix|'
-    r'1tamilmv|tamilblasters|cinevood|themoviesboss|toonworld4all|bolly4u|9xmovies|filmywap|worldfree4u|'
-    r'katmoviehd|hdm2|primefix|mkv|mp4|avi|wmv|mov|flv|webm|ts|sample|combined|part|vol|volume|chapter'
-    r')\b',
-    re.IGNORECASE
-)
+_BASE_IGNORE_WORDS = {
+    "rarbg", "dub", "sub", "sample", "mkv", "mp4", "avi", "aac", "ac3", "eac3", "ddp", "ddp5", "atmos", "dts",
+    "combined", "esub", "msub", "proper", "repack", "unrated", "extended", "imax", "remux", "10bit", "10-bit",
+    "x264", "x265", "h264", "h265", "hevc", "avc", "dovi", "hdr", "hdr10", "hdr10+",
+    "web", "dl", "bonus", "special", "ott", "reloaded", "uncut",
+    "action", "adventure", "animation", "biography", "comedy", "crime",
+    "documentary", "drama", "fantasy", "film-noir", "history",
+    "horror", "music", "musical", "mystery", "romance", "sci-fi", "sport",
+    "thriller", "war", "western", "hdcam", "hdtc", "camrip", "cam", "ts", "tc", "hdts",
+    "telesync", "dvdscr", "dvdrip", "predvd", "webrip", "web-dl", "tvrip",
+    "hdtv", "web dl", "webdl", "bluray", "brrip", "bdrip", "360p", "480p",
+    "720p", "1080p", "2160p", "4k", "1440p", "540p", "240p", "140p",
+    "hdrip", "hq-hdrip", "hq-hdtc", "hq-cam", "hq-ts", "hq-predvd",
+    "dual", "multi", "audio", "dubbed",
+    "v1", "v2", "v3", "v4", "v5", "v6", "version", "ver", "cleaned", "clean",
+    "nf", "netflix", "sonyliv", "sony", "sliv", "amzn", "prime",
+    "primevideo", "hotstar", "zee5", "jio", "jhs", "aha", "hbo", "paramount",
+    "apple", "atv", "atvp", "appletv", "hoichoi", "sunnxt", "viki", "cr", "crunchyroll", "hulu",
+    "disney", "dnp", "lionsgate", "lionsgateplay", "peacock", "max", "alt",
+    "altbalaji", "altt", "shemaroo", "shemaroome", "chaupal", "stage",
+    "planetmarathi", "manorama", "manoramamax", "tubi", "mxplayer", "mxtv", "eros", "erosnow",
+    "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "dd5.1", "ddp5.1", "dd", "ddp",
+    "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada",
+    "ben", "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "eng", "english",
+    "kor", "korean", "jpn", "japanese", "chi", "chinese", "spa", "spanish", "fre", "french"
+}
 
-LANGUAGE_TOKENS_REGEX = re.compile(
-    r'\b(?:'
-    r'hin|hindi|tam|tamil|tel|telugu|mal|malayalam|kan|kannada|ben|bengali|mar|marathi|'
-    r'guj|gujarati|pun|punjabi|urd|urdu|bho|bhojpuri|ori|odia|oriya|asm|assamese|'
-    r'eng|english|spa|spanish|fre|french|ger|german|ita|italian|rus|russian|'
-    r'kor|korean|jpn|japanese|chi|chinese|tha|thai|ind|indonesian'
-    r')\b',
-    re.IGNORECASE
-)
-
-OTT_TOKENS_REGEX = re.compile(
-    r'\b(?:'
-    r'ott|nf|netflix|sonyliv|sony|sliv|amzn|prime|primevideo|amazon|hotstar|zee5|'
-    r'jio|jhs|jiohotstar|jiocinema|aha|hbo|paramount|apple|atv|atvp|appletv|'
-    r'hoichoi|sunnxt|viki|cr|crunchyroll|hulu|disney|dnp|lionsgate|lionsgateplay|'
-    r'peacock|max|alt|altbalaji|altt|shemaroo|shemaroome|chaupal|stage|planetmarathi|'
-    r'manorama|manoramamax|tubi|mxplayer|mxtv|eros|erosnow'
-    r')\b',
-    re.IGNORECASE
-)
+IGNORE_WORDS = _BASE_IGNORE_WORDS | set(BAD_WORDS if isinstance(BAD_WORDS, (list, tuple, set)) else [])
 
 CAPTION_LANGUAGES = {
     "hin": "Hindi", "hindi": "Hindi", "tam": "Tamil", "tamil": "Tamil",
@@ -163,22 +150,18 @@ def normalize(s: str) -> str:
     s = NORMALIZE_PATTERN.sub(" ", s)
     return re.sub(r"\s+", " ", s).strip()
 
-def clean_all_junk(text: str) -> str:
-    t = PIRACY_JUNK_REGEX.sub(" ", text)
-    t = LANGUAGE_TOKENS_REGEX.sub(" ", t)
-    t = OTT_TOKENS_REGEX.sub(" ", t)
-    if isinstance(BAD_WORDS, (list, tuple, set)):
-        for b in BAD_WORDS:
-            t = re.sub(rf'\b{re.escape(str(b))}\b', ' ', t, flags=re.IGNORECASE)
-    return normalize(t)
+def remove_ignored_words(text: str) -> str:
+    ignore_words_lower = {w.lower() for w in IGNORE_WORDS}
+    words = [w for w in text.split() if w.lower() not in ignore_words_lower]
+    return " ".join(words) if words else text
 
 def is_good_title_match(query: str, found_title: str) -> bool:
     if not query or not found_title:
         return False
-    q_clean = clean_all_junk(YEAR_PATTERN.sub('', query))
-    f_clean = clean_all_junk(YEAR_PATTERN.sub('', found_title))
-    q_words = [w for w in q_clean.lower().split() if len(w) >= 2]
-    f_words = [w for w in f_clean.lower().split() if len(w) >= 2]
+    q_clean = normalize(YEAR_PATTERN.sub('', query)).lower()
+    f_clean = normalize(YEAR_PATTERN.sub('', found_title)).lower()
+    q_words = [w for w in q_clean.split() if len(w) >= 2]
+    f_words = [w for w in f_clean.split() if len(w) >= 2]
     if not q_words or not f_words:
         return False
     if q_words == f_words or all(qw in f_words for qw in q_words):
@@ -269,13 +252,10 @@ def extract_ott_platform(text: str) -> str:
     platforms = {plat for key, plat in OTT_PLATFORMS.items() if re.search(rf"\b{re.escape(key)}\b", text)}
     return " | ".join(sorted(platforms)) if platforms else "N/A"
 
-# =========================================================================
-# ULTRA POWERFUL OTT ENGINE (Direct TMDb /watch/providers with Region IN)
-# =========================================================================
 async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str) -> str:
     platforms = set()
 
-    # 1. Direct TMDb Watch Providers API (Primary & Most Reliable)
+    # 1. TMDb Watch Providers API (Region IN / US)
     tmdb_id = tmdb_details.get("id") if isinstance(tmdb_details, dict) else None
     media_type = "tv" if (tmdb_details and tmdb_details.get("first_air_date")) else "movie"
     api_key = TMDB_API_KEY
@@ -296,10 +276,10 @@ async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str
                             for key, plat in OTT_PLATFORMS.items():
                                 if re.search(rf"\b{re.escape(key)}\b", p_name):
                                     platforms.add(plat)
-        except Exception as e:
-            logger.warning(f"TMDb watch providers fetch failed: {e}")
+        except Exception:
+            pass
 
-    # 2. IMDb Priority
+    # 2. IMDb Details fallback
     if not platforms and imdb_details and isinstance(imdb_details, dict):
         raw_ott = f"{imdb_details.get('distributors', '')} {imdb_details.get('ott', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
@@ -321,7 +301,7 @@ async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str
 
 def get_clean_title(name: str) -> str:
     t = re.sub(r'\b(19|20)\d{2}\b', '', name)
-    return clean_all_junk(t).lower()
+    return normalize(t).lower()
 
 def format_runtime(runtime_val, is_series: bool = False) -> str:
     if not runtime_val or str(runtime_val).strip().upper() in ("N/A", "NONE", "0", "-", ""):
@@ -365,73 +345,13 @@ def format_runtime(runtime_val, is_series: bool = False) -> str:
     else:
         return f"{total_mins}m"
 
-# =========================================================================
-# INTELLIGENT MATCHING: TMDB / IMDB FUZZY CANDIDATE LOOKUP WITH RUNTIME CHECK
-# =========================================================================
-async def fetch_tmdb_safely_intelligent(title: str, year: Optional[str] = None, file_runtime: Optional[int] = None, is_series: bool = False) -> dict:
-    if not TMDB_API_KEY:
-        return {}
-    try:
-        clean_q = clean_all_junk(re.sub(r'\b(19|20)\d{2}\b', '', title)).strip()
-        media_type = "tv" if is_series else "movie"
-        url = f"https://api.themoviedb.org/3/search/{media_type}?api_key={TMDB_API_KEY}&query={quote_plus(clean_q)}"
-        if year and not is_series:
-            url += f"&year={year}"
-
-        timeout = aiohttp.ClientTimeout(total=6)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return {}
-                data = await resp.json()
-
-        results = data.get("results", [])
-        if not results:
-            return {}
-
-        best_candidate = results[0]
-        # Runtime Intelligence: If file duration is present, compare candidates
-        if file_runtime and not is_series and len(results) > 1:
-            for item in results[:5]:
-                item_id = item.get("id")
-                detail_url = f"https://api.themoviedb.org/3/movie/{item_id}?api_key={TMDB_API_KEY}"
-                async with session.get(detail_url) as d_resp:
-                    if d_resp.status == 200:
-                        d_data = await d_resp.json()
-                        tmdb_rt = d_data.get("runtime") or 0
-                        if tmdb_rt and abs(tmdb_rt - file_runtime) <= 25:
-                            best_candidate = item
-                            break
-
-        target_id = best_candidate.get("id")
-        detail_url = f"https://api.themoviedb.org/3/{media_type}/{target_id}?api_key={TMDB_API_KEY}&append_to_response=watch/providers"
-        async with session.get(detail_url) as d_resp:
-            if d_resp.status == 200:
-                res = await d_resp.json()
-                backdrop = f"https://image.tmdb.org/t/p/original{res['backdrop_path']}" if res.get("backdrop_path") else None
-                poster = f"https://image.tmdb.org/t/p/original{res['poster_path']}" if res.get("poster_path") else None
-                return {
-                    "id": res.get("id"),
-                    "title": res.get("title") or res.get("name"),
-                    "rating": res.get("vote_average"),
-                    "runtime": res.get("runtime"),
-                    "episode_run_time": res.get("episode_run_time"),
-                    "backdrop_url": backdrop,
-                    "poster_url": poster,
-                    "genres": ", ".join([g["name"] for g in res.get("genres", [])]),
-                    "first_air_date": res.get("first_air_date")
-                }
-    except Exception as e:
-        logger.warning(f"Error in intelligent TMDb search: {e}")
-    return {}
-
 async def fetch_imdb_safely(base_name: str, is_series: bool, year: Optional[str] = None) -> dict:
     sig = inspect.signature(get_movie_details)
     kwargs = {}
     if "is_series" in sig.parameters: kwargs["is_series"] = is_series
     elif "media_type" in sig.parameters: kwargs["media_type"] = "tv" if is_series else "movie"
 
-    search_name = clean_all_junk(re.sub(r'\s+Season\s*\d+', '', base_name, flags=re.IGNORECASE)).strip()
+    search_name = re.sub(r'\s+Season\s*\d+', '', base_name, flags=re.IGNORECASE).strip()
     queries = [f"{search_name} {year}".strip() if year else search_name, search_name]
 
     for q in queries:
@@ -442,6 +362,68 @@ async def fetch_imdb_safely(base_name: str, is_series: bool, year: Optional[str]
         except Exception:
             pass
     return {}
+
+async def fetch_tmdb_safely(tmdb_query: str, base_name: str, is_series: bool) -> dict:
+    if not TMDB_POSTER:
+        return {}
+    sig = inspect.signature(get_movie_detailsx)
+    kwargs = {}
+    if "is_series" in sig.parameters: kwargs["is_series"] = is_series
+    elif "media_type" in sig.parameters: kwargs["media_type"] = "tv" if is_series else "movie"
+
+    if tmdb_query and tmdb_query.startswith("tt"):
+        try:
+            res = await get_movie_detailsx(tmdb_query, **kwargs) if kwargs else await get_movie_detailsx(tmdb_query)
+            if res and not res.get("error"):
+                return res
+        except Exception:
+            pass
+
+    queries = []
+    if is_series:
+        clean_s = re.sub(r'\s+Season\s*\d+', '', base_name, flags=re.IGNORECASE).strip()
+        queries.append(clean_s)
+        queries.append(base_name)
+    else:
+        queries.append(tmdb_query or base_name)
+        queries.append(base_name)
+
+    best_fallback = {}
+    for q in queries:
+        try:
+            res = await get_movie_detailsx(q, **kwargs) if kwargs else await get_movie_detailsx(q)
+            if res and not res.get("error"):
+                title = res.get("title") or res.get("name")
+                if title and is_good_title_match(base_name, title):
+                    return res
+                if not best_fallback:
+                    best_fallback = res
+        except Exception:
+            pass
+    return best_fallback
+
+async def search_tmdb_backdrop_force(title: str, year: Optional[str] = None, is_series: bool = False) -> Optional[str]:
+    try:
+        api_key = TMDB_API_KEY
+        if not api_key:
+            return None
+        clean_q = normalize(re.sub(r'\b(19|20)\d{2}\b', '', title)).strip()
+        media_type = "tv" if is_series else "movie"
+        url = f"https://api.themoviedb.org/3/search/{media_type}?api_key={api_key}&query={quote_plus(clean_q)}"
+        if year and not is_series:
+            url += f"&year={year}"
+
+        timeout = aiohttp.ClientTimeout(total=5)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    for item in data.get("results", []):
+                        if item.get("backdrop_path"):
+                            return f"https://image.tmdb.org/t/p/original{item['backdrop_path']}"
+    except Exception:
+        pass
+    return None
 
 async def get_hdhub_base_url() -> str:
     try:
@@ -463,7 +445,7 @@ async def get_blogger_poster_url(base_name: str, year: Optional[str] = None) -> 
                 if resp.status != 200: return None
                 data = await resp.json()
 
-        clean_query = f"{clean_all_junk(base_name)} {year}".strip() if year else clean_all_junk(base_name)
+        clean_query = f"{normalize(base_name)} {year}".strip() if year else normalize(base_name)
         for entry in data.get("feed", {}).get("entry", []):
             post_title = entry.get("title", {}).get("$t", "")
             if is_good_title_match(clean_query, post_title):
@@ -483,7 +465,7 @@ async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
     genres, rating, info_url, is_series = "N/A", "N/A", "", False
     try:
         base_url = await get_hdhub_base_url() or DEFAULT_HDHUB_DOMAIN
-        clean_query = clean_all_junk(re.sub(r'\b(?:19|20)\d{2}\b', '', base_name)).strip()
+        clean_query = normalize(re.sub(r'\b(?:19|20)\d{2}\b', '', base_name)).strip()
         search_words = [w for w in clean_query.split() if len(w) >= 2][:3]
         search_url = f"{base_url.rstrip('/')}/?s={'+'.join(search_words) if search_words else clean_query}"
 
@@ -492,7 +474,7 @@ async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
             "Referer": base_url
         }
 
-        timeout = aiohttp.ClientTimeout(total=8)
+        timeout = aiohttp.ClientTimeout(total=7)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(search_url, headers=headers, allow_redirects=True) as resp:
                 if resp.status != 200: return "N/A", "N/A", "", False
@@ -581,9 +563,24 @@ def schedule_update(bot, base_name, delay=8):
 
     pending_updates[base_name] = loop.call_later(delay, lambda: asyncio.create_task(wrapper()))
 
+def _strip_season_episode_tokens(name: str) -> str:
+    if not name: return name
+    patterns = [
+        r"\bS\d{1,2}[\s._-]*(?:Bonus|Special)[\s._-]*(?:E(?:p(?:isode)?)?)?0*\d{1,3}\b",
+        r"\b(?:Bonus|Special)[\s._-]*Ep(?:isode)?\.?\s*\d{1,3}\b",
+        r"\bS\d{1,2}E\d{1,3}\b", r"\bS\d{1,2}\b", r"\bE\d{1,3}\b", r"\b\d{1,2}x\d{1,3}\b",
+        r"\bSeason\s*\d{1,2}\b", r"\bEp(?:isode)?\.?\s*\d{1,3}\b", r"\bEpisode\s*\d{1,3}\b",
+        r"\b[vV]\d+\b", r"\b(?:version|ver)\.?\s*\d+\b",
+        r"\b(?:dd|ddp|ac3|eac3|aac)?\s*[257]\s*[._]\s*[01]\b", r"\b(?:dd|ddp)\s*[257]\b",
+        r"\b(?:hin|hindi|tam|tamil|tel|telugu|mal|malayalam|kan|kannada|ben|bengali|mar|marathi|guj|gujarati|pun|punjabi|eng|english|kor|korean|jpn|japanese|dual|multi|audio|dubbed)\b",
+        r"\b(?:reloaded|uncut)\b"
+    ]
+    for p in patterns: name = re.sub(p, " ", name, flags=re.IGNORECASE)
+    return normalize(name).strip()
+
 def extract_media_info(filename: str, caption: str):
-    fn_clean = clean_mentions_links(filename)
-    unified = f"{clean_mentions_links(caption).lower()} {fn_clean.lower()}".strip()
+    filename_clean = clean_mentions_links(filename)
+    unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
     season, episode = extract_season_episode(filename)
     tag = "#SERIES" if season is not None else "#MOVIE"
@@ -597,18 +594,16 @@ def extract_media_info(filename: str, caption: str):
     year_match = YEAR_PATTERN.search(unified)
     year = year_match.group(0) if year_match else None
 
-    # Ultra Pure Base Name Extraction
-    pure_name = clean_all_junk(fn_clean)
-    if year:
-        pure_name = re.sub(rf'\b{year}\b', '', pure_name).strip()
-    pure_name = normalize(pure_name).strip()
+    base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
+    base_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
+    base_name = normalize(base_name).strip()
 
-    base_name = f"{pure_name} {year}".strip() if year else pure_name
-    if season is not None:
-        base_name = f"{pure_name} Season {season}"
+    if year and year not in base_name: base_name = f"{base_name} {year}"
+    if season is not None: base_name = f"{base_name} Season {season}"
+    if not base_name: base_name = normalize(filename_clean)
 
     return {
-        "processed": fn_clean,
+        "processed": normalize(filename_clean),
         "base_name": base_name,
         "tag": tag,
         "season": season,
@@ -708,18 +703,19 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             media_info["tag"] = "#SERIES"
             file_data["tag"] = "#SERIES"
 
-        # Intelligent Search Pipeline with Runtime Check
-        clean_search_query = clean_all_junk(re.sub(r'\b(19|20)\d{2}\b', '', base_name)).strip()
-        tmdb_details = await fetch_tmdb_safely_intelligent(clean_search_query, media_info.get("year"), file_runtime_mins, is_series)
-        imdb_details = await fetch_imdb_safely(clean_search_query, is_series=is_series, year=media_info.get("year")) or {}
+        tt_match = re.search(r'tt\d+', hdhub_info_url) if hdhub_info_url else None
+        hdhub_imdb_id = tt_match.group(0) if tt_match else None
 
-        official_search_title = tmdb_details.get("title") or imdb_details.get("title") or base_name
+        imdb_details = await fetch_imdb_safely(base_name, is_series=is_series, year=media_info.get("year")) or {}
+        official_search_title = imdb_details.get("title") or base_name
+        imdb_id = hdhub_imdb_id or imdb_details.get("imdb_id")
 
-        # Accurate OTT Fetch
+        tmdb_query = imdb_id if (imdb_id and imdb_id.startswith("tt")) else official_search_title
+        tmdb_details = await fetch_tmdb_safely(tmdb_query, base_name, is_series)
+
         ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption)
         file_data["ott_platform"] = ott_platform
 
-        # 16:9 Landscape Banner Priority
         poster_url = ""
         is_backdrop = False
 
@@ -730,17 +726,21 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         elif tmdb_details.get("backdrop_url"):
             poster_url = tmdb_details["backdrop_url"]
             is_backdrop = True
-        elif imdb_details.get("backdrop_url"):
-            poster_url = imdb_details["backdrop_url"]
-            is_backdrop = True
-        elif tmdb_details.get("poster_url"):
-            poster_url = tmdb_details["poster_url"]
-            is_backdrop = False
         else:
-            poster_url = imdb_details.get("poster_url", "")
-            is_backdrop = False
+            forced_backdrop = await search_tmdb_backdrop_force(official_search_title, media_info.get("year"), is_series)
+            if forced_backdrop:
+                poster_url = forced_backdrop
+                is_backdrop = True
+            elif imdb_details.get("backdrop_url"):
+                poster_url = imdb_details["backdrop_url"]
+                is_backdrop = True
+            elif tmdb_details.get("poster_url"):
+                poster_url = tmdb_details["poster_url"]
+                is_backdrop = False
+            else:
+                poster_url = imdb_details.get("poster_url", "")
+                is_backdrop = False
 
-        # Rating Logic
         tmdb_rate = tmdb_details.get("rating")
         imdb_rate = imdb_details.get("rating")
         if hdhub_rating and hdhub_rating not in ("N/A", "x/10"): rating = hdhub_rating
@@ -753,7 +753,6 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             if imdb_details.get("imdb_id"): imdb_url = f"https://www.imdb.com/title/{imdb_details['imdb_id']}/"
             elif tmdb_details.get("id"): imdb_url = f"https://www.themoviedb.org/{'tv' if is_series else 'movie'}/{tmdb_details['id']}"
 
-        # Runtime Engine
         imdb_r = imdb_details.get("runtime")
         tmdb_r = tmdb_details.get("episode_run_time") if is_series and tmdb_details.get("episode_run_time") else tmdb_details.get("runtime")
         if isinstance(imdb_r, (list, tuple)) and imdb_r: imdb_r = imdb_r[0]
@@ -939,7 +938,7 @@ def generate_movie_message(movie_doc, base_name):
     runtime = format_runtime(raw_runtime, is_series=is_series)
 
     stored_title = movie_doc.get("title", base_name)
-    display_title = clean_all_junk(re.sub(r'[:,]?\s*(?:Episode|Ep)\s*\d+.*|\s+Season\s*\d+|\s+S\d+', '', stored_title, flags=re.IGNORECASE)).strip()
+    display_title = re.sub(r'[:,]?\s*(?:Episode|Ep)\s*\d+.*|\s+Season\s*\d+|\s+S\d+', '', stored_title, flags=re.IGNORECASE).strip()
     movie_year = movie_doc.get("year")
     filename_display = f"{display_title} {movie_year}".strip() if (movie_year and str(movie_year) not in display_title and not is_series) else display_title
 
