@@ -684,6 +684,7 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
         year_match = YEAR_PATTERN.search(unified)
         year = year_match.group(0) if year_match else None
 
+    # Strict: Use Gemini Clean Title as the Base Name
     if ai_title:
         base_name = normalize(ai_title)
         if year and year not in base_name and tag != "#SERIES":
@@ -702,6 +703,7 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
     return {
         "processed": normalize(filename_clean),
         "base_name": base_name,
+        "clean_search_title": normalize(ai_title) if ai_title else base_name,
         "tag": tag,
         "season": season,
         "episode": episode,
@@ -795,7 +797,9 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
     }
 
     if not movie_doc or is_mismatched:
-        hdhub_genres, hdhub_rating, hdhub_info_url, hdhub_is_series = await get_hdhub4u_data(base_name)
+        # Strictly use Gemini verified title for metadata searching
+        search_target_title = media_info.get("clean_search_title") or base_name
+        hdhub_genres, hdhub_rating, hdhub_info_url, hdhub_is_series = await get_hdhub4u_data(search_target_title)
         if not is_series and hdhub_is_series:
             is_series = True
             media_info["tag"] = "#SERIES"
@@ -804,12 +808,12 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         tt_match = re.search(r'tt\d+', hdhub_info_url) if hdhub_info_url else None
         hdhub_imdb_id = tt_match.group(0) if tt_match else None
 
-        imdb_details = await fetch_imdb_safely(base_name, is_series=is_series, year=media_info.get("year")) or {}
-        official_search_title = imdb_details.get("title") or base_name
+        imdb_details = await fetch_imdb_safely(search_target_title, is_series=is_series, year=media_info.get("year")) or {}
+        official_search_title = search_target_title
         imdb_id = hdhub_imdb_id or imdb_details.get("imdb_id")
 
         tmdb_query = imdb_id if (imdb_id and imdb_id.startswith("tt")) else official_search_title
-        tmdb_details = await fetch_tmdb_safely(tmdb_query, base_name, is_series)
+        tmdb_details = await fetch_tmdb_safely(tmdb_query, search_target_title, is_series)
 
         ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption, media_info.get("ai_ott"))
         file_data["ott_platform"] = ott_platform
@@ -817,7 +821,7 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         poster_url = ""
         is_backdrop = False
 
-        blogger_poster = await get_blogger_poster_url(base_name, media_info.get("year"))
+        blogger_poster = await get_blogger_poster_url(search_target_title, media_info.get("year"))
         if blogger_poster:
             poster_url = blogger_poster
             is_backdrop = True
@@ -835,6 +839,9 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             elif imdb_details.get("poster_url"):
                 poster_url = imdb_details["poster_url"]
                 is_backdrop = False
+            elif imdb_details.get("backdrop_url"):
+                poster_url = imdb_details["backdrop_url"]
+                is_backdrop = True
 
         tmdb_rate = tmdb_details.get("rating")
         imdb_rate = imdb_details.get("rating")
@@ -1053,6 +1060,7 @@ def generate_movie_message(movie_doc, base_name):
 
     runtime = format_runtime(raw_runtime, is_series=is_series)
 
+    # Strictly render the clean Gemini Official Title on post
     stored_title = movie_doc.get("title", base_name)
     display_title = re.sub(r'[:,]?\s*(?:Episode|Ep)\s*\d+.*|\s+Season\s*\d+|\s+S\d+', '', stored_title, flags=re.IGNORECASE).strip()
     movie_year = movie_doc.get("year")
