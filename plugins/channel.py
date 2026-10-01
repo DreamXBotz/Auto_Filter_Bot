@@ -10,7 +10,7 @@ from collections import defaultdict
 from plugins.Dreamxfutures.Imdbposter import get_movie_detailsx, fetch_image, get_movie_details
 from database.users_chats_db import db
 from pyrogram import Client, filters, enums
-from info import CHANNELS, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, BAD_WORDS, TMDB_POSTER, ADMINS
+from info import CHANNELS, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, BAD_WORDS, TMDB_POSTER, ADMINS, TMDB_API_KEY
 from Script import script
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -23,55 +23,31 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HDHUB_DOMAIN = "https://new1.hdhub4u.free"
 
-# =========================================================================
-# ULTRA COMPREHENSIVE JUNK & IGNORE WORDS LIST (NO GLITCH GUARANTEED)
-# =========================================================================
 _BASE_IGNORE_WORDS = {
-    # File Formats & Encoders
-    "mkv", "mp4", "avi", "wmv", "mov", "flv", "webm", "vob", "m4v", "3gp", "ts", "m2ts", "sample",
-    "x264", "x265", "h264", "h265", "hevc", "avc", "xvid", "divx", "10bit", "10-bit", "8bit", "8-bit",
-    "dovi", "hdr", "hdr10", "hdr10+", "dv", "sdr", "remux", "imax", "proper", "repack", "unrated",
-    "extended", "directors", "cut", "special", "edition", "bonus", "complete", "pack", "batch",
-
-    # Audio Codecs & Tags
-    "aac", "ac3", "eac3", "ddp", "ddp5", "ddp5.1", "dd5.1", "atmos", "dts", "dts-hd", "truehd",
-    "mp3", "flac", "opus", "wav", "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "2.0ch", "ch", "audio",
-    "dual", "multi", "dub", "dubbed", "sub", "subs", "esub", "esubs", "msub", "hardsub", "softsub",
-    "clean", "cleaned", "line", "mic", "hq", "hd", "hq-line", "line-audio", "hq-mic", "mic-audio",
-
-    # Source & Quality Rips
-    "hdcam", "hdtc", "camrip", "cam", "hq-cam", "hdts", "hq-ts", "tc", "telesync", "tele-sync",
-    "dvdscr", "dvd-scr", "dvdrip", "dvd-rip", "predvd", "pre-dvd", "hq-predvd", "webrip", "web-rip",
-    "web-dl", "webdl", "web", "dl", "tvrip", "tv-rip", "hdtv", "hd-tv", "bluray", "blu-ray", "brrip",
-    "bdrip", "bdr", "remuxed", "hdrip", "hq-hdrip", "hq-hdtc", "140p", "240p", "360p", "480p", "540p",
-    "720p", "1080p", "1440p", "2160p", "4k", "2k", "uhd", "fhd", "sd",
-
-    # Release Versions
-    "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "ver1", "ver2", "version", "ver", "part",
-    "vol", "volume", "chapter", "combined",
-
-    # Language Terms (Strip to avoid duplicate movie posts like 'Marco Hindi')
-    "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada", "ben",
-    "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "urd", "urdu", "bho", "bhojpuri",
-    "ori", "odia", "oriya", "asm", "assamese", "eng", "english", "spa", "spanish", "fre", "french",
-    "ger", "german", "ita", "italian", "rus", "russian", "kor", "korean", "jpn", "japanese", "chi",
-    "chinese", "tha", "thai", "ind", "indonesian",
-
-    # OTT Platforms
-    "ott", "nf", "netflix", "sonyliv", "sony", "sliv", "amzn", "prime", "primevideo", "hotstar",
-    "zee5", "jio", "jhs", "jiohotstar", "aha", "hbo", "paramount", "apple", "atv", "atvp", "appletv",
-    "hoichoi", "sunnxt", "viki", "cr", "crunchyroll", "hulu", "disney", "dnp", "lionsgate",
-    "lionsgateplay", "peacock", "max", "alt", "altbalaji", "altt", "shemaroo", "shemaroome",
-    "chaupal", "stage", "planetmarathi", "manorama", "manoramamax", "tubi", "mxplayer", "mxtv",
-
-    # Common Web Scrape Junk, Piracy Groups & Sites
-    "rarbg", "yts", "yify", "ettv", "galaxytv", "tgx", "psa", "pahe", "mkvcinemas", "hdhub4u",
-    "moviesmod", "skymovieshd", "extraflix", "1tamilmv", "tamilblasters", "cinevood", "themoviesboss",
-    "toonworld4all", "bolly4u", "9xmovies", "filmywap", "worldfree4u", "katmoviehd", "hdm2", "primefix",
-    "hub", "org", "in", "net", "com", "site", "pro", "vip", "club", "zone", "link", "click", "download",
-    "join", "telegram", "channel", "group", "official", "original", "exclusive", "premium", "fast",
-    "speed", "full", "movie", "series", "season", "episode", "episodes", "show", "watch", "stream",
-    "drm", "rip", "www", "http", "https"
+    "rarbg", "dub", "sub", "sample", "mkv", "mp4", "avi", "aac", "ac3", "eac3", "ddp", "ddp5", "atmos", "dts",
+    "combined", "esub", "msub", "proper", "repack", "unrated", "extended", "imax", "remux", "10bit", "10-bit",
+    "x264", "x265", "h264", "h265", "hevc", "avc", "dovi", "hdr", "hdr10",
+    "web", "dl", "bonus", "special", "ott",
+    "action", "adventure", "animation", "biography", "comedy", "crime",
+    "documentary", "drama", "fantasy", "film-noir", "history",
+    "horror", "music", "musical", "mystery", "romance", "sci-fi", "sport",
+    "thriller", "war", "western", "hdcam", "hdtc", "camrip", "cam", "ts", "tc", "hdts",
+    "telesync", "dvdscr", "dvdrip", "predvd", "webrip", "web-dl", "tvrip",
+    "hdtv", "web dl", "webdl", "bluray", "brrip", "bdrip", "360p", "480p",
+    "720p", "1080p", "2160p", "4k", "1440p", "540p", "240p", "140p",
+    "hdrip", "hq-hdrip", "hq-hdtc", "hq-cam", "hq-ts", "hq-predvd",
+    "dual", "multi", "audio", "dubbed",
+    "v1", "v2", "v3", "v4", "v5", "v6", "version", "ver", "cleaned", "clean",
+    "nf", "netflix", "sonyliv", "sony", "sliv", "amzn", "prime",
+    "primevideo", "hotstar", "zee5", "jio", "jhs", "aha", "hbo", "paramount",
+    "apple", "atv", "atvp", "appletv", "hoichoi", "sunnxt", "viki", "cr", "crunchyroll", "hulu",
+    "disney", "dnp", "lionsgate", "lionsgateplay", "peacock", "max", "alt",
+    "altbalaji", "altt", "shemaroo", "shemaroome", "chaupal", "stage",
+    "planetmarathi", "manorama", "manoramamax", "tubi",
+    "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "dd5.1", "ddp5.1", "dd", "ddp",
+    "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada",
+    "ben", "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "eng", "english",
+    "kor", "korean", "jpn", "japanese", "chi", "chinese", "spa", "spanish", "fre", "french"
 }
 
 IGNORE_WORDS = _BASE_IGNORE_WORDS | set(BAD_WORDS if isinstance(BAD_WORDS, (list, tuple, set)) else [])
@@ -94,11 +70,11 @@ CAPTION_LANGUAGES = {
     "ori": "Odia", "odia": "Odia", "oriya": "Odia",
     "asm": "Assamese", "assamese": "Assamese",
     "spa": "Spanish", "spanish": "Spanish",
-    "fre": "French", "french": "French", "fra": "French",
-    "ger": "German", "german": "German", "deu": "German",
+    "fre": "French", "french": "French",
+    "ger": "German", "german": "German",
     "ita": "Italian", "italian": "Italian",
     "rus": "Russian", "russian": "Russian",
-    "chi": "Chinese", "chinese": "Chinese", "zho": "Chinese",
+    "chi": "Chinese", "chinese": "Chinese",
     "tha": "Thai", "thai": "Thai",
     "ind": "Indonesian", "indonesian": "Indonesian",
     "dual": "Dual Audio", "multi": "Multi Audio"
@@ -148,7 +124,6 @@ RES_ORDER = {
     "2160p": 2160, "4k": 2160
 }
 
-# Regex to strip emojis, unicode pictograms, URLs, telegram channels
 CLEAN_PATTERN = re.compile(
     r'@[^ \n\r\t\.,:;!?()\[\]{}<>\\/"\'=_%]+|'
     r'https?://\S+|www\.\S+|'
@@ -158,7 +133,6 @@ CLEAN_PATTERN = re.compile(
 )
 
 NORMALIZE_PATTERN = re.compile(r"[._\-+]+|[()\[\]{}:;'\"–—!,.?~`*^|\\/]")
-
 RESOLUTION_PATTERN = re.compile(r"\b(?:2160p|4K|1440p|1080p|720p|540p|480p|360p|240p|140p)\b", re.IGNORECASE)
 SOURCE_PATTERN = re.compile(
     r"\b(?:HDCam|HD-Cam|HQ-HDCam|HDTC|HD-TC|HQ-HDTC|CamRip|CAM|HQ-CAM|TS|HDTS|HQ-TS|TC|TeleSync|DVDScr|DVDRip|PreDVD|HQ-PreDVD|"
@@ -458,20 +432,26 @@ async def fetch_tmdb_safely(tmdb_query: str, base_name: str, is_series: bool) ->
     elif "media_type" in sig.parameters:
         kwargs["media_type"] = "tv" if is_series else "movie"
 
+    # 1. Direct Search with provided Query
     if tmdb_query and tmdb_query.startswith("tt"):
         try:
             res = await get_movie_detailsx(tmdb_query, **kwargs) if kwargs else await get_movie_detailsx(tmdb_query)
             if res and not res.get("error"):
-                return res
+                # Check if backdrop exists, if yes return
+                if res.get("backdrop_url"):
+                    return res
         except Exception:
             pass
 
     queries = []
     if is_series:
-        queries.append(f"{base_name} Series")
+        clean_s = re.sub(r'\s+Season\s*\d+', '', base_name, flags=re.IGNORECASE).strip()
+        queries.append(clean_s)
+        queries.append(f"{clean_s} Series")
         queries.append(base_name)
     else:
         queries.append(tmdb_query or base_name)
+        queries.append(base_name)
 
     best_fallback = {}
     for q in queries:
@@ -480,12 +460,46 @@ async def fetch_tmdb_safely(tmdb_query: str, base_name: str, is_series: bool) ->
             if res and not res.get("error"):
                 title = res.get("title") or res.get("name")
                 if title and is_good_title_match(base_name, title):
-                    return res
-                if not best_fallback:
+                    if res.get("backdrop_url"):
+                        return res
+                    if not best_fallback:
+                        best_fallback = res
+                elif not best_fallback:
                     best_fallback = res
         except Exception:
             pass
     return best_fallback
+
+async def search_tmdb_backdrop_force(title: str, year: Optional[str] = None, is_series: bool = False) -> Optional[str]:
+    """Dedicated secondary search to aggressively hunt down a 16:9 Landscape Banner from TMDB."""
+    try:
+        api_key = TMDB_API_KEY
+        if not api_key:
+            return None
+        clean_q = re.sub(r'\b(19|20)\d{2}\b', '', title)
+        clean_q = re.sub(r'\s+Season\s*\d+', '', clean_q, flags=re.IGNORECASE).strip()
+        media_type = "tv" if is_series else "movie"
+        url = f"https://api.themoviedb.org/3/search/{media_type}?api_key={api_key}&query={quote_plus(clean_q)}"
+        if year and not is_series:
+            url += f"&year={year}"
+
+        timeout = aiohttp.ClientTimeout(total=6)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+
+        results = data.get("results", [])
+        if not results:
+            return None
+
+        for item in results:
+            if item.get("backdrop_path"):
+                return f"https://image.tmdb.org/t/p/original{item['backdrop_path']}"
+    except Exception as e:
+        logger.warning(f"Error in force backdrop search: {e}")
+    return None
 
 async def get_hdhub_base_url() -> str:
     try:
@@ -1028,11 +1042,12 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         file_data["ott_platform"] = ott_platform
 
         # -----------------------------------------------------------------
-        # STRICT LANDSCAPE FIRST POSTER SELECTION:
+        # STRICT LANDSCAPE FIRST POSTER SELECTION ENGINE:
         # 1. Blogger Banner (16:9)
-        # 2. TMDB Backdrop Banner (16:9 Landscape)
-        # 3. IMDb Backdrop Banner (16:9 Landscape)
-        # 4. Portrait Fallback (No 16:9 Force-Stretch)
+        # 2. TMDB Backdrop from Details (16:9 Landscape)
+        # 3. Direct Forced TMDB Backdrop API Search (16:9 Landscape)
+        # 4. IMDb Backdrop (16:9 Landscape)
+        # 5. Portrait Fallback (No 16:9 Force-Stretch)
         # -----------------------------------------------------------------
         poster_url = ""
         is_backdrop = False
@@ -1044,15 +1059,21 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         elif TMDB_POSTER and tmdb_details.get("backdrop_url"):
             poster_url = tmdb_details.get("backdrop_url")
             is_backdrop = True
-        elif imdb_details.get("backdrop_url"):
-            poster_url = imdb_details.get("backdrop_url")
-            is_backdrop = True
-        elif tmdb_details.get("poster_url"):
-            poster_url = tmdb_details.get("poster_url")
-            is_backdrop = False
         else:
-            poster_url = imdb_details.get("poster_url", "")
-            is_backdrop = False
+            # Force search TMDB for real 16:9 backdrop banner
+            forced_backdrop = await search_tmdb_backdrop_force(official_search_title, media_info.get("year"), is_series)
+            if forced_backdrop:
+                poster_url = forced_backdrop
+                is_backdrop = True
+            elif imdb_details.get("backdrop_url"):
+                poster_url = imdb_details.get("backdrop_url")
+                is_backdrop = True
+            elif tmdb_details.get("poster_url"):
+                poster_url = tmdb_details.get("poster_url")
+                is_backdrop = False
+            else:
+                poster_url = imdb_details.get("poster_url", "")
+                is_backdrop = False
 
         imdb_rate = imdb_details.get("rating")
         tmdb_rate = tmdb_details.get("rating")
@@ -1200,7 +1221,6 @@ async def send_movie_update(bot, base_name):
                 all_tags = {f.get("tag") for f in movie_doc.get("files", []) if f.get("tag")}
                 primary_tag = "#SERIES" if "#SERIES" in all_tags else "#MOVIE"
 
-                # Button Style: Movie -> Blue (PRIMARY), Series -> Green (SUCCESS)
                 btn_style = enums.ButtonStyle.SUCCESS if primary_tag == "#SERIES" else enums.ButtonStyle.PRIMARY
 
                 match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
@@ -1281,7 +1301,6 @@ async def update_movie_message(bot, base_name):
         all_tags = {f.get("tag") for f in movie_doc.get("files", []) if f.get("tag")}
         primary_tag = "#SERIES" if "#SERIES" in all_tags else "#MOVIE"
 
-        # Button Style: Movie -> Blue (PRIMARY), Series -> Green (SUCCESS)
         btn_style = enums.ButtonStyle.SUCCESS if primary_tag == "#SERIES" else enums.ButtonStyle.PRIMARY
 
         match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
