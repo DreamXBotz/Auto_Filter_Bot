@@ -193,7 +193,7 @@ def is_good_title_match(query: str, found_title: str) -> bool:
     return False
 
 # =========================================================================
-# CLEAN & NATURAL GEMINI AI IDENTIFIER
+# STATELESS GEMINI AI IDENTIFIER
 # =========================================================================
 async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
     if not GEMINI_API_KEY:
@@ -201,13 +201,17 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
 
     duration_info = f"{duration_mins} mins" if duration_mins else "Unknown"
     prompt = (
-        "Identify the official movie or series name from the following media details:\n"
+        "Identify the real movie or series name from this piracy release info:\n"
         f"- Filename: {filename}\n"
         f"- Caption: {caption}\n"
         f"- Runtime: {duration_info}\n\n"
-        "Extract the real title without codecs or rip tags, release year, whether it is a series or movie, "
-        "and official Indian OTT platforms (e.g. Netflix, Disney+ Hotstar, Amazon Prime Video, JioCinema, SonyLiv, Zee5).\n"
-        "Return ONLY a raw JSON dictionary without backticks:\n"
+        "Rules:\n"
+        "1. Extract the official title (including franchise numbers like Dhamaal 4, Pushpa 2, Housefull 5).\n"
+        "2. Strip all piracy tags like DS4K, LINE, WEB-DL, HEVC, audio names, codecs, channels.\n"
+        "3. Detect exact release year.\n"
+        "4. Determine is_series (true/false).\n"
+        "5. List Indian streaming OTT platforms.\n\n"
+        "Return ONLY a raw JSON dictionary without markdown:\n"
         "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Netflix\"]}"
     )
 
@@ -665,20 +669,8 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
     lang_keys = {k for k in CAPTION_LANGUAGES if re.search(rf"\b{re.escape(k)}\b", unified)}
     language = ", ".join(sorted({CAPTION_LANGUAGES[k] for k in lang_keys})) if lang_keys else "N/A"
 
-    base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
-    prelim_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
-    clean_search = get_clean_title(prelim_name)
-
-    # 1. MongoDB Cache First: Prevent duplicate posts & save quota
-    cached_doc = None
-    if hasattr(db, "movie_updates"):
-        cached_doc = await db.movie_updates.find_one({
-            "$or": [{"clean_title": clean_search}, {"_id": clean_search}]
-        })
-
-    ai_data = {}
-    if not cached_doc and GEMINI_API_KEY:
-        ai_data = await identify_movie_with_gemini(filename_clean, caption, duration_mins)
+    # Always call Gemini AI for primary identification (Guarantees Dhamaal 4, Pushpa 2 etc)
+    ai_data = await identify_movie_with_gemini(filename_clean, caption, duration_mins) if GEMINI_API_KEY else {}
 
     ai_title = ai_data.get("title")
     ai_year = ai_data.get("year")
@@ -692,13 +684,13 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
         year_match = YEAR_PATTERN.search(unified)
         year = year_match.group(0) if year_match else None
 
-    if cached_doc:
-        base_name = cached_doc["_id"]
-    elif ai_title:
+    if ai_title:
         base_name = normalize(ai_title)
         if year and year not in base_name and tag != "#SERIES":
             base_name = f"{base_name} {year}"
     else:
+        base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
+        prelim_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
         base_name = prelim_name
         if year and year not in base_name: base_name = f"{base_name} {year}"
 
@@ -837,14 +829,11 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             if forced_backdrop:
                 poster_url = forced_backdrop
                 is_backdrop = True
-            elif imdb_details.get("backdrop_url"):
-                poster_url = imdb_details["backdrop_url"]
-                is_backdrop = True
             elif tmdb_details.get("poster_url"):
                 poster_url = tmdb_details["poster_url"]
                 is_backdrop = False
-            else:
-                poster_url = imdb_details.get("poster_url", "")
+            elif imdb_details.get("poster_url"):
+                poster_url = imdb_details["poster_url"]
                 is_backdrop = False
 
         tmdb_rate = tmdb_details.get("rating")
