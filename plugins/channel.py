@@ -23,10 +23,13 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HDHUB_DOMAIN = "https://new1.hdhub4u.free"
 
+# =========================================================================
+# ULTRA COMPREHENSIVE JUNK & IGNORE WORDS LIST
+# =========================================================================
 _BASE_IGNORE_WORDS = {
     "rarbg", "dub", "sub", "sample", "mkv", "mp4", "avi", "aac", "ac3", "eac3", "ddp", "ddp5", "atmos", "dts",
     "combined", "esub", "msub", "proper", "repack", "unrated", "extended", "imax", "remux", "10bit", "10-bit",
-    "x264", "x265", "h264", "h265", "hevc", "avc", "dovi", "hdr", "hdr10",
+    "x264", "x265", "h264", "h265", "hevc", "avc", "dovi", "hdr", "hdr10", "hdr10+",
     "web", "dl", "bonus", "special", "ott",
     "action", "adventure", "animation", "biography", "comedy", "crime",
     "documentary", "drama", "fantasy", "film-noir", "history",
@@ -43,7 +46,7 @@ _BASE_IGNORE_WORDS = {
     "apple", "atv", "atvp", "appletv", "hoichoi", "sunnxt", "viki", "cr", "crunchyroll", "hulu",
     "disney", "dnp", "lionsgate", "lionsgateplay", "peacock", "max", "alt",
     "altbalaji", "altt", "shemaroo", "shemaroome", "chaupal", "stage",
-    "planetmarathi", "manorama", "manoramamax", "tubi",
+    "planetmarathi", "manorama", "manoramamax", "tubi", "mxplayer", "mxtv", "eros", "erosnow",
     "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "dd5.1", "ddp5.1", "dd", "ddp",
     "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada",
     "ben", "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "eng", "english",
@@ -74,7 +77,7 @@ CAPTION_LANGUAGES = {
     "ger": "German", "german": "German",
     "ita": "Italian", "italian": "Italian",
     "rus": "Russian", "russian": "Russian",
-    "chi": "Chinese", "chinese": "Chinese",
+    "chi": "Chinese", "chinese": "Chinese", "zho": "Chinese",
     "tha": "Thai", "thai": "Thai",
     "ind": "Indonesian", "indonesian": "Indonesian",
     "dual": "Dual Audio", "multi": "Multi Audio"
@@ -83,10 +86,10 @@ CAPTION_LANGUAGES = {
 OTT_PLATFORMS = {
     "nf": "Netflix", "netflix": "Netflix",
     "sonyliv": "SonyLiv", "sony": "SonyLiv", "sliv": "SonyLiv",
-    "amzn": "Amazon Prime Video", "prime": "Amazon Prime Video", "primevideo": "Amazon Prime Video",
+    "amzn": "Amazon Prime Video", "prime": "Amazon Prime Video", "primevideo": "Amazon Prime Video", "amazon": "Amazon Prime Video",
     "hotstar": "Disney+ Hotstar", "disney": "Disney+", "dnp": "Disney+",
     "zee5": "Zee5",
-    "jio": "JioHotstar", "jhs": "JioHotstar",
+    "jio": "JioHotstar", "jhs": "JioHotstar", "jiocinema": "JioCinema",
     "aha": "Aha", "hbo": "HBO Max", "max": "Max",
     "paramount": "Paramount+",
     "apple": "Apple TV+", "atv": "Apple TV+", "atvp": "Apple TV+", "appletv": "Apple TV+",
@@ -98,7 +101,7 @@ OTT_PLATFORMS = {
     "shemaroo": "ShemarooMe", "shemaroome": "ShemarooMe",
     "chaupal": "Chaupal", "stage": "Stage",
     "planetmarathi": "Planet Marathi", "manorama": "ManoramaMAX", "manoramamax": "ManoramaMAX",
-    "tubi": "Tubi"
+    "tubi": "Tubi", "eros": "Eros Now", "erosnow": "Eros Now"
 }
 
 STANDARD_FORMATS = {
@@ -309,21 +312,45 @@ def extract_ott_platform(text: str) -> str:
     platforms = {plat for key, plat in OTT_PLATFORMS.items() if re.search(rf"\b{re.escape(key)}\b", text)}
     return " | ".join(sorted(platforms)) if platforms else "N/A"
 
+# =========================================================================
+# ULTRA POWERFUL OTT ENGINE (Direct TMDb /watch/providers with Region IN)
+# =========================================================================
 async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str) -> str:
     platforms = set()
 
-    if imdb_details and isinstance(imdb_details, dict):
+    # 1. Direct TMDb Watch Providers API (Primary & Most Reliable)
+    tmdb_id = tmdb_details.get("id") if isinstance(tmdb_details, dict) else None
+    media_type = "tv" if (tmdb_details and tmdb_details.get("first_air_date")) else "movie"
+    api_key = TMDB_API_KEY
+
+    if tmdb_id and api_key:
+        try:
+            prov_url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/watch/providers?api_key={api_key}"
+            timeout = aiohttp.ClientTimeout(total=5)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(prov_url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        results = data.get("results", {})
+                        # Prioritize India (IN), then fallback to US or global
+                        reg_data = results.get("IN") or results.get("US") or {}
+                        providers = reg_data.get("flatrate", []) + reg_data.get("buy", []) + reg_data.get("rent", [])
+                        for p in providers:
+                            p_name = p.get("provider_name", "").lower()
+                            for key, plat in OTT_PLATFORMS.items():
+                                if re.search(rf"\b{re.escape(key)}\b", p_name):
+                                    platforms.add(plat)
+        except Exception as e:
+            logger.warning(f"TMDb watch providers fetch failed: {e}")
+
+    # 2. IMDb Priority
+    if not platforms and imdb_details and isinstance(imdb_details, dict):
         raw_ott = f"{imdb_details.get('distributors', '')} {imdb_details.get('ott', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
             if re.search(rf"\b{re.escape(key)}\b", raw_ott):
                 platforms.add(plat)
 
-    if not platforms and tmdb_details and isinstance(tmdb_details, dict):
-        networks = f"{tmdb_details.get('networks', '')} {tmdb_details.get('watch_providers', '')}".lower()
-        for key, plat in OTT_PLATFORMS.items():
-            if re.search(rf"\b{re.escape(key)}\b", networks):
-                platforms.add(plat)
-
+    # 3. File & Caption Regex Fallback
     if not platforms:
         unified_text = f"{filename} {caption}".lower()
         for key, plat in OTT_PLATFORMS.items():
@@ -432,12 +459,10 @@ async def fetch_tmdb_safely(tmdb_query: str, base_name: str, is_series: bool) ->
     elif "media_type" in sig.parameters:
         kwargs["media_type"] = "tv" if is_series else "movie"
 
-    # 1. Direct Search with provided Query
     if tmdb_query and tmdb_query.startswith("tt"):
         try:
             res = await get_movie_detailsx(tmdb_query, **kwargs) if kwargs else await get_movie_detailsx(tmdb_query)
             if res and not res.get("error"):
-                # Check if backdrop exists, if yes return
                 if res.get("backdrop_url"):
                     return res
         except Exception:
@@ -471,7 +496,7 @@ async def fetch_tmdb_safely(tmdb_query: str, base_name: str, is_series: bool) ->
     return best_fallback
 
 async def search_tmdb_backdrop_force(title: str, year: Optional[str] = None, is_series: bool = False) -> Optional[str]:
-    """Dedicated secondary search to aggressively hunt down a 16:9 Landscape Banner from TMDB."""
+    """Force hunt for 16:9 Landscape Banner from TMDB."""
     try:
         api_key = TMDB_API_KEY
         if not api_key:
@@ -491,9 +516,6 @@ async def search_tmdb_backdrop_force(title: str, year: Optional[str] = None, is_
                 data = await resp.json()
 
         results = data.get("results", [])
-        if not results:
-            return None
-
         for item in results:
             if item.get("backdrop_path"):
                 return f"https://image.tmdb.org/t/p/original{item['backdrop_path']}"
@@ -523,9 +545,6 @@ async def get_blogger_poster_url(base_name: str, year: Optional[str] = None) -> 
                 data = await resp.json()
 
         entries = data.get("feed", {}).get("entry", [])
-        if not entries:
-            return None
-
         clean_query = f"{base_name} {year}".strip() if year else base_name
         for entry in entries:
             post_title = entry.get("title", {}).get("$t", "")
@@ -1038,17 +1057,11 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         tmdb_query = imdb_id if (imdb_id and imdb_id.startswith("tt")) else official_search_title
         tmdb_details = await fetch_tmdb_safely(tmdb_query, base_name, is_series)
 
+        # OTT ENGINE CALL
         ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption)
         file_data["ott_platform"] = ott_platform
 
-        # -----------------------------------------------------------------
-        # STRICT LANDSCAPE FIRST POSTER SELECTION ENGINE:
-        # 1. Blogger Banner (16:9)
-        # 2. TMDB Backdrop from Details (16:9 Landscape)
-        # 3. Direct Forced TMDB Backdrop API Search (16:9 Landscape)
-        # 4. IMDb Backdrop (16:9 Landscape)
-        # 5. Portrait Fallback (No 16:9 Force-Stretch)
-        # -----------------------------------------------------------------
+        # STRICT 16:9 LANDSCAPE BANNER DISCOVERY PIPELINE
         poster_url = ""
         is_backdrop = False
 
@@ -1060,7 +1073,6 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             poster_url = tmdb_details.get("backdrop_url")
             is_backdrop = True
         else:
-            # Force search TMDB for real 16:9 backdrop banner
             forced_backdrop = await search_tmdb_backdrop_force(official_search_title, media_info.get("year"), is_series)
             if forced_backdrop:
                 poster_url = forced_backdrop
@@ -1221,6 +1233,7 @@ async def send_movie_update(bot, base_name):
                 all_tags = {f.get("tag") for f in movie_doc.get("files", []) if f.get("tag")}
                 primary_tag = "#SERIES" if "#SERIES" in all_tags else "#MOVIE"
 
+                # Button Style: Movie -> Blue (PRIMARY), Series -> Green (SUCCESS)
                 btn_style = enums.ButtonStyle.SUCCESS if primary_tag == "#SERIES" else enums.ButtonStyle.PRIMARY
 
                 match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
@@ -1301,6 +1314,7 @@ async def update_movie_message(bot, base_name):
         all_tags = {f.get("tag") for f in movie_doc.get("files", []) if f.get("tag")}
         primary_tag = "#SERIES" if "#SERIES" in all_tags else "#MOVIE"
 
+        # Button Style: Movie -> Blue (PRIMARY), Series -> Green (SUCCESS)
         btn_style = enums.ButtonStyle.SUCCESS if primary_tag == "#SERIES" else enums.ButtonStyle.PRIMARY
 
         match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
