@@ -303,21 +303,21 @@ def extract_ott_platform(text: str) -> str:
 async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str) -> str:
     platforms = set()
 
-    # 1. IMDb check
+    # 1. IMDb Priority
     if imdb_details and isinstance(imdb_details, dict):
         raw_ott = f"{imdb_details.get('distributors', '')} {imdb_details.get('ott', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
             if re.search(rf"\b{re.escape(key)}\b", raw_ott):
                 platforms.add(plat)
 
-    # 2. TMDb check
+    # 2. TMDb Priority
     if not platforms and tmdb_details and isinstance(tmdb_details, dict):
         networks = f"{tmdb_details.get('networks', '')} {tmdb_details.get('watch_providers', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
             if re.search(rf"\b{re.escape(key)}\b", networks):
                 platforms.add(plat)
 
-    # 3. File Name / Caption fallback
+    # 3. File & Caption Regex
     if not platforms:
         unified_text = f"{filename} {caption}".lower()
         for key, plat in OTT_PLATFORMS.items():
@@ -536,6 +536,8 @@ async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
             href = a_tag["href"].strip()
             if not href or href == "#" or any(x in href for x in ["/category/", "/tag/", "/author/", "/page/", "/wp-content/"]):
                 continue
+            if not href.startswith("http"):
+                href = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
             img_alt = art.find("img").get("alt", "") if art.find("img") else ""
             title_text = f"{a_tag.get('title', '')} {a_tag.get_text()} {img_alt}".strip()
             candidate_items.append((title_text, href))
@@ -544,6 +546,8 @@ async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
             for a in soup.select("h2 a, h3 a, .entry-title a, .recent-movies a, a[rel='bookmark']"):
                 href = a.get("href", "")
                 if href and not any(x in href for x in ["/category/", "/tag/", "/author/", "/page/"]):
+                    if not href.startswith("http"):
+                        href = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
                     candidate_items.append((a.get_text().strip(), href))
 
         movie_page_url = None
@@ -723,6 +727,35 @@ def schedule_update(bot, base_name, delay=8):
         lambda: asyncio.create_task(wrapper())
     )
 
+def _strip_season_episode_tokens(name: str) -> str:
+    if not name:
+        return name
+    year_match = re.search(r"\(?\b(19|20)\d{2}\b\)?\s*$", name)
+    year_part = ""
+    if year_match:
+        year_part = year_match.group(0)
+        name = name[:year_match.start()].strip()
+
+    patterns = [
+        r"\bS\d{1,2}[\s._-]*(?:Bonus|Special)[\s._-]*(?:E(?:p(?:isode)?)?)?0*\d{1,3}\b",
+        r"\b(?:Bonus|Special)[\s._-]*Ep(?:isode)?\.?\s*\d{1,3}\b",
+        r"\bS\d{1,2}E\d{1,3}\b", r"\bS\d{1,2}\b", r"\bE\d{1,3}\b", r"\b\d{1,2}x\d{1,3}\b",
+        r"\bSeason\s*\d{1,2}\b", r"\bEp(?:isode)?\.?\s*\d{1,3}\b", r"\bEpisode\s*\d{1,3}\b",
+        r"\bPart\s*\d{1,2}\b", r"\bDay\s*\d{1,3}\b", r"\bBonus\b", r"\bSpecial\b",
+        r"\b[vV]\d+\b", r"\b(?:version|ver)\.?\s*\d+\b",
+        r"\b(?:dd|ddp|ac3|eac3|aac)?\s*[257]\s*[._]\s*[01]\b", r"\b(?:dd|ddp)\s*[257]\b"
+    ]
+    for p in patterns:
+        name = re.sub(p, " ", name, flags=re.IGNORECASE)
+
+    name = re.sub(r"[_\.\-]+", " ", name)
+    name = re.sub(r"\s+", " ", name).strip()
+    if year_part:
+        y = re.search(r"(19|20)\d{2}", year_part)
+        if y:
+            name = f"{name} {y.group(0)}"
+    return name.strip()
+
 def extract_media_info(filename: str, caption: str):
     filename_clean = clean_mentions_links(filename)
     filename = normalize(filename_clean.title())
@@ -799,35 +832,6 @@ def extract_media_info(filename: str, caption: str):
         if year:
             base_name += f" {year}"
 
-    def _strip_season_episode_tokens(name: str) -> str:
-        if not name:
-            return name
-        year_match = re.search(r"\(?\b(19|20)\d{2}\b\)?\s*$", name)
-        year_part = ""
-        if year_match:
-            year_part = year_match.group(0)
-            name = name[:year_match.start()].strip()
-
-        patterns = [
-            r"\bS\d{1,2}[\s._-]*(?:Bonus|Special)[\s._-]*(?:E(?:p(?:isode)?)?0*\d{1,3}\b",
-            r"\b(?:Bonus|Special)[\s._-]*Ep(?:isode)?\.?\s*\d{1,3}\b",
-            r"\bS\d{1,2}E\d{1,3}\b", r"\bS\d{1,2}\b", r"\bE\d{1,3}\b", r"\b\d{1,2}x\d{1,3}\b",
-            r"\bSeason\s*\d{1,2}\b", r"\bEp(?:isode)?\.?\s*\d{1,3}\b", r"\bEpisode\s*\d{1,3}\b",
-            r"\bPart\s*\d{1,2}\b", r"\bDay\s*\d{1,3}\b", r"\bBonus\b", r"\bSpecial\b",
-            r"\b[vV]\d+\b", r"\b(?:version|ver)\.?\s*\d+\b",
-            r"\b(?:dd|ddp|ac3|eac3|aac)?\s*[257]\s*[._]\s*[01]\b", r"\b(?:dd|ddp)\s*[257]\b"
-        ]
-        for p in patterns:
-            name = re.sub(p, " ", name, flags=re.IGNORECASE)
-
-        name = re.sub(r"[_\.\-]+", " ", name)
-        name = re.sub(r"\s+", " ", name).strip()
-        if year_part:
-            y = re.search(r"(19|20)\d{2}", year_part)
-            if y:
-                name = f"{name} {y.group(0)}"
-        return name.strip()
-
     base_name = _strip_season_episode_tokens(base_name)
     base_name = re.sub(r'(\b(?:19|20)\d{2}\b)(?:\s+\1)+', r'\1', base_name).strip()
 
@@ -849,8 +853,18 @@ def extract_media_info(filename: str, caption: str):
         "language": language
     }
 
-@Client.on_message(filters.command("setdomain") & filters.user(ADMINS))
+async def is_admin_user(user_id):
+    if not user_id:
+        return False
+    admins_set = {int(a) if str(a).lstrip('-').isdigit() else str(a) for a in ADMINS}
+    return (user_id in admins_set) or (str(user_id) in admins_set)
+
+@Client.on_message(filters.command("setdomain"))
 async def set_domain_handler(bot, message):
+    user_id = message.from_user.id if message.from_user else None
+    if not await is_admin_user(user_id):
+        return
+
     if len(message.command) < 2:
         current_url = await get_hdhub_base_url()
         return await message.reply_text(
@@ -1021,9 +1035,7 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
             elif tmdb_details.get("id"):
                 imdb_url = f"https://www.themoviedb.org/movie/{tmdb_details.get('id')}"
 
-        # -------------------------------------------------------------
-        # RUNTIME: IMDb -> TMDb -> File Runtime (Fallback)
-        # -------------------------------------------------------------
+        # RUNTIME: IMDb -> TMDb -> File Runtime Fallback
         imdb_r = imdb_details.get("runtime")
         tmdb_r = tmdb_details.get("episode_run_time") if is_series and tmdb_details.get("episode_run_time") else tmdb_details.get("runtime")
         if isinstance(imdb_r, (list, tuple)) and imdb_r:
@@ -1366,12 +1378,6 @@ def generate_movie_message(movie_doc, base_name):
     else:
         clean_rating = raw_rating if raw_rating not in ("x/10", "x", "N/A", "0") else "6.5"
 
-    # -------------------------------------------------------------
-    # RUNTIME FALLBACK ENGINE:
-    # 1. Stored DB Runtime (if present from IMDb/TMDb)
-    # 2. If Series & Missing: Calculate Exact Average of All Episodes
-    # 3. If Movie & Missing: Take Exact Movie File Runtime
-    # -------------------------------------------------------------
     raw_runtime = movie_doc.get("runtime", "N/A")
     if not raw_runtime or str(raw_runtime).strip().upper() in ("N/A", "NONE", "0", "-"):
         if is_series and valid_file_runtimes:
@@ -1384,14 +1390,14 @@ def generate_movie_message(movie_doc, base_name):
 
     stored_title = movie_doc.get("title", base_name)
     stored_title = re.sub(r'[:,]?\s*(?:Episode|Ep)\s*\d+.*', '', stored_title, flags=re.IGNORECASE).strip()
-    display_title = re.sub(r'\s+Season\s*\d+', '', stored_title, flags=re.IGNORECASE).strip()
-    display_title = re.sub(r'\s+S\d+', '', display_title, flags=re.IGNORECASE).strip(" :,-\"'")
+    clean_series_title = re.sub(r'\s+Season\s*\d+', '', stored_title, flags=re.IGNORECASE).strip()
+    clean_series_title = re.sub(r'\s+S\d+', '', clean_series_title, flags=re.IGNORECASE).strip(" :,-\"'")
 
     movie_year = movie_doc.get("year")
-    if movie_year and str(movie_year) not in str(display_title) and primary_tag != "#SERIES":
-        filename_display = f"{display_title} {movie_year}"
+    if movie_year and str(movie_year) not in str(clean_series_title) and primary_tag != "#SERIES":
+        filename_display = f"{clean_series_title} {movie_year}"
     else:
-        filename_display = display_title
+        filename_display = clean_series_title
 
     imdb_url = movie_doc.get("imdb_url") or "https://www.imdb.com"
 
