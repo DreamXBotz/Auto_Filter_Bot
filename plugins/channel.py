@@ -25,17 +25,32 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HDHUB_DOMAIN = "https://new1.hdhub4u.free"
 
-# Read Gemini API Key safely from info.py or environment variables
 try:
     from info import GEMINI_API_KEY
 except ImportError:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
+PIRACY_STRIP_REGEX = re.compile(
+    r'\b(?:'
+    r'ds4k|ds1080p|ds720p|ds480p|line[\s._-]*aud(?:io)?|line|org[\s._-]*aud(?:io)?|org|'
+    r'clean[\s._-]*aud(?:io)?|mic|hq[\s._-]*line|hq[\s._-]*mic|'
+    r'esub|esubs|msub|hardsub|softsub|sub|subs|dub|dubbed|multi|dual|'
+    r'x264|x265|h264|h265|hevc|avc|10bit|10-bit|8bit|dovi|hdr10\+|hdr10|hdr|dv|'
+    r'ddp5\.1|ddp5|dd5\.1|ddp|dd|ac3|eac3|aac|atmos|dts|truehd|mp3|'
+    r'webrip|web-dl|webdl|web|dl|bluray|brrip|bdrip|remux|imax|proper|repack|'
+    r'hdcam|hdtc|camrip|cam|ts|tc|hdts|telesync|dvdscr|dvdrip|predvd|'
+    r'reloaded|uncut|the[\s._-]*rule|rule|special[\s._-]*edition|'
+    r'2160p|1440p|1080p|720p|540p|480p|360p|240p|4k|2k|'
+    r'v1|v2|v3|v4|v5|v6|ver\d+|version\d+'
+    r')\b',
+    re.IGNORECASE
+)
+
 _BASE_IGNORE_WORDS = {
     "rarbg", "dub", "sub", "sample", "mkv", "mp4", "avi", "aac", "ac3", "eac3", "ddp", "ddp5", "atmos", "dts",
     "combined", "esub", "msub", "proper", "repack", "unrated", "extended", "imax", "remux", "10bit", "10-bit",
     "x264", "x265", "h264", "h265", "hevc", "avc", "dovi", "hdr", "hdr10", "hdr10+",
-    "web", "dl", "bonus", "special", "ott", "reloaded", "uncut",
+    "web", "dl", "bonus", "special", "ott", "reloaded", "uncut", "ds4k", "line",
     "action", "adventure", "animation", "biography", "comedy", "crime",
     "documentary", "drama", "fantasy", "film-noir", "history",
     "horror", "music", "musical", "mystery", "romance", "sci-fi", "sport",
@@ -159,8 +174,9 @@ def normalize(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 def remove_ignored_words(text: str) -> str:
+    t = PIRACY_STRIP_REGEX.sub(" ", text)
     ignore_words_lower = {w.lower() for w in IGNORE_WORDS}
-    words = [w for w in text.split() if w.lower() not in ignore_words_lower]
+    words = [w for w in t.split() if w.lower() not in ignore_words_lower]
     return " ".join(words) if words else text
 
 def is_good_title_match(query: str, found_title: str) -> bool:
@@ -177,33 +193,47 @@ def is_good_title_match(query: str, found_title: str) -> bool:
     return False
 
 # =========================================================================
-# STATELESS GEMINI AI SINGLE-REQUEST IDENTIFIER
+# CLEAN & NATURAL GEMINI AI IDENTIFIER
 # =========================================================================
-async def identify_movie_with_gemini(filename: str) -> dict:
+async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
     if not GEMINI_API_KEY:
         return {}
-    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+
+    duration_info = f"{duration_mins} mins" if duration_mins else "Unknown"
     prompt = (
-        f"You are a movie identification system. Given this filename: '{filename}', identify the official movie or series name, "
-        f"its release year, whether it is a series or movie, and which official OTT streaming platform(s) it streams on in India (e.g. Netflix, Amazon Prime Video, JioCinema, SonyLiv, Zee5, Disney+ Hotstar, etc.). "
-        f"Return ONLY valid raw JSON with keys: 'title' (string, main movie name only without junk), 'year' (string or null), 'is_series' (boolean), 'ott' (list of strings). No markdown formatting, no code blocks."
+        "Identify the official movie or series name from the following media details:\n"
+        f"- Filename: {filename}\n"
+        f"- Caption: {caption}\n"
+        f"- Runtime: {duration_info}\n\n"
+        "Extract the real title without codecs or rip tags, release year, whether it is a series or movie, "
+        "and official Indian OTT platforms (e.g. Netflix, Disney+ Hotstar, Amazon Prime Video, JioCinema, SonyLiv, Zee5).\n"
+        "Return ONLY a raw JSON dictionary without backticks:\n"
+        "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Netflix\"]}"
     )
+
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
     }
+
+    models = ["gemini-1.5-flash", "gemini-2.0-flash"]
     timeout = aiohttp.ClientTimeout(total=5)
-    try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.post(endpoint, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
-                    raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
-                    parsed = json.loads(raw_text)
-                    return parsed
-    except Exception as e:
-        logger.warning(f"Gemini AI Identification failed: {e}")
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        for model in models:
+            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            try:
+                async with session.post(endpoint, json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                        raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
+                        parsed = json.loads(raw_text)
+                        if parsed.get("title"):
+                            return parsed
+            except Exception as e:
+                logger.warning(f"Gemini {model} failed: {e}")
+                continue
     return {}
 
 def get_qualities(text: str) -> str:
@@ -343,6 +373,7 @@ async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str
 
 def get_clean_title(name: str) -> str:
     t = re.sub(r'\b(19|20)\d{2}\b', '', name)
+    t = PIRACY_STRIP_REGEX.sub(" ", t)
     return normalize(t).lower()
 
 def format_runtime(runtime_val, is_series: bool = False) -> str:
@@ -621,7 +652,7 @@ def _strip_season_episode_tokens(name: str) -> str:
     for p in patterns: name = re.sub(p, " ", name, flags=re.IGNORECASE)
     return normalize(name).strip()
 
-async def extract_media_info_ai(filename: str, caption: str):
+async def extract_media_info_ai(filename: str, caption: str, duration_mins: Optional[int] = None):
     filename_clean = clean_mentions_links(filename)
     unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
@@ -638,14 +669,16 @@ async def extract_media_info_ai(filename: str, caption: str):
     prelim_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
     clean_search = get_clean_title(prelim_name)
 
-    # Database Cache First: Do not query Gemini if already exists in Mongo
+    # 1. MongoDB Cache First: Prevent duplicate posts & save quota
     cached_doc = None
     if hasattr(db, "movie_updates"):
-        cached_doc = await db.movie_updates.find_one({"clean_title": clean_search})
+        cached_doc = await db.movie_updates.find_one({
+            "$or": [{"clean_title": clean_search}, {"_id": clean_search}]
+        })
 
     ai_data = {}
     if not cached_doc and GEMINI_API_KEY:
-        ai_data = await identify_movie_with_gemini(filename_clean)
+        ai_data = await identify_movie_with_gemini(filename_clean, caption, duration_mins)
 
     ai_title = ai_data.get("title")
     ai_year = ai_data.get("year")
@@ -726,7 +759,7 @@ async def media_handler(bot, message):
 
 async def process_and_send_update(bot, filename, caption, file_runtime_mins=None):
     try:
-        media_info = await extract_media_info_ai(filename, caption)
+        media_info = await extract_media_info_ai(filename, caption, file_runtime_mins)
         base_name = media_info["base_name"]
         processed = media_info["processed"]
 
@@ -823,8 +856,13 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
 
         imdb_url = hdhub_info_url.strip() if hdhub_info_url else ""
         if not imdb_url:
-            if imdb_details.get("imdb_id"): imdb_url = f"https://www.imdb.com/title/{imdb_details['imdb_id']}/"
-            elif tmdb_details.get("id"): imdb_url = f"https://www.themoviedb.org/{'tv' if is_series else 'movie'}/{tmdb_details['id']}"
+            final_imdb_id = imdb_details.get("imdb_id") or (tmdb_details.get("imdb_id") if isinstance(tmdb_details, dict) else None) or imdb_id
+            if final_imdb_id and str(final_imdb_id).startswith("tt"):
+                imdb_url = f"https://www.imdb.com/title/{final_imdb_id}/"
+            elif is_series and tmdb_details.get("id"):
+                imdb_url = f"https://www.themoviedb.org/tv/{tmdb_details['id']}"
+            elif tmdb_details.get("id"):
+                imdb_url = f"https://www.themoviedb.org/movie/{tmdb_details['id']}"
 
         imdb_r = imdb_details.get("runtime")
         tmdb_r = tmdb_details.get("episode_run_time") if is_series and tmdb_details.get("episode_run_time") else tmdb_details.get("runtime")
