@@ -193,11 +193,12 @@ def is_good_title_match(query: str, found_title: str) -> bool:
     return False
 
 # =========================================================================
-# STATELESS GEMINI AI IDENTIFIER (WITH DIAGNOSTIC LOGGING)
+# STATELESS GEMINI AI IDENTIFIER
 # =========================================================================
 async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
-    if not GEMINI_API_KEY:
-        logger.warning("[GEMINI] No GEMINI_API_KEY provided!")
+    key = GEMINI_API_KEY.strip()
+    if not key:
+        logger.warning("[GEMINI] Missing GEMINI_API_KEY.")
         return {}
 
     duration_info = f"{duration_mins} mins" if duration_mins else "Unknown"
@@ -207,30 +208,29 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
         f"- Caption: {caption}\n"
         f"- Runtime: {duration_info}\n\n"
         "Rules:\n"
-        "1. Extract the official title (preserve franchise sequel numbers like Dhamaal 4, Pushpa 2, Housefull 5).\n"
-        "2. Strip channel handles (@CineHDs etc), DS4K, LINE, WEB-DL, HEVC, audio tags, codecs.\n"
+        "1. Extract the official title (preserve sequel numbers like Dhamaal 4, Pushpa 2, Romanchakam).\n"
+        "2. Strip piracy tags like DS4K, LINE, WEB-DL, HEVC, codecs, channels, domains.\n"
         "3. Detect exact release year.\n"
         "4. Determine is_series (true/false).\n"
-        "5. List Indian streaming OTT platforms.\n\n"
-        "Return ONLY a raw JSON dictionary without markdown code blocks:\n"
-        "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Netflix\"]}"
+        "5. List Indian streaming OTT platforms (e.g. Disney+ Hotstar, Netflix, Amazon Prime Video, SonyLiv).\n\n"
+        "Return ONLY valid raw JSON without markdown:\n"
+        "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Disney+ Hotstar\"]}"
     )
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
     }
+    headers = {"Content-Type": "application/json"}
 
     models = ["gemini-1.5-flash", "gemini-2.0-flash"]
     timeout = aiohttp.ClientTimeout(total=5)
 
-    logger.info(f"[GEMINI PROMPT] Filename: '{filename}' | Duration: {duration_info}")
-
     async with aiohttp.ClientSession(timeout=timeout) as session:
         for model in models:
-            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
             try:
-                async with session.post(endpoint, json=payload) as resp:
+                async with session.post(endpoint, json=payload, headers=headers) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
@@ -240,7 +240,8 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
                         if parsed.get("title"):
                             return parsed
                     else:
-                        logger.warning(f"[GEMINI ERROR] Status {resp.status} with model {model}")
+                        err_body = await resp.text()
+                        logger.warning(f"[GEMINI ERROR] Status {resp.status} on model {model}: {err_body}")
             except Exception as e:
                 logger.warning(f"[GEMINI EXCEPTION] {model} failed: {e}")
                 continue
@@ -675,7 +676,6 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
     lang_keys = {k for k in CAPTION_LANGUAGES if re.search(rf"\b{re.escape(k)}\b", unified)}
     language = ", ".join(sorted({CAPTION_LANGUAGES[k] for k in lang_keys})) if lang_keys else "N/A"
 
-    # Always call Gemini AI for primary identification (Guarantees Dhamaal 4, Pushpa 2 etc)
     ai_data = await identify_movie_with_gemini(filename_clean, caption, duration_mins) if GEMINI_API_KEY else {}
 
     ai_title = ai_data.get("title")
@@ -690,7 +690,6 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
         year_match = YEAR_PATTERN.search(unified)
         year = year_match.group(0) if year_match else None
 
-    # Strict: Use Gemini Clean Title as the Base Name
     if ai_title:
         base_name = normalize(ai_title)
         if year and year not in base_name and tag != "#SERIES":
@@ -805,7 +804,6 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
     }
 
     if not movie_doc or is_mismatched:
-        # Strictly use Gemini verified title for metadata searching
         search_target_title = media_info.get("clean_search_title") or base_name
         hdhub_genres, hdhub_rating, hdhub_info_url, hdhub_is_series = await get_hdhub4u_data(search_target_title)
         if not is_series and hdhub_is_series:
@@ -878,7 +876,8 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         else:
             runtime = str(imdb_r).strip() if (imdb_r and str(imdb_r).strip().upper() not in ("N/A", "0")) else (str(tmdb_r).strip() if tmdb_r else final_file_runtime)
 
-        raw_g = tmdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else imdb_details.get("genres", "Drama"))
+        # STRICT GENRE PRIORITY: TMDb -> IMDb -> Scraper
+        raw_g = tmdb_details.get("genres") or imdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else "Drama")
         if isinstance(raw_g, list):
             genres = ", ".join([str(x).strip(" '\"") for x in raw_g])
         elif isinstance(raw_g, str):
