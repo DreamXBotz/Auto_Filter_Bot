@@ -23,28 +23,55 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HDHUB_DOMAIN = "https://new1.hdhub4u.free"
 
+# =========================================================================
+# ULTRA COMPREHENSIVE JUNK & IGNORE WORDS LIST (NO GLITCH GUARANTEED)
+# =========================================================================
 _BASE_IGNORE_WORDS = {
-    "rarbg", "dub", "sub", "sample", "mkv", "mp4", "avi", "aac", "ac3", "eac3", "ddp", "ddp5", "atmos", "dts",
-    "combined", "esub", "msub", "proper", "repack", "unrated", "extended", "imax", "remux", "10bit", "10-bit",
-    "x264", "x265", "h264", "h265", "hevc", "avc", "dovi", "hdr", "hdr10",
-    "web", "dl", "bonus", "special",
-    "action", "adventure", "animation", "biography", "comedy", "crime",
-    "documentary", "drama", "fantasy", "film-noir", "history",
-    "horror", "music", "musical", "mystery", "romance", "sci-fi", "sport",
-    "thriller", "war", "western", "hdcam", "hdtc", "camrip", "cam", "ts", "tc", "hdts",
-    "telesync", "dvdscr", "dvdrip", "predvd", "webrip", "web-dl", "tvrip",
-    "hdtv", "web dl", "webdl", "bluray", "brrip", "bdrip", "360p", "480p",
-    "720p", "1080p", "2160p", "4k", "1440p", "540p", "240p", "140p",
-    "hdrip", "hq-hdrip", "hq-hdtc", "hq-cam", "hq-ts", "hq-predvd",
-    "dual", "multi", "audio",
-    "v1", "v2", "v3", "v4", "v5", "v6", "version", "ver", "cleaned", "clean",
-    "nf", "netflix", "sonyliv", "sony", "sliv", "amzn", "prime",
-    "primevideo", "hotstar", "zee5", "jio", "jhs", "aha", "hbo", "paramount",
-    "apple", "atv", "atvp", "appletv", "hoichoi", "sunnxt", "viki", "cr", "crunchyroll", "hulu",
-    "disney", "dnp", "lionsgate", "lionsgateplay", "peacock", "max", "alt",
-    "altbalaji", "altt", "shemaroo", "shemaroome", "chaupal", "stage",
-    "planetmarathi", "manorama", "manoramamax", "tubi",
-    "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "dd5.1", "ddp5.1", "dd", "ddp"
+    # File Formats & Encoders
+    "mkv", "mp4", "avi", "wmv", "mov", "flv", "webm", "vob", "m4v", "3gp", "ts", "m2ts", "sample",
+    "x264", "x265", "h264", "h265", "hevc", "avc", "xvid", "divx", "10bit", "10-bit", "8bit", "8-bit",
+    "dovi", "hdr", "hdr10", "hdr10+", "dv", "sdr", "remux", "imax", "proper", "repack", "unrated",
+    "extended", "directors", "cut", "special", "edition", "bonus", "complete", "pack", "batch",
+
+    # Audio Codecs & Tags
+    "aac", "ac3", "eac3", "ddp", "ddp5", "ddp5.1", "dd5.1", "atmos", "dts", "dts-hd", "truehd",
+    "mp3", "flac", "opus", "wav", "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "2.0ch", "ch", "audio",
+    "dual", "multi", "dub", "dubbed", "sub", "subs", "esub", "esubs", "msub", "hardsub", "softsub",
+    "clean", "cleaned", "line", "mic", "hq", "hd", "hq-line", "line-audio", "hq-mic", "mic-audio",
+
+    # Source & Quality Rips
+    "hdcam", "hdtc", "camrip", "cam", "hq-cam", "hdts", "hq-ts", "tc", "telesync", "tele-sync",
+    "dvdscr", "dvd-scr", "dvdrip", "dvd-rip", "predvd", "pre-dvd", "hq-predvd", "webrip", "web-rip",
+    "web-dl", "webdl", "web", "dl", "tvrip", "tv-rip", "hdtv", "hd-tv", "bluray", "blu-ray", "brrip",
+    "bdrip", "bdr", "remuxed", "hdrip", "hq-hdrip", "hq-hdtc", "140p", "240p", "360p", "480p", "540p",
+    "720p", "1080p", "1440p", "2160p", "4k", "2k", "uhd", "fhd", "sd",
+
+    # Release Versions
+    "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "ver1", "ver2", "version", "ver", "part",
+    "vol", "volume", "chapter", "combined",
+
+    # Language Terms (Strip to avoid duplicate movie posts like 'Marco Hindi')
+    "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada", "ben",
+    "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "urd", "urdu", "bho", "bhojpuri",
+    "ori", "odia", "oriya", "asm", "assamese", "eng", "english", "spa", "spanish", "fre", "french",
+    "ger", "german", "ita", "italian", "rus", "russian", "kor", "korean", "jpn", "japanese", "chi",
+    "chinese", "tha", "thai", "ind", "indonesian",
+
+    # OTT Platforms
+    "ott", "nf", "netflix", "sonyliv", "sony", "sliv", "amzn", "prime", "primevideo", "hotstar",
+    "zee5", "jio", "jhs", "jiohotstar", "aha", "hbo", "paramount", "apple", "atv", "atvp", "appletv",
+    "hoichoi", "sunnxt", "viki", "cr", "crunchyroll", "hulu", "disney", "dnp", "lionsgate",
+    "lionsgateplay", "peacock", "max", "alt", "altbalaji", "altt", "shemaroo", "shemaroome",
+    "chaupal", "stage", "planetmarathi", "manorama", "manoramamax", "tubi", "mxplayer", "mxtv",
+
+    # Common Web Scrape Junk, Piracy Groups & Sites
+    "rarbg", "yts", "yify", "ettv", "galaxytv", "tgx", "psa", "pahe", "mkvcinemas", "hdhub4u",
+    "moviesmod", "skymovieshd", "extraflix", "1tamilmv", "tamilblasters", "cinevood", "themoviesboss",
+    "toonworld4all", "bolly4u", "9xmovies", "filmywap", "worldfree4u", "katmoviehd", "hdm2", "primefix",
+    "hub", "org", "in", "net", "com", "site", "pro", "vip", "club", "zone", "link", "click", "download",
+    "join", "telegram", "channel", "group", "official", "original", "exclusive", "premium", "fast",
+    "speed", "full", "movie", "series", "season", "episode", "episodes", "show", "watch", "stream",
+    "drm", "rip", "www", "http", "https"
 }
 
 IGNORE_WORDS = _BASE_IGNORE_WORDS | set(BAD_WORDS if isinstance(BAD_WORDS, (list, tuple, set)) else [])
@@ -121,8 +148,16 @@ RES_ORDER = {
     "2160p": 2160, "4k": 2160
 }
 
-CLEAN_PATTERN = re.compile(r'@[^ \n\r\t\.,:;!?()\[\]{}<>\\/"\'=_%]+|\bwww\.[^\s\]\)]+|\([\@^]+\)|\[[\@^]+\]')
-NORMALIZE_PATTERN = re.compile(r"[._]+|[()\[\]{}:;'–!,.?_]")
+# Regex to strip emojis, unicode pictograms, URLs, telegram channels
+CLEAN_PATTERN = re.compile(
+    r'@[^ \n\r\t\.,:;!?()\[\]{}<>\\/"\'=_%]+|'
+    r'https?://\S+|www\.\S+|'
+    r'[\U00010000-\U0010ffff]|'
+    r'[\u2000-\u3300]|'
+    r'[\(\[\{][@#\^\*]+[\)\]\}]'
+)
+
+NORMALIZE_PATTERN = re.compile(r"[._\-+]+|[()\[\]{}:;'\"–—!,.?~`*^|\\/]")
 
 RESOLUTION_PATTERN = re.compile(r"\b(?:2160p|4K|1440p|1080p|720p|540p|480p|360p|240p|140p)\b", re.IGNORECASE)
 SOURCE_PATTERN = re.compile(
@@ -156,7 +191,7 @@ pending_updates = {}
 sending_updates = set()
 
 def clean_mentions_links(text: str) -> str:
-    return CLEAN_PATTERN.sub("", text or "").strip()
+    return CLEAN_PATTERN.sub(" ", text or "").strip()
 
 def normalize(s: str) -> str:
     s = NORMALIZE_PATTERN.sub(" ", s)
@@ -177,7 +212,7 @@ def is_good_title_match(query: str, found_title: str) -> bool:
         s = re.sub(r'^(the|a|an)\s+', '', s, flags=re.IGNORECASE)
         s = re.sub(r"['’]", "", s)
         s = normalize(s).lower()
-        return [w for w in s.split() if w]
+        return [w for w in s.split() if w and w not in _BASE_IGNORE_WORDS]
 
     q_words = clean_words(q_raw)
     f_words = clean_words(f_raw)
@@ -303,21 +338,18 @@ def extract_ott_platform(text: str) -> str:
 async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str) -> str:
     platforms = set()
 
-    # 1. IMDb Priority
     if imdb_details and isinstance(imdb_details, dict):
         raw_ott = f"{imdb_details.get('distributors', '')} {imdb_details.get('ott', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
             if re.search(rf"\b{re.escape(key)}\b", raw_ott):
                 platforms.add(plat)
 
-    # 2. TMDb Priority
     if not platforms and tmdb_details and isinstance(tmdb_details, dict):
         networks = f"{tmdb_details.get('networks', '')} {tmdb_details.get('watch_providers', '')}".lower()
         for key, plat in OTT_PLATFORMS.items():
             if re.search(rf"\b{re.escape(key)}\b", networks):
                 platforms.add(plat)
 
-    # 3. File & Caption Regex
     if not platforms:
         unified_text = f"{filename} {caption}".lower()
         for key, plat in OTT_PLATFORMS.items():
@@ -743,7 +775,8 @@ def _strip_season_episode_tokens(name: str) -> str:
         r"\bSeason\s*\d{1,2}\b", r"\bEp(?:isode)?\.?\s*\d{1,3}\b", r"\bEpisode\s*\d{1,3}\b",
         r"\bPart\s*\d{1,2}\b", r"\bDay\s*\d{1,3}\b", r"\bBonus\b", r"\bSpecial\b",
         r"\b[vV]\d+\b", r"\b(?:version|ver)\.?\s*\d+\b",
-        r"\b(?:dd|ddp|ac3|eac3|aac)?\s*[257]\s*[._]\s*[01]\b", r"\b(?:dd|ddp)\s*[257]\b"
+        r"\b(?:dd|ddp|ac3|eac3|aac)?\s*[257]\s*[._]\s*[01]\b", r"\b(?:dd|ddp)\s*[257]\b",
+        r"\b(?:hin|hindi|tam|tamil|tel|telugu|mal|malayalam|kan|kannada|ben|bengali|mar|marathi|guj|gujarati|pun|punjabi|eng|english|kor|korean|jpn|japanese|dual|multi|audio|dubbed)\b"
     ]
     for p in patterns:
         name = re.sub(p, " ", name, flags=re.IGNORECASE)
@@ -994,6 +1027,13 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption)
         file_data["ott_platform"] = ott_platform
 
+        # -----------------------------------------------------------------
+        # STRICT LANDSCAPE FIRST POSTER SELECTION:
+        # 1. Blogger Banner (16:9)
+        # 2. TMDB Backdrop Banner (16:9 Landscape)
+        # 3. IMDb Backdrop Banner (16:9 Landscape)
+        # 4. Portrait Fallback (No 16:9 Force-Stretch)
+        # -----------------------------------------------------------------
         poster_url = ""
         is_backdrop = False
 
