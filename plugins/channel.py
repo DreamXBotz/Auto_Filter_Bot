@@ -193,10 +193,11 @@ def is_good_title_match(query: str, found_title: str) -> bool:
     return False
 
 # =========================================================================
-# STATELESS GEMINI AI IDENTIFIER
+# STATELESS GEMINI AI IDENTIFIER (WITH DIAGNOSTIC LOGGING)
 # =========================================================================
 async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
     if not GEMINI_API_KEY:
+        logger.warning("[GEMINI] No GEMINI_API_KEY provided!")
         return {}
 
     duration_info = f"{duration_mins} mins" if duration_mins else "Unknown"
@@ -206,12 +207,12 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
         f"- Caption: {caption}\n"
         f"- Runtime: {duration_info}\n\n"
         "Rules:\n"
-        "1. Extract the official title (including franchise numbers like Dhamaal 4, Pushpa 2, Housefull 5).\n"
-        "2. Strip all piracy tags like DS4K, LINE, WEB-DL, HEVC, audio names, codecs, channels.\n"
+        "1. Extract the official title (preserve franchise sequel numbers like Dhamaal 4, Pushpa 2, Housefull 5).\n"
+        "2. Strip channel handles (@CineHDs etc), DS4K, LINE, WEB-DL, HEVC, audio tags, codecs.\n"
         "3. Detect exact release year.\n"
         "4. Determine is_series (true/false).\n"
         "5. List Indian streaming OTT platforms.\n\n"
-        "Return ONLY a raw JSON dictionary without markdown:\n"
+        "Return ONLY a raw JSON dictionary without markdown code blocks:\n"
         "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Netflix\"]}"
     )
 
@@ -223,6 +224,8 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
     models = ["gemini-1.5-flash", "gemini-2.0-flash"]
     timeout = aiohttp.ClientTimeout(total=5)
 
+    logger.info(f"[GEMINI PROMPT] Filename: '{filename}' | Duration: {duration_info}")
+
     async with aiohttp.ClientSession(timeout=timeout) as session:
         for model in models:
             endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
@@ -232,11 +235,14 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
                         data = await resp.json()
                         raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
                         raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
+                        logger.info(f"[GEMINI RAW RESPONSE] {raw_text}")
                         parsed = json.loads(raw_text)
                         if parsed.get("title"):
                             return parsed
+                    else:
+                        logger.warning(f"[GEMINI ERROR] Status {resp.status} with model {model}")
             except Exception as e:
-                logger.warning(f"Gemini {model} failed: {e}")
+                logger.warning(f"[GEMINI EXCEPTION] {model} failed: {e}")
                 continue
     return {}
 
@@ -700,6 +706,8 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
 
     if not base_name: base_name = normalize(filename_clean)
 
+    logger.info(f"[IDENTIFIED MOVIE] BaseName: '{base_name}' | Title: '{ai_title}' | OTT: {ai_ott}")
+
     return {
         "processed": normalize(filename_clean),
         "base_name": base_name,
@@ -1060,7 +1068,6 @@ def generate_movie_message(movie_doc, base_name):
 
     runtime = format_runtime(raw_runtime, is_series=is_series)
 
-    # Strictly render the clean Gemini Official Title on post
     stored_title = movie_doc.get("title", base_name)
     display_title = re.sub(r'[:,]?\s*(?:Episode|Ep)\s*\d+.*|\s+Season\s*\d+|\s+S\d+', '', stored_title, flags=re.IGNORECASE).strip()
     movie_year = movie_doc.get("year")
