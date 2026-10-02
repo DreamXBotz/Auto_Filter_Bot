@@ -70,7 +70,7 @@ _BASE_IGNORE_WORDS = {
     "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "dd5.1", "ddp5.1", "dd", "ddp",
     "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada",
     "ben", "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "eng", "english",
-    "kor", "korean", "jpn", "japanese", "chi", "chinese", "spa", "spanish", "fre", "french"
+    "kor", "korean", "jpn", "japanese", "chi", "chinese", "spa", "spanish", "fre", "french", "ms"
 }
 
 IGNORE_WORDS = _BASE_IGNORE_WORDS | set(BAD_WORDS if isinstance(BAD_WORDS, (list, tuple, set)) else [])
@@ -193,7 +193,7 @@ def is_good_title_match(query: str, found_title: str) -> bool:
     return False
 
 # =========================================================================
-# STATELESS GEMINI AI IDENTIFIER
+# PROFESSIONAL GEMINI AI IDENTIFIER (WITH SERIES & EPISODE EXTRACTION)
 # =========================================================================
 async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
     key = GEMINI_API_KEY.strip()
@@ -203,27 +203,28 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
 
     duration_info = f"{duration_mins} mins" if duration_mins else "Unknown"
     prompt = (
-        "Identify the real movie or series name from this piracy release info:\n"
+        "You are a professional media metadata extractor. Analyze the filename and caption to identify the core movie/series.\n"
         f"- Filename: {filename}\n"
         f"- Caption: {caption}\n"
         f"- Runtime: {duration_info}\n\n"
         "Rules:\n"
-        "1. Extract the official title (preserve sequel numbers like Dhamaal 4, Pushpa 2, Romanchakam).\n"
-        "2. Strip piracy tags like DS4K, LINE, WEB-DL, HEVC, codecs, channels, domains.\n"
+        "1. Extract the official title (preserve sequel numbers like 'Dhamaal 4', 'Pushpa 2').\n"
+        "2. Strip piracy tags (DS4K, LINE, WEB-DL, HEVC, codecs, channels, audio tags, sizes).\n"
         "3. Detect exact release year.\n"
-        "4. Determine is_series (true/false).\n"
-        "5. List Indian streaming OTT platforms (e.g. Disney+ Hotstar, Netflix, Amazon Prime Video, SonyLiv).\n\n"
-        "Return ONLY valid raw JSON without markdown:\n"
-        "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Disney+ Hotstar\"]}"
+        "4. Determine if it is a series (is_series: true/false).\n"
+        "5. If it IS a series, extract the Season (integer) and Episode (string/integer) from the filename.\n"
+        "6. List Indian streaming OTT platforms (e.g., Disney+ Hotstar, Netflix, Amazon Prime Video, SonyLiv).\n\n"
+        "Return ONLY a raw JSON dictionary without markdown code blocks:\n"
+        "{\"title\": \"Name\", \"year\": \"YYYY\", \"is_series\": false, \"season\": null, \"episode\": null, \"ott\": [\"Netflix\"]}"
     )
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 250}
     }
     headers = {"Content-Type": "application/json"}
 
-    models = ["gemini-1.5-flash", "gemini-2.0-flash"]
+    models = ["gemini-3.8-flash", "gemini-1.5-flash"]
     timeout = aiohttp.ClientTimeout(total=5)
 
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -667,8 +668,8 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
     filename_clean = clean_mentions_links(filename)
     unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
-    season, episode = extract_season_episode(filename)
-    tag = "#SERIES" if season is not None else "#MOVIE"
+    local_season, local_episode = extract_season_episode(filename)
+    tag = "#SERIES" if local_season is not None else "#MOVIE"
 
     quality = get_qualities(caption) or get_qualities(filename) or "N/A"
     ott_platform = extract_ott_platform(unified)
@@ -676,13 +677,24 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
     lang_keys = {k for k in CAPTION_LANGUAGES if re.search(rf"\b{re.escape(k)}\b", unified)}
     language = ", ".join(sorted({CAPTION_LANGUAGES[k] for k in lang_keys})) if lang_keys else "N/A"
 
-    ai_data = await identify_movie_with_gemini(filename_clean, caption, duration_mins) if GEMINI_API_KEY else {}
+    # Rate Limiting Protection - Slightly slow down to avoid Free Tier lockouts
+    await asyncio.sleep(1.5)
+
+    ai_data = {}
+    if GEMINI_API_KEY:
+        ai_data = await identify_movie_with_gemini(filename_clean, caption, duration_mins)
 
     ai_title = ai_data.get("title")
     ai_year = ai_data.get("year")
     ai_ott = ai_data.get("ott", [])
+    
+    # Merge local and AI extraction for season/episode
+    ai_season = ai_data.get("season")
+    ai_episode = ai_data.get("episode")
+    season = int(ai_season) if ai_season is not None else local_season
+    episode = str(ai_episode) if ai_episode is not None else local_episode
 
-    if ai_data.get("is_series"):
+    if ai_data.get("is_series") or season is not None:
         tag = "#SERIES"
 
     year = str(ai_year) if ai_year else None
@@ -690,6 +702,7 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
         year_match = YEAR_PATTERN.search(unified)
         year = year_match.group(0) if year_match else None
 
+    # Use Gemini Clean Title as the Base Name
     if ai_title:
         base_name = normalize(ai_title)
         if year and year not in base_name and tag != "#SERIES":
@@ -705,7 +718,7 @@ async def extract_media_info_ai(filename: str, caption: str, duration_mins: Opti
 
     if not base_name: base_name = normalize(filename_clean)
 
-    logger.info(f"[IDENTIFIED MOVIE] BaseName: '{base_name}' | Title: '{ai_title}' | OTT: {ai_ott}")
+    logger.info(f"[IDENTIFIED MOVIE] BaseName: '{base_name}' | Title: '{ai_title}' | OTT: {ai_ott} | S: {season} E: {episode}")
 
     return {
         "processed": normalize(filename_clean),
@@ -876,7 +889,6 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
         else:
             runtime = str(imdb_r).strip() if (imdb_r and str(imdb_r).strip().upper() not in ("N/A", "0")) else (str(tmdb_r).strip() if tmdb_r else final_file_runtime)
 
-        # STRICT GENRE PRIORITY: TMDb -> IMDb -> Scraper
         raw_g = tmdb_details.get("genres") or imdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else "Drama")
         if isinstance(raw_g, list):
             genres = ", ".join([str(x).strip(" '\"") for x in raw_g])
@@ -915,6 +927,7 @@ async def _process_with_lock(bot, filename, caption, media_info, base_name, proc
 
         await send_movie_update(bot, base_name)
     else:
+        # Check if the exact filename is already uploaded
         if any(f.get("filename") == filename for f in movie_doc.get("files", [])): return
         update_fields = {"$push": {"files": file_data}}
         if (not movie_doc.get("runtime") or str(movie_doc.get("runtime")) == "N/A") and final_file_runtime != "N/A":
@@ -992,6 +1005,7 @@ async def update_movie_message(bot, base_name):
                 await bot.edit_message_caption(chat_id=MOVIE_UPDATE_CHANNEL, message_id=message_id, caption=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
             else:
                 await bot.edit_message_text(chat_id=MOVIE_UPDATE_CHANNEL, message_id=message_id, text=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML, disable_web_page_preview=not LINK_PREVIEW)
+        # Exception thrown when message content is exactly the same - auto skips API call
         except MessageNotModified:
             pass
         except MessageIdInvalid:
@@ -1013,7 +1027,7 @@ def generate_movie_message(movie_doc, base_name):
         if file.get("ott_platform") and file.get("ott_platform") != "N/A":
             for plat in file["ott_platform"].split("|"):
                 all_ott_platforms.add(OTT_PLATFORMS.get(plat.strip().lower(), plat.strip()))
-        if file.get("season") is not None and file.get("episode"):
+        if file.get("season") is not None and file.get("episode") is not None:
             episodes_by_season[file["season"]].add(str(file["episode"]))
         if file.get("runtime") and str(file["runtime"]).isdigit() and int(file["runtime"]) > 0:
             valid_file_runtimes.append(int(file["runtime"]))
