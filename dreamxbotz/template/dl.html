@@ -49,6 +49,7 @@
             color: #ffffff;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
+            width: 100%;
         }
 
         body {
@@ -93,10 +94,12 @@
         .blob-blue { width: 62vw; height: 62vw; background: radial-gradient(circle, #0051ff 0%, transparent 70%); bottom: -18%; right: -12%; animation-delay: -5s; }
         .blob-violet { width: 48vw; height: 48vw; background: radial-gradient(circle, #7928ca 0%, transparent 70%); top: 30%; left: 25%; animation-delay: -9s; }
 
-        /* Phone & Tablet Screen: Remove blobs & cursor glow */
+        /* Phone & Tablet Screen: Remove blobs & set smooth gradient */
         @media (max-width: 768px) {
             body::before, .aura-blob { display: none !important; }
-            .ambient-layer { background: linear-gradient(135deg, #02040a 0%, #081021 100%) !important; }
+            .ambient-layer { 
+                background: radial-gradient(circle at 50% 25%, #081630 0%, #02040a 90%) !important; 
+            }
         }
 
         @keyframes auraFloat {
@@ -106,7 +109,7 @@
         }
 
         .glass-nav {
-            background: rgba(6, 11, 24, 0.82);
+            background: rgba(6, 11, 24, 0.88);
             backdrop-filter: blur(35px) saturate(210%);
             -webkit-backdrop-filter: blur(35px) saturate(210%);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -477,7 +480,7 @@
 
     <div id="toast" class="toast text-[11px] md:text-xs font-semibold">Notification</div>
 
-    <!-- Floating Glass Navbar (Join Button Spacing Fixed) -->
+    <!-- Floating Glass Navbar (Fixed Border & Balanced Join Spacing) -->
     <nav class="glass-nav sticky top-0 px-3.5 md:px-8 py-2.5 md:py-3 flex items-center justify-between">
         <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 brand-group cursor-pointer">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sapphire to-cobalt flex items-center justify-center shadow-[0_0_15px_rgba(0,210,255,0.6)] transition-transform duration-300 group-hover:scale-105">
@@ -532,7 +535,7 @@
                     </div>
                 </div>
 
-                <!-- Double-Tap Skip Zones (YouTube Style Skip) -->
+                <!-- Double-Tap Skip Zones -->
                 <div class="double-tap-zone dt-left" id="dt-left">
                     <div class="minimal-skip-pill" id="skip-left"><i class="fas fa-backward text-[10px]"></i> 10s</div>
                 </div>
@@ -542,7 +545,7 @@
 
                 <!-- HUD Controls Layer -->
                 <div class="hud" id="hud">
-                    <!-- Top HUD Bar (Audio Sync Slider Button Removed) -->
+                    <!-- Top HUD Bar -->
                     <div class="p-2.5 sm:p-3 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent">
                         <span class="text-[10px] sm:text-xs font-medium text-gray-200 truncate max-w-[60%] drop-shadow">{{file_name}}</span>
                         <div class="flex items-center gap-1.5 ml-auto">
@@ -570,7 +573,7 @@
                         </button>
                     </div>
 
-                    <!-- Bottom Timeline & Controls (Quality Settings Gear Button Removed) -->
+                    <!-- Bottom Timeline & Controls -->
                     <div class="p-2 sm:p-3 bg-gradient-to-t from-black/95 via-black/75 to-transparent">
                         <div class="relative w-full h-4 sm:h-5 flex items-center group cursor-pointer mb-1" id="timeline-container">
                             <div class="relative w-full h-1 bg-white/25 rounded-full overflow-hidden transition-all group-hover:h-1.5">
@@ -598,17 +601,17 @@
                                 <button class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] sm:text-xs font-semibold active:scale-95" onclick="openPopup('speed-popup')">
                                     <span id="speed-display">1x</span>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openAudioPopup()" title="Audio Tracks">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" onclick="openAudioPopup()" title="Audio Tracks">
                                     <i class="fas fa-music"></i>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openSubPopup()" title="Subtitles">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" onclick="openSubPopup()" title="Subtitles">
                                     <i class="fas fa-closed-captioning"></i>
                                 </button>
                                 <!-- Persistent Orientation Toggle -->
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
                                     <i class="fas fa-rotate" id="rotate-screen-icon"></i>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-fullscreen" title="Fullscreen">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" id="btn-fullscreen" title="Fullscreen">
                                     <i class="fas fa-expand" id="fs-icon"></i>
                                 </button>
                             </div>
@@ -637,7 +640,7 @@
             </button>
         </div>
 
-        <!-- External Players Section -->
+        <!-- External Players Section (Exact 8 App Cards Maintained) -->
         <div class="mb-3 w-full">
             <div class="flex items-center gap-2.5 mb-2.5 px-1">
                 <div class="h-px flex-grow bg-white/10"></div>
@@ -651,7 +654,7 @@
                         <path d="M24 4L14 36H34L24 4Z" fill="#FF8800"/>
                         <path d="M19 20H29L30.5 25H17.5L19 20Z" fill="#FFFFFF"/>
                         <path d="M16 29H32L33.5 34H14.5L16 29Z" fill="#FFFFFF"/>
-                        <path d="M8 38C8 36.9 8.9 36 10 36H38C39.1 36 40 39.1 40 38C40 39.1 39.1 40 38 40H10C8.9 40 8 39.1 8 38Z" fill="#FF8800"/>
+                        <path d="M8 38C8 36.9 8.9 36 10 36H38C39.1 36 40 36.9 40 38C40 39.1 39.1 40 38 40H10C8.9 40 8 39.1 8 38Z" fill="#FF8800"/>
                     </svg>
                     <span class="font-bold text-[10px] sm:text-xs text-gray-200">VLC</span>
                 </button>
@@ -744,10 +747,10 @@
         </div>
     </main>
 
-    <!-- ROOT TOP-LAYER MODALS (Same Exact Modals & Cards) -->
+    <!-- ROOT TOP-LAYER MODALS -->
     <div id="global-modal-layer">
 
-        <!-- 1. Welcome Advisory Liquid Glass Popup (Only Text Edited as Specified) -->
+        <!-- 1. Welcome Advisory Liquid Glass Popup -->
         <div id="welcome-popup" class="glass-popup-backdrop active" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5 sm:p-6 border-sapphire/30 shadow-[0_25px_60px_rgba(0,0,0,0.95)]">
                 <div class="flex justify-between items-center mb-3">
@@ -844,7 +847,7 @@
             </div>
         </div>
 
-        <!-- 6. Audio Tracks Popup (Seamless In-Player Audio Switch) -->
+        <!-- 6. Audio Tracks Popup -->
         <div id="audio-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -858,7 +861,7 @@
             </div>
         </div>
 
-        <!-- 7. Subtitles Popup (6 Sizes, Clean Original Speed) -->
+        <!-- 7. Subtitles Popup (Exact 6 Sizes Maintained) -->
         <div id="sub-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -980,10 +983,10 @@
         }
         inferTracksFromFilename(FILE_NAME);
 
-        function getTranscodedUrl(audioIdx = 0) {
+        function getTranscodedUrl(audioIdx = 0, startTime = 0) {
             if (!FILE_URL) return '';
             const sep = FILE_URL.includes('?') ? '&' : '?';
-            return `${FILE_URL}${sep}transcode=1&audio=${audioIdx}`;
+            return `${FILE_URL}${sep}transcode=1&audio=${audioIdx}&start=${Math.floor(startTime)}`;
         }
 
         function initPlayer() {
@@ -1000,8 +1003,7 @@
                 hls.loadSource(FILE_URL);
                 hls.attachMedia(video);
             } else {
-                // Connect with backend transcoding for browser audio compatibility
-                video.src = getTranscodedUrl(activeAudioIdx);
+                video.src = getTranscodedUrl(activeAudioIdx, 0);
             }
         }
 
@@ -1015,8 +1017,7 @@
             errorScreen.classList.add('hidden');
             videoLoader.classList.remove('hidden');
             const currentPos = video.currentTime || 0;
-            video.src = getTranscodedUrl(activeAudioIdx);
-            video.currentTime = currentPos;
+            video.src = getTranscodedUrl(activeAudioIdx, currentPos);
             video.play().catch(() => {});
         }
 
@@ -1361,7 +1362,7 @@
             else if (document.pictureInPictureEnabled) video.requestPictureInPicture();
         });
 
-        // Modal Open / Close with Auto-Resume Feature
+        // Popup Handlers with Auto-Resume Feature
         function openPopup(id) {
             closeAllPopups();
             wasPlayingBeforePopup = (!video.paused && !video.ended);
@@ -1369,9 +1370,9 @@
             document.getElementById(id).classList.add('active');
         }
         function closeAllPopups() {
-            const hasOpen = !!document.querySelector('.glass-popup-backdrop.active');
+            const hadActivePopup = !!document.querySelector('.glass-popup-backdrop.active');
             document.querySelectorAll('.glass-popup-backdrop').forEach(p => p.classList.remove('active'));
-            if (hasOpen && wasPlayingBeforePopup) {
+            if (hadActivePopup && wasPlayingBeforePopup) {
                 video.play().catch(() => {});
                 wasPlayingBeforePopup = false;
             }
@@ -1433,7 +1434,7 @@
             showToast(`Aspect Ratio: ${mode}`);
         }
 
-        // Subtitle Cue Parser (VLC Font)
+        // Subtitle Cue Parser (Runs at Exact Original Speed, VLC Font)
         function bindSubtitleCueRenderer() {
             if (!video.textTracks) return;
             for (let i = 0; i < video.textTracks.length; i++) {
@@ -1510,11 +1511,13 @@
             document.querySelectorAll('.sub-size-btn').forEach(b => {
                 b.className = 'sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition';
             });
-            btnElem.className = 'sub-size-btn py-2 rounded-xl bg-sapphire/20 text-sapphire border border-sapphire/50 text-xs font-bold transition';
+            if (btnElem) {
+                btnElem.className = 'sub-size-btn py-2 rounded-xl bg-sapphire/20 text-sapphire border border-sapphire/50 text-xs font-bold transition';
+            }
             showToast(`Subtitle Size: ${labelPct}`);
         }
 
-        // Multi-Audio Switcher (Zero-Reload / Instant Track Shift)
+        // Multi-Audio Track Switcher (Saved Position)
         function openAudioPopup() {
             const list = document.getElementById('audio-track-list');
             list.innerHTML = '';
@@ -1533,9 +1536,8 @@
                 btn.onclick = () => {
                     if (activeAudioIdx !== i) {
                         activeAudioIdx = i;
-                        const curTime = video.currentTime;
-                        video.src = getTranscodedUrl(i);
-                        video.currentTime = curTime;
+                        const curTime = video.currentTime || 0;
+                        video.src = getTranscodedUrl(i, curTime);
                         video.play().catch(() => {});
                     }
                     showToast(`Audio: ${label}`);
@@ -1549,7 +1551,7 @@
         // Direct Browser Download
         function copyDownloadLink() {
             if (!FILE_URL) return;
-            navigator.clipboard.writeText(FILE_URL).then(() => {
+            navigator.clipboard.writeText(RAW_FILE_URL).then(() => {
                 showToast("Link Copied! Paste in ADM / 1DM / FDM");
                 closeAllPopups();
             });
@@ -1565,12 +1567,12 @@
             dlView.classList.add('flex');
 
             const fallbackBtn = document.getElementById('manual-dl-fallback');
-            fallbackBtn.href = FILE_URL;
+            fallbackBtn.href = RAW_FILE_URL;
             fallbackBtn.setAttribute('download', FILE_NAME);
 
-            if (FILE_URL && FILE_URL.startsWith('http')) {
+            if (RAW_FILE_URL && RAW_FILE_URL.startsWith('http')) {
                 const dlLink = document.createElement('a');
-                dlLink.href = FILE_URL;
+                dlLink.href = RAW_FILE_URL;
                 dlLink.setAttribute('download', FILE_NAME);
                 dlLink.target = '_blank';
                 document.body.appendChild(dlLink);
@@ -1588,7 +1590,7 @@
 
         document.getElementById('btn-copy').addEventListener('click', () => {
             if (!FILE_URL) return;
-            navigator.clipboard.writeText(FILE_URL).then(() => showToast('Stream Link Copied!'));
+            navigator.clipboard.writeText(RAW_FILE_URL).then(() => showToast('Stream Link Copied!'));
         });
 
         function triggerNativeDeviceCast() {
@@ -1608,7 +1610,7 @@
             }
             if (window.PresentationRequest && FILE_URL) {
                 try {
-                    const req = new PresentationRequest([FILE_URL]);
+                    const req = new PresentationRequest([RAW_FILE_URL]);
                     req.start().catch(() => {});
                     return;
                 } catch (e) {}
@@ -1616,7 +1618,7 @@
             showToast("Searching for Cast devices on your Wi-Fi...");
         }
 
-        // External Player Launcher
+        // External Player Launcher (Direct URL For Maximum Speed)
         function launchApp(type) {
             if (!FILE_URL) {
                 showToast("Stream URL required");
@@ -1625,8 +1627,8 @@
             video.pause();
 
             if (isMobile) {
-                const cleanUrl = FILE_URL.replace(/^https?:\/\//, '');
-                const scheme = FILE_URL.startsWith('https') ? 'https' : 'http';
+                const cleanUrl = RAW_FILE_URL.replace(/^https?:\/\//, '');
+                const scheme = RAW_FILE_URL.startsWith('https') ? 'https' : 'http';
                 const packages = {
                     vlc: 'org.videolan.vlc',
                     mx: 'com.mxtech.videoplayer.ad',
@@ -1639,16 +1641,16 @@
                 if (packages[type]) {
                     window.location.href = `intent://${cleanUrl}#Intent;scheme=${scheme};type=video/*;package=${packages[type]};S.title=${encodeURIComponent(FILE_NAME)};end`;
                 } else if (type === 'potplayer') {
-                    window.location.href = `vlc://${FILE_URL}`;
+                    window.location.href = `vlc://${RAW_FILE_URL}`;
                 }
             } else {
                 if (type === 'potplayer') {
-                    navigator.clipboard.writeText(FILE_URL).catch(() => {});
-                    window.location.href = `potplayer://${FILE_URL}`;
+                    navigator.clipboard.writeText(RAW_FILE_URL).catch(() => {});
+                    window.location.href = `potplayer://${RAW_FILE_URL}`;
                     showToast("Opening PotPlayer...");
                 } else if (type === 'vlc') {
-                    navigator.clipboard.writeText(FILE_URL).catch(() => {});
-                    const m3uContent = `#EXTM3U\n#EXTINF:-1,${FILE_NAME}\n#EXTVLCOPT:network-caching=5000\n#EXTVLCOPT:http-reconnect=true\n${FILE_URL}`;
+                    navigator.clipboard.writeText(RAW_FILE_URL).catch(() => {});
+                    const m3uContent = `#EXTM3U\n#EXTINF:-1,${FILE_NAME}\n#EXTVLCOPT:network-caching=5000\n#EXTVLCOPT:http-reconnect=true\n${RAW_FILE_URL}`;
                     const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
@@ -1658,7 +1660,7 @@
                     document.body.removeChild(link);
                     showToast("Launching VLC Playlist...");
                 } else {
-                    navigator.clipboard.writeText(FILE_URL).then(() => {
+                    navigator.clipboard.writeText(RAW_FILE_URL).then(() => {
                         showToast(`${type.toUpperCase()}: Stream Link Copied (Press Ctrl+V in Player)`);
                     });
                 }
