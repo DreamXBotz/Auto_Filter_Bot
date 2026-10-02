@@ -2,7 +2,6 @@ from aiohttp import web
 import re
 import math
 import logging
-import secrets
 import mimetypes
 from aiohttp.http_exceptions import BadStatusLine
 from dreamxbotz.Bot import multi_clients, work_loads
@@ -47,7 +46,7 @@ async def watch_handler(request: web.Request):
     except FIleNotFound as e:
         raise web.HTTPNotFound(text=e.message)
     except (AttributeError, BadStatusLine, ConnectionResetError):
-        pass
+        raise web.HTTPBadRequest()
     except Exception as e:
         logger.critical(e.with_traceback(None))
         raise web.HTTPInternalServerError(text=str(e))
@@ -77,15 +76,17 @@ async def stream_handler(request: web.Request):
     except web.HTTPNotFound:
         raise
     except (AttributeError, BadStatusLine, ConnectionResetError):
-        pass
+        raise web.HTTPBadRequest()
     except Exception as e:
         logger.critical(e.with_traceback(None))
         raise web.HTTPInternalServerError(text=str(e))
 
 async def media_streamer(request: web.Request, id: int, secure_hash: str):
-    range_header = request.headers.get("Range", 0)
+    range_header = request.headers.get("Range", None)
+
+    # 💥 INSTANT DOWNLOAD CHECK
     is_download = request.rel_url.query.get("dl") == "1"
-    
+
     index = min(work_loads, key=work_loads.get)
     faster_client = multi_clients[index]
 
@@ -96,9 +97,9 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
         class_cache[faster_client] = tg_connect
 
     file_id = await tg_connect.get_file_properties(id)
-    if file_id.unique_id[:6] != secure_hash:
+    if file_id.unique_id[:6]!= secure_hash:
         raise InvalidHash
-    
+
     file_size = file_id.file_size
 
     if range_header:
@@ -109,15 +110,15 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
         from_bytes = request.http_range.start or 0
         until_bytes = (request.http_range.stop or file_size) - 1
 
-    if (until_bytes > file_size) or (from_bytes < 0) or (until_bytes < from_bytes):
+    if (until_bytes >= file_size) or (from_bytes < 0) or (until_bytes < from_bytes):
         return web.Response(
             status=416,
             body="416: Range not satisfiable",
             headers={"Content-Range": f"bytes */{file_size}"},
         )
-    
-    # 💥 BUG FIX: Aage 1MB chilo bole slow hoto. Ekhon 3MB chunk korlam fast stream & skip er jonno!
-    chunk_size = 3 * 1024 * 1024 
+
+    # 💥 BUG FIX: Must be exactly 1MB (1024 * 1024) to match Telegram chunks and avoid skip buffer crashes.
+    chunk_size = 1024 * 1024
     until_bytes = min(until_bytes, file_size - 1)
 
     offset = from_bytes - (from_bytes % chunk_size)
@@ -136,11 +137,11 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
     if not mime_type:
         mime_type = mimetypes.guess_type(original_file_name)[0] or "video/mp4"
 
-    # 💥 NAME FORMATTING: Ekhon file er naam auto "Boultflix - {name}" hobe.
-    safe_name = original_file_name.replace('"', '')
+    # 💥 AUTO RENAME
+    safe_name = original_file_name.replace('"', '').replace("'", "")
     formatted_file_name = f"Boultflix - {safe_name}"
 
-    # 💥 INSTANT DOWNLOAD: dl=1 thakle attachment hobe, nahole inline stream.
+    # 💥 INSTANT DOWNLOAD HEADER
     disposition = "attachment" if is_download else "inline"
 
     resp_headers = {
@@ -153,7 +154,7 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
         "Access-Control-Allow-Headers": "Range, Content-Type",
         "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges",
     }
-    
+
     if range_header:
         resp_headers["Content-Range"] = f"bytes {from_bytes}-{until_bytes}/{file_size}"
 
