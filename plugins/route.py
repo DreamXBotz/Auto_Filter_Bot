@@ -13,7 +13,6 @@ from dreamxbotz.util.render_template import render_page
 import info
 
 logger = logging.getLogger(__name__)
-
 routes = web.RouteTableDef()
 
 @routes.get("/favicon.ico")
@@ -53,38 +52,6 @@ async def watch_handler(request: web.Request):
         logger.critical(e.with_traceback(None))
         raise web.HTTPInternalServerError(text=str(e))
 
-@routes.get(r"/{path:\S+}", allow_head=True)
-async def stream_handler(request: web.Request):
-    try:
-        path = request.match_info["path"]
-        match = re.search(r"^([a-zA-Z0-9_-]{6})(\d+)$", path)
-        if match:
-            secure_hash = match.group(1)
-            id = int(match.group(2))
-        else:
-            id_match = re.search(r"(\d+)(?:\/\S+)?", path)
-            if not id_match:
-                raise web.HTTPNotFound(text="Not found")
-            id = int(id_match.group(1))
-            secure_hash = request.rel_url.query.get("hash")
-        
-        # Check if AAC Transcode or Multi-Audio track is requested
-        if request.rel_url.query.get("transcode") == "1" or "audio" in request.rel_url.query:
-            return await transcode_streamer(request, id, secure_hash)
-
-        return await media_streamer(request, id, secure_hash)
-    except InvalidHash as e:
-        raise web.HTTPForbidden(text=e.message)
-    except FIleNotFound as e:
-        raise web.HTTPNotFound(text=e.message)
-    except web.HTTPNotFound:
-        raise
-    except (AttributeError, BadStatusLine, ConnectionResetError):
-        pass
-    except Exception as e:
-        logger.critical(e.with_traceback(None))
-        raise web.HTTPInternalServerError(text=str(e))
-
 class_cache = {}
 
 async def get_tg_streamer(id: int, secure_hash: str):
@@ -99,6 +66,37 @@ async def get_tg_streamer(id: int, secure_hash: str):
     if file_id.unique_id[:6] != secure_hash:
         raise InvalidHash
     return tg_connect, file_id, index
+
+@routes.get(r"/{path:\S+}", allow_head=True)
+async def stream_handler(request: web.Request):
+    try:
+        path = request.match_info["path"]
+        match = re.search(r"^([a-zA-Z0-9_-]{6})(\d+)$", path)
+        if match:
+            secure_hash = match.group(1)
+            id = int(match.group(2))
+        else:
+            id_match = re.search(r"(\d+)(?:\/\S+)?", path)
+            if not id_match:
+                raise web.HTTPNotFound(text="Not found")
+            id = int(id_match.group(1))
+            secure_hash = request.rel_url.query.get("hash")
+
+        if request.rel_url.query.get("transcode") == "1":
+            return await transcode_streamer(request, id, secure_hash)
+
+        return await media_streamer(request, id, secure_hash)
+    except InvalidHash as e:
+        raise web.HTTPForbidden(text=e.message)
+    except FIleNotFound as e:
+        raise web.HTTPNotFound(text=e.message)
+    except web.HTTPNotFound:
+        raise
+    except (AttributeError, BadStatusLine, ConnectionResetError):
+        pass
+    except Exception as e:
+        logger.critical(e.with_traceback(None))
+        raise web.HTTPInternalServerError(text=str(e))
 
 async def media_streamer(request: web.Request, id: int, secure_hash: str):
     range_header = request.headers.get("Range", 0)
@@ -132,23 +130,18 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
         file_id, index, offset, first_part_cut, last_part_cut, part_count, chunk_size
     )
 
-    mime_type = file_id.mime_type
-    file_name = file_id.file_name
-
-    if not mime_type:
-        mime_type = mimetypes.guess_type(file_name)[0] or "video/mp4"
+    mime_type = file_id.mime_type or mimetypes.guess_type(file_id.file_name)[0] or "video/mp4"
 
     resp_headers = {
-        "Content-Type": f"{mime_type}",
+        "Content-Type": mime_type,
         "Content-Length": str(req_length),
-        "Content-Disposition": f'inline; filename="{file_name}"',
+        "Content-Disposition": f'inline; filename="{file_id.file_name}"',
         "Accept-Ranges": "bytes",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
         "Access-Control-Allow-Headers": "Range, Content-Type",
         "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges",
     }
-    
     if range_header:
         resp_headers["Content-Range"] = f"bytes {from_bytes}-{until_bytes}/{file_size}"
 
@@ -158,20 +151,21 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
         headers=resp_headers
     )
 
-# Real-Time On-The-Fly Audio Transcoding (DDP/AC3 -> AAC) & Multi-Audio Selector
 async def transcode_streamer(request: web.Request, id: int, secure_hash: str):
     tg_connect, file_id, index = await get_tg_streamer(id, secure_hash)
     audio_idx = request.rel_url.query.get("audio", "0")
-    
-    # Internal source loop stream
+    start_time = request.rel_url.query.get("start", "0")
+
+    # Local port loop to avoid SSL handshake lag
     source_url = f"http://127.0.0.1:{info.PORT}/{request.match_info['path']}?hash={secure_hash}"
-    
+
     ffmpeg_cmd = [
         "ffmpeg",
+        "-ss", str(start_time),
         "-reconnect", "1",
         "-reconnect_at_eof", "1",
         "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "5",
+        "-reconnect_delay_max", "2",
         "-i", source_url,
         "-map", "0:v:0",
         "-map", f"0:a:{audio_idx}?",
@@ -195,6 +189,7 @@ async def transcode_streamer(request: web.Request, id: int, secure_hash: str):
         headers={
             "Content-Type": "video/mp4",
             "Content-Disposition": f'inline; filename="stream_{file_id.file_name}.mp4"',
+            "Accept-Ranges": "none",
             "Access-Control-Allow-Origin": "*",
         }
     )
