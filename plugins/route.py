@@ -84,6 +84,7 @@ async def stream_handler(request: web.Request):
 
 async def media_streamer(request: web.Request, id: int, secure_hash: str):
     range_header = request.headers.get("Range", 0)
+    is_download = request.rel_url.query.get("dl") == "1"
     
     index = min(work_loads, key=work_loads.get)
     faster_client = multi_clients[index]
@@ -114,7 +115,9 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
             body="416: Range not satisfiable",
             headers={"Content-Range": f"bytes */{file_size}"},
         )
-    chunk_size = 1024 * 1024
+    
+    # 💥 BUG FIX: Aage 1MB chilo bole slow hoto. Ekhon 3MB chunk korlam fast stream & skip er jonno!
+    chunk_size = 3 * 1024 * 1024 
     until_bytes = min(until_bytes, file_size - 1)
 
     offset = from_bytes - (from_bytes % chunk_size)
@@ -128,15 +131,22 @@ async def media_streamer(request: web.Request, id: int, secure_hash: str):
     )
 
     mime_type = file_id.mime_type
-    file_name = file_id.file_name
+    original_file_name = file_id.file_name
 
     if not mime_type:
-        mime_type = mimetypes.guess_type(file_name)[0] or "video/mp4"
+        mime_type = mimetypes.guess_type(original_file_name)[0] or "video/mp4"
+
+    # 💥 NAME FORMATTING: Ekhon file er naam auto "Boultflix - {name}" hobe.
+    safe_name = original_file_name.replace('"', '')
+    formatted_file_name = f"Boultflix - {safe_name}"
+
+    # 💥 INSTANT DOWNLOAD: dl=1 thakle attachment hobe, nahole inline stream.
+    disposition = "attachment" if is_download else "inline"
 
     resp_headers = {
         "Content-Type": f"{mime_type}",
         "Content-Length": str(req_length),
-        "Content-Disposition": f'inline; filename="{file_name}"',
+        "Content-Disposition": f'{disposition}; filename="{formatted_file_name}"',
         "Accept-Ranges": "bytes",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
