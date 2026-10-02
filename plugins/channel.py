@@ -30,8 +30,6 @@ try:
 except ImportError:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-gemini_semaphore = asyncio.Semaphore(1)
-
 PIRACY_STRIP_REGEX = re.compile(
     r'\b(?:'
     r'ds4k|ds1080p|ds720p|ds480p|line[\s._-]*aud(?:io)?|line|org[\s._-]*aud(?:io)?|org|'
@@ -72,7 +70,7 @@ _BASE_IGNORE_WORDS = {
     "5.1", "7.1", "2.0", "5.1ch", "7.1ch", "dd5.1", "ddp5.1", "dd", "ddp",
     "hin", "hindi", "tam", "tamil", "tel", "telugu", "mal", "malayalam", "kan", "kannada",
     "ben", "bengali", "mar", "marathi", "guj", "gujarati", "pun", "punjabi", "eng", "english",
-    "kor", "korean", "jpn", "japanese", "chi", "chinese", "spa", "spanish", "fre", "french", "ms"
+    "kor", "korean", "jpn", "japanese", "chi", "chinese", "spa", "spanish", "fre", "french"
 }
 
 IGNORE_WORDS = _BASE_IGNORE_WORDS | set(BAD_WORDS if isinstance(BAD_WORDS, (list, tuple, set)) else [])
@@ -194,62 +192,48 @@ def is_good_title_match(query: str, found_title: str) -> bool:
         return True
     return False
 
+# =========================================================================
+# CLEAN & NATURAL GEMINI AI IDENTIFIER
+# =========================================================================
 async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
-    key = GEMINI_API_KEY.strip()
-    if not key:
+    if not GEMINI_API_KEY:
         return {}
 
     duration_info = f"{duration_mins} mins" if duration_mins else "Unknown"
     prompt = (
-        "Identify the real movie or series name from this filename.\n"
+        "Identify the official movie or series name from the following media details:\n"
         f"- Filename: {filename}\n"
         f"- Caption: {caption}\n"
-        "Rules:\n"
-        "1. Extract the core official title only (preserve sequel numbers like Dhamaal 4, Dupahiya). Do NOT extract Season or Episode numbers, let my regex handle episodes.\n"
-        "2. Strip piracy tags like DS4K, LINE, WEB-DL, HEVC, codecs, sizes.\n"
-        "3. Detect release year.\n"
-        "4. Determine is_series (true/false).\n"
-        "5. List Indian streaming OTT platforms (e.g. Disney+ Hotstar, Netflix, Amazon Prime Video, SonyLiv).\n\n"
-        "Return ONLY a JSON dictionary exactly in this format: {\"title\": \"Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Netflix\"]}"
+        f"- Runtime: {duration_info}\n\n"
+        "Extract the real title without codecs or rip tags, release year, whether it is a series or movie, "
+        "and official Indian OTT platforms (e.g. Netflix, Disney+ Hotstar, Amazon Prime Video, JioCinema, SonyLiv, Zee5).\n"
+        "Return ONLY a raw JSON dictionary without backticks:\n"
+        "{\"title\": \"Movie Name\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": [\"Netflix\"]}"
     )
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 200,
-            "responseMimeType": "application/json"
-        }
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
     }
-    headers = {"Content-Type": "application/json"}
-    models = ["gemini-1.5-flash", "gemini-1.5-pro"]
-    timeout = aiohttp.ClientTimeout(total=7)
 
-    async with gemini_semaphore:
-        await asyncio.sleep(2.5) 
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            for model in models:
-                endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-                try:
-                    async with session.post(endpoint, json=payload, headers=headers) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
-                            raw_text = re.sub(r"```[^\n]*\n", "", raw_text)
-                            raw_text = raw_text.replace("```", "").strip()
-                            try:
-                                return json.loads(raw_text)
-                            except json.JSONDecodeError:
-                                logger.warning(f"[GEMINI JSON ERROR] {model} returned bad JSON: {raw_text}")
-                                return {}
-                        elif resp.status == 429:
-                            logger.warning(f"[GEMINI 429] Too many requests on {model}. Retrying...")
-                            await asyncio.sleep(3)
-                        else:
-                            logger.warning(f"[GEMINI ERROR] Status {resp.status} on model {model}")
-                except Exception as e:
-                    logger.warning(f"[GEMINI EXCEPTION] {model} failed: {e}")
-                    continue
+    models = ["gemini-1.5-flash", "gemini-2.0-flash"]
+    timeout = aiohttp.ClientTimeout(total=5)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        for model in models:
+            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            try:
+                async with session.post(endpoint, json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                        raw_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
+                        parsed = json.loads(raw_text)
+                        if parsed.get("title"):
+                            return parsed
+            except Exception as e:
+                logger.warning(f"Gemini {model} failed: {e}")
+                continue
     return {}
 
 def get_qualities(text: str) -> str:
@@ -668,18 +652,29 @@ def _strip_season_episode_tokens(name: str) -> str:
     for p in patterns: name = re.sub(p, " ", name, flags=re.IGNORECASE)
     return normalize(name).strip()
 
-async def extract_media_info_ai(filename: str, caption: str, prelim_name: str, cached_doc: dict, duration_mins: Optional[int] = None):
+async def extract_media_info_ai(filename: str, caption: str, duration_mins: Optional[int] = None):
     filename_clean = clean_mentions_links(filename)
     unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
-    local_season, local_episode = extract_season_episode(filename)
-    tag = "#SERIES" if local_season is not None else "#MOVIE"
+    season, episode = extract_season_episode(filename)
+    tag = "#SERIES" if season is not None else "#MOVIE"
 
     quality = get_qualities(caption) or get_qualities(filename) or "N/A"
     ott_platform = extract_ott_platform(unified)
 
     lang_keys = {k for k in CAPTION_LANGUAGES if re.search(rf"\b{re.escape(k)}\b", unified)}
     language = ", ".join(sorted({CAPTION_LANGUAGES[k] for k in lang_keys})) if lang_keys else "N/A"
+
+    base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
+    prelim_name = remove_ignored_words(_strip_season_episode_tokens(base_raw))
+    clean_search = get_clean_title(prelim_name)
+
+    # 1. MongoDB Cache First: Prevent duplicate posts & save quota
+    cached_doc = None
+    if hasattr(db, "movie_updates"):
+        cached_doc = await db.movie_updates.find_one({
+            "$or": [{"clean_title": clean_search}, {"_id": clean_search}]
+        })
 
     ai_data = {}
     if not cached_doc and GEMINI_API_KEY:
@@ -707,20 +702,17 @@ async def extract_media_info_ai(filename: str, caption: str, prelim_name: str, c
         base_name = prelim_name
         if year and year not in base_name: base_name = f"{base_name} {year}"
 
-    if local_season is not None and "Season" not in base_name:
-        base_name = f"{base_name} Season {local_season}"
+    if season is not None and "Season" not in base_name:
+        base_name = f"{base_name} Season {season}"
 
     if not base_name: base_name = normalize(filename_clean)
-
-    logger.info(f"[IDENTIFIED MOVIE] BaseName: '{base_name}' | Title: '{ai_title}' | OTT: {ai_ott} | S: {local_season} E: {local_episode}")
 
     return {
         "processed": normalize(filename_clean),
         "base_name": base_name,
-        "clean_search_title": normalize(ai_title) if ai_title else base_name,
         "tag": tag,
-        "season": local_season,
-        "episode": local_episode,
+        "season": season,
+        "episode": episode,
         "year": year,
         "quality": quality,
         "ott_platform": ott_platform,
@@ -767,53 +759,39 @@ async def media_handler(bot, message):
 
 async def process_and_send_update(bot, filename, caption, file_runtime_mins=None):
     try:
-        filename_clean = clean_mentions_links(filename)
-        base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
-        prelim_name = normalize(remove_ignored_words(_strip_season_episode_tokens(base_raw)))
-        
-        # Determine exact local preliminary base name including season to match exact DB records
-        local_season, _ = extract_season_episode(filename)
-        if local_season is not None:
-            prelim_name = f"{prelim_name} Season {local_season}"
-            
-        clean_prelim = get_clean_title(prelim_name)
+        media_info = await extract_media_info_ai(filename, caption, file_runtime_mins)
+        base_name = media_info["base_name"]
+        processed = media_info["processed"]
 
-        lock = locks[clean_prelim]
+        if not hasattr(db, "movie_updates"): db.movie_updates = db.db.movie_updates
+
+        clean_title = get_clean_title(base_name)
+        existing_doc = await db.movie_updates.find_one({"$or": [{"_id": base_name}, {"clean_title": clean_title}]})
+        if existing_doc: base_name = existing_doc["_id"]
+
+        lock = locks[base_name]
         async with lock:
-            await _process_with_lock(bot, filename, caption, filename_clean, prelim_name, clean_prelim, file_runtime_mins)
+            await _process_with_lock(bot, filename, caption, media_info, base_name, processed, file_runtime_mins)
     except Exception as e:
         logger.exception(f"Processing failed in process_and_send_update: {e}")
 
-async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name, clean_prelim, file_runtime_mins=None):
+async def _process_with_lock(bot, filename, caption, media_info, base_name, processed, file_runtime_mins=None):
     if not hasattr(db, "movie_updates"): db.movie_updates = db.db.movie_updates
 
-    # FIRST PASS DB CHECK - BYPASS API IMMEDIATELY IF FOUND
-    cached_doc = await db.movie_updates.find_one({
-        "$or": [{"clean_title": clean_prelim}, {"_id": prelim_name}]
-    })
-
-    media_info = await extract_media_info_ai(filename_clean, caption, prelim_name, cached_doc, file_runtime_mins)
-    base_name = media_info["base_name"]
     clean_title = get_clean_title(base_name)
-
-    # SECOND PASS DB CHECK - in case Gemini fetched a different final title
-    if not cached_doc:
-        cached_doc = await db.movie_updates.find_one({
-            "$or": [{"clean_title": clean_title}, {"_id": base_name}]
-        })
-    if cached_doc:
-        base_name = cached_doc["_id"]
+    movie_doc = await db.movie_updates.find_one({"$or": [{"_id": base_name}, {"clean_title": clean_title}]})
+    if movie_doc: base_name = movie_doc["_id"]
 
     is_series = media_info["tag"] == "#SERIES"
     is_mismatched = False
-    if cached_doc:
-        stored_title = cached_doc.get("title", "")
+    if movie_doc:
+        stored_title = movie_doc.get("title", "")
         if stored_title and not is_good_title_match(base_name, stored_title): is_mismatched = True
 
     final_file_runtime = f"{file_runtime_mins}" if file_runtime_mins else "N/A"
     file_data = {
         "filename": filename,
-        "processed": media_info["processed"],
+        "processed": processed,
         "quality": media_info["quality"],
         "language": media_info["language"],
         "ott_platform": media_info["ott_platform"],
@@ -824,9 +802,8 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
         "runtime": final_file_runtime
     }
 
-    if not cached_doc or is_mismatched:
-        search_target_title = media_info.get("clean_search_title") or base_name
-        hdhub_genres, hdhub_rating, hdhub_info_url, hdhub_is_series = await get_hdhub4u_data(search_target_title)
+    if not movie_doc or is_mismatched:
+        hdhub_genres, hdhub_rating, hdhub_info_url, hdhub_is_series = await get_hdhub4u_data(base_name)
         if not is_series and hdhub_is_series:
             is_series = True
             media_info["tag"] = "#SERIES"
@@ -835,12 +812,12 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
         tt_match = re.search(r'tt\d+', hdhub_info_url) if hdhub_info_url else None
         hdhub_imdb_id = tt_match.group(0) if tt_match else None
 
-        imdb_details = await fetch_imdb_safely(search_target_title, is_series=is_series, year=media_info.get("year")) or {}
-        official_search_title = search_target_title
+        imdb_details = await fetch_imdb_safely(base_name, is_series=is_series, year=media_info.get("year")) or {}
+        official_search_title = imdb_details.get("title") or base_name
         imdb_id = hdhub_imdb_id or imdb_details.get("imdb_id")
 
         tmdb_query = imdb_id if (imdb_id and imdb_id.startswith("tt")) else official_search_title
-        tmdb_details = await fetch_tmdb_safely(tmdb_query, search_target_title, is_series)
+        tmdb_details = await fetch_tmdb_safely(tmdb_query, base_name, is_series)
 
         ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption, media_info.get("ai_ott"))
         file_data["ott_platform"] = ott_platform
@@ -848,7 +825,7 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
         poster_url = ""
         is_backdrop = False
 
-        blogger_poster = await get_blogger_poster_url(search_target_title, media_info.get("year"))
+        blogger_poster = await get_blogger_poster_url(base_name, media_info.get("year"))
         if blogger_poster:
             poster_url = blogger_poster
             is_backdrop = True
@@ -860,15 +837,15 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
             if forced_backdrop:
                 poster_url = forced_backdrop
                 is_backdrop = True
-            elif tmdb_details.get("poster_url"):
-                poster_url = tmdb_details["poster_url"]
-                is_backdrop = False
-            elif imdb_details.get("poster_url"):
-                poster_url = imdb_details["poster_url"]
-                is_backdrop = False
             elif imdb_details.get("backdrop_url"):
                 poster_url = imdb_details["backdrop_url"]
                 is_backdrop = True
+            elif tmdb_details.get("poster_url"):
+                poster_url = tmdb_details["poster_url"]
+                is_backdrop = False
+            else:
+                poster_url = imdb_details.get("poster_url", "")
+                is_backdrop = False
 
         tmdb_rate = tmdb_details.get("rating")
         imdb_rate = imdb_details.get("rating")
@@ -897,7 +874,7 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
         else:
             runtime = str(imdb_r).strip() if (imdb_r and str(imdb_r).strip().upper() not in ("N/A", "0")) else (str(tmdb_r).strip() if tmdb_r else final_file_runtime)
 
-        raw_g = tmdb_details.get("genres") or imdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else "Drama")
+        raw_g = tmdb_details.get("genres") or (hdhub_genres if hdhub_genres != "N/A" else imdb_details.get("genres", "Drama"))
         if isinstance(raw_g, list):
             genres = ", ".join([str(x).strip(" '\"") for x in raw_g])
         elif isinstance(raw_g, str):
@@ -935,9 +912,9 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
 
         await send_movie_update(bot, base_name)
     else:
-        if any(f.get("filename") == filename for f in cached_doc.get("files", [])): return
+        if any(f.get("filename") == filename for f in movie_doc.get("files", [])): return
         update_fields = {"$push": {"files": file_data}}
-        if (not cached_doc.get("runtime") or str(cached_doc.get("runtime")) == "N/A") and final_file_runtime != "N/A":
+        if (not movie_doc.get("runtime") or str(movie_doc.get("runtime")) == "N/A") and final_file_runtime != "N/A":
             update_fields.setdefault("$set", {})["runtime"] = final_file_runtime
         await db.movie_updates.update_one({"_id": base_name}, update_fields)
         schedule_update(bot, base_name)
@@ -1012,7 +989,6 @@ async def update_movie_message(bot, base_name):
                 await bot.edit_message_caption(chat_id=MOVIE_UPDATE_CHANNEL, message_id=message_id, caption=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
             else:
                 await bot.edit_message_text(chat_id=MOVIE_UPDATE_CHANNEL, message_id=message_id, text=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML, disable_web_page_preview=not LINK_PREVIEW)
-        # Prevents redundant API calls if exact same qualities are found.
         except MessageNotModified:
             pass
         except MessageIdInvalid:
@@ -1034,7 +1010,7 @@ def generate_movie_message(movie_doc, base_name):
         if file.get("ott_platform") and file.get("ott_platform") != "N/A":
             for plat in file["ott_platform"].split("|"):
                 all_ott_platforms.add(OTT_PLATFORMS.get(plat.strip().lower(), plat.strip()))
-        if file.get("season") is not None and file.get("episode") is not None:
+        if file.get("season") is not None and file.get("episode"):
             episodes_by_season[file["season"]].add(str(file["episode"]))
         if file.get("runtime") and str(file["runtime"]).isdigit() and int(file["runtime"]) > 0:
             valid_file_runtimes.append(int(file["runtime"]))
