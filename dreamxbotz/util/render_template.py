@@ -1,6 +1,5 @@
 #Thanks @dreamxbotz for helping in this journey 
 
-import jinja2
 from info import BIN_CHANNEL, URL
 from dreamxbotz.Bot import dreamxbotz
 from dreamxbotz.util.human_readable import humanbytes
@@ -28,21 +27,20 @@ async def render_page(id, secure_hash, src=None):
     tag = file_data.mime_type.split("/")[0].strip()
     file_size = humanbytes(file_data.file_size)
     if tag in ["video", "audio"]:
-        template_file = "dreamxbotz/template/req.html"
+        template_file = "dreamxbotz/template/dl.html"
     else:
         template_file = "dreamxbotz/template/dl.html"
         async with aiohttp.ClientSession() as s:
             async with s.get(src) as u:
                 file_size = humanbytes(int(u.headers.get("Content-Length")))
 
-    with open(template_file) as f:
-        template = jinja2.Template(f.read())
+    with open(template_file, "r", encoding="utf-8") as f:
+        html_raw = f.read()
 
     file_name = file_data.file_name.replace("_", " ")
 
-    return template.render(
-        file_name=file_name,
-        file_url=src,
-        file_size=file_size,
-        file_unique_id=file_data.unique_id,
-    )
+    return html_raw.replace("{{file_name}}", file_name) \
+                   .replace("{{file_url}}", src) \
+                   .replace("{{file_size}}", file_size) \
+                   .replace("{{file_unique_id}}", file_data.unique_id) \
+                   .replace("{{tutorial}}", "https://youtube.com/")

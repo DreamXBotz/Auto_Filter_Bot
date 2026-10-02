@@ -1,1708 +1,1698 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DreamXbotz | {{file_name}}</title>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://i.ibb.co/mFdT56V5/20260922-071000.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{{file_name}} - BoultFlix</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsmkv@0.4.2/dist/jsmkv.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#020408',
+                        'obsidian-dark': '#000000',
+                        sapphire: '#00d2ff',
+                        violet: '#7928ca',
+                        cobalt: '#0051ff'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- HLS & Native Cast Sender -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 
     <style>
         :root {
-            --bg-primary: rgb(2, 6, 23);
-            --bg-secondary: rgb(30, 41, 59);
-            --bg-glass: rgba(15, 23, 42, 0.6);
-            --bg-glass-dark: rgba(2, 6, 23, 0.95);
-
-            --accent-rose: rgb(244, 63, 94);
-            --accent-rose-light: rgb(248, 113, 113);
-            --accent-blue: rgb(37, 99, 235);
-            --accent-amber: rgb(251, 191, 36);
-
-            --text-primary: rgb(248, 250, 252);
-            --text-secondary: rgb(203, 213, 225);
-            --text-muted: rgb(148, 163, 184);
-
-            --border-subtle: rgba(255, 255, 255, 0.05);
-            --border-normal: rgba(255, 255, 255, 0.1);
+            --x: 50vw;
+            --y: 50vh;
+            --sub-scale: 1;
         }
-
-
-        .plyr__control .lucide {
-            fill: none !important;
-        }
-
-        * {
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            background-color: #02040a !important;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
         }
 
         body {
-            font-family: "Inter", sans-serif;
-            background: linear-gradient(to bottom, var(--bg-primary), #0a0e1a);
-            color: var(--text-primary);
-            min-height: 100vh;
-            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100dvh;
+            justify-content: space-between;
+            position: relative;
         }
 
-
-        .header {
+        /* Ambient Dynamic Cursor Radial Glow (PC Only) */
+        body::before {
+            content: '';
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            background: var(--bg-glass-dark);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-subtle);
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(700px circle at var(--x) var(--y), rgba(0, 210, 255, 0.15), transparent 52%);
+            pointer-events: none;
+            z-index: 1;
         }
 
-        .header-content {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 1rem 1.5rem;
+        /* Ambient Color Mesh Layer */
+        .ambient-layer {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 50%, #030816 0%, #02040a 100%);
+        }
+        .aura-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.55;
+            animation: auraFloat 16s infinite alternate ease-in-out;
+        }
+        .blob-cyan { width: 55vw; height: 55vw; background: radial-gradient(circle, #00d2ff 0%, transparent 68%); top: -12%; left: -10%; }
+        .blob-blue { width: 62vw; height: 62vw; background: radial-gradient(circle, #0051ff 0%, transparent 70%); bottom: -18%; right: -12%; animation-delay: -5s; }
+        .blob-violet { width: 48vw; height: 48vw; background: radial-gradient(circle, #7928ca 0%, transparent 70%); top: 30%; left: 25%; animation-delay: -9s; }
+
+        /* Phone & Tablet Screen: Remove blobs & cursor glow */
+        @media (max-width: 768px) {
+            body::before, .aura-blob { display: none !important; }
+            .ambient-layer { background: linear-gradient(135deg, #02040a 0%, #081021 100%) !important; }
+        }
+
+        @keyframes auraFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(4vw, 5vh) scale(1.1); }
+            100% { transform: translate(-4vw, -4vh) scale(0.95); }
+        }
+
+        .glass-nav {
+            background: rgba(6, 11, 24, 0.82);
+            backdrop-filter: blur(35px) saturate(210%);
+            -webkit-backdrop-filter: blur(35px) saturate(210%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            z-index: 40;
+            width: 100%;
+        }
+
+        .brand-text {
+            background: linear-gradient(to right, #ffffff, #f3f4f6, #cbd5e1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            transition: all 0.3s ease;
+        }
+        .brand-group:hover .brand-text {
+            background: linear-gradient(90deg, #00d2ff 0%, #38bdf8 50%, #0051ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 12px rgba(0, 210, 255, 0.6));
+        }
+
+        .glass-panel {
+            background: rgba(10, 18, 36, 0.68);
+            backdrop-filter: blur(35px) saturate(190%);
+            -webkit-backdrop-filter: blur(35px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 1.25rem;
+            position: relative;
+            box-shadow: 0 20px 45px -5px rgba(0, 0, 0, 0.85);
+            transition: all 0.25s ease;
+        }
+
+        .liquid-glass-card {
+            background: rgba(12, 20, 40, 0.72);
+            backdrop-filter: blur(50px) saturate(210%);
+            -webkit-backdrop-filter: blur(50px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1.75rem;
+            position: relative;
+            box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.95), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        .ott-btn-primary {
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.22) 0%, rgba(0, 81, 255, 0.3) 100%);
+            border: 1px solid rgba(0, 210, 255, 0.55);
+            border-radius: 0.9rem;
+            box-shadow: 0 8px 25px -5px rgba(0, 210, 255, 0.3);
+            transition: all 0.22s ease;
+        }
+        .ott-btn-primary:active { transform: scale(0.97); }
+        .ott-btn-primary:hover {
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.36) 0%, rgba(0, 81, 255, 0.45) 100%);
+            border-color: rgba(0, 210, 255, 0.95);
+            box-shadow: 0 10px 30px -4px rgba(0, 210, 255, 0.55);
+            transform: translateY(-2px);
+        }
+
+        .ott-btn-secondary {
+            background: rgba(14, 23, 44, 0.8);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.9rem;
+            transition: all 0.22s ease;
+        }
+        .ott-btn-secondary:active { transform: scale(0.97); }
+        .ott-btn-secondary:hover {
+            background: rgba(20, 32, 60, 0.95);
+            border-color: rgba(0, 210, 255, 0.55);
+            box-shadow: 0 10px 28px -5px rgba(0, 210, 255, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .red-guide-card {
+            background: linear-gradient(135deg, rgba(38, 12, 18, 0.8) 0%, rgba(22, 9, 14, 0.9) 100%);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            border-radius: 0.9rem;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .red-guide-card:active { transform: scale(0.97); }
+        .red-guide-card:hover {
+            background: linear-gradient(135deg, rgba(60, 15, 24, 0.95) 0%, rgba(32, 10, 18, 0.98) 100%);
+            border-color: rgba(239, 68, 68, 0.8);
+            box-shadow: 0 10px 28px -5px rgba(239, 68, 68, 0.45);
+            transform: translateY(-2px);
+        }
+
+        .player-container {
+            aspect-ratio: 16 / 9;
+            background: #000000;
+            position: relative;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.14);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo {
-            font-family: "JetBrains Mono", monospace;
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg,
-                    var(--accent-rose),
-                    var(--accent-amber));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .nav {
-            display: flex;
-            gap: 2rem;
-        }
-
-        .nav a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .nav a:hover {
-            color: var(--accent-rose);
-        }
-
-        .mobile-menu {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            cursor: pointer;
-        }
-
-
-        .slogan {
-            text-align: center;
-            padding: 6.5rem 1.5rem 0.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .slogan-text {
-            color: var(--text-secondary);
-        }
-
-        .slogan-highlight {
-            background: linear-gradient(135deg,
-                    var(--accent-rose),
-                    var(--accent-amber));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem 3rem;
-        }
-
-
-        .player-wrapper {
-            margin-bottom: 1.5rem;
-            border-radius: 16px;
-            overflow: hidden;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-subtle);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-        }
-
-        .video-container {
-            position: relative;
+            justify-content: center;
+            z-index: 10;
+            cursor: default;
+            user-select: none;
             width: 100%;
-            padding-bottom: 56.25%;
-
-            background: #000;
-            overflow: hidden;
         }
 
-        .video-container video {
+        .hide-cursor, .hide-cursor * { cursor: none !important; }
+
+        .player-container:fullscreen,
+        .player-container:-webkit-full-screen {
+            border-radius: 0 !important;
+            border: none !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: #000000 !important;
+            z-index: 2147483647 !important;
+        }
+
+        .player-container.css-landscape {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: 100dvh !important;
+            height: 100vw !important;
+            transform: translate(-50%, -50%) rotate(90deg) !important;
+            z-index: 2147483640 !important;
+            border-radius: 0 !important;
+            background: #000000 !important;
+        }
+
+        video {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
+            margin: auto;
             width: 100%;
             height: 100%;
             object-fit: contain;
+            object-position: center;
+            background: #000000;
+            z-index: 10;
         }
 
-
-        .video-container .plyr {
+        #custom-sub-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-
-        .info-card {
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 1.75rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .file-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            line-height: 1.4;
-            word-break: break-word;
-        }
-
-        .file-meta {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
-        }
-
-        .meta-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.375rem 0.875rem;
-            background: rgba(244, 63, 94, 0.1);
-            border: 1px solid rgba(244, 63, 94, 0.2);
-            border-radius: 6px;
-            color: var(--accent-rose);
-            font-size: 0.8125rem;
-            font-weight: 600;
-        }
-
-
-        .actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.75rem;
-        }
-
-        .btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.625rem;
-            padding: 0.875rem 1.25rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-normal);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 0.875rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn:hover {
-            background: rgba(244, 63, 94, 0.1);
-            border-color: var(--accent-rose);
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg,
-                    var(--accent-rose),
-                    rgb(225, 29, 72));
-            border-color: transparent;
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 8px 20px rgba(244, 63, 94, 0.3);
-        }
-
-        .btn svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .btn img {
-            width: 18px;
-            height: 18px;
-        }
-
-
-        .dropdown {
-            position: relative;
-        }
-
-        .dropdown-menu {
-            position: absolute;
-            bottom: calc(100% + 0.5rem);
-            right: 0;
-            min-width: 200px;
-            max-width: 280px;
-            max-height: 60vh;
-            overflow-y: auto;
-            background: var(--bg-glass-dark);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-normal);
-            border-radius: 8px;
-            padding: 0.5rem;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(10px);
-            transition: all 0.2s;
-            z-index: 100;
-        }
-
-        .dropdown-menu.active {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .dropdown-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-        }
-
-        .player-link {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 0.625rem;
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid var(--border-subtle);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .player-link img {
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
-        }
-
-        .player-link:hover {
-            background: rgba(244, 63, 94, 0.1);
-            border-color: var(--accent-rose);
-            color: var(--accent-rose);
-        }
-
-
-        .cards-section {
-            margin: 3rem 0;
-        }
-
-        .section-header {
+            bottom: 11%;
+            left: 5%;
+            right: 5%;
             text-align: center;
-            margin-bottom: 2.5rem;
-        }
-
-        .section-title {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg,
-                    var(--accent-rose),
-                    var(--accent-amber));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .section-subtitle {
-            color: var(--text-muted);
-        }
-
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .card {
-            background: var(--bg-glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 2rem;
-            transition: all 0.3s;
-        }
-
-        .card:hover {
-            border-color: var(--accent-rose);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(244, 63, 94, 0.2);
-        }
-
-        .card-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(244, 63, 94, 0.1);
-            border: 1px solid rgba(244, 63, 94, 0.2);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.25rem;
-        }
-
-        .card-icon svg {
-            color: var(--accent-rose);
-        }
-
-        .card h3 {
-            font-size: 1.25rem;
+            z-index: 24;
+            pointer-events: none;
+            font-family: Arial, Helvetica, sans-serif;
             font-weight: 700;
-            margin-bottom: 0.75rem;
+            color: #ffffff;
+            font-size: calc(clamp(1.05rem, 2.4vw, 1.55rem) * var(--sub-scale));
+            text-shadow: 
+                0 1px 2px #000000,
+                0 2px 4px #000000,
+                0 0 8px rgba(0, 0, 0, 0.95);
+            line-height: 1.35;
+            transition: bottom 0.25s ease;
         }
 
-        .card p {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-        }
-
-        .card-links {
+        .hud {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 28%, transparent 72%, rgba(0,0,0,0.85) 100%);
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .card-link {
-            display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 0.625rem 0.875rem;
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid var(--border-subtle);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.8125rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .card-link:hover {
-            background: rgba(244, 63, 94, 0.1);
-            border-color: var(--accent-rose);
-            color: var(--accent-rose);
-        }
-
-
-        .footer {
-            text-align: center;
-            padding: 2.5rem 1.5rem;
-            border-top: 1px solid var(--border-subtle);
-            color: var(--text-muted);
-            font-size: 0.875rem;
-        }
-
-        .footer a {
-            color: var(--accent-rose);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-
-        .plyr {
-            --plyr-color-main: rgb(244, 63, 94);
-            border-radius: 0 0 16px 16px;
-        }
-
-        .plyr__control {
-            color: white;
-        }
-
-        .plyr__control:hover {
-            background: rgba(244, 63, 94, 0.2);
-        }
-
-        .plyr__control--overlaid {
-            background: rgba(244, 63, 94, 0.9);
-        }
-
-        .plyr__menu {
-            background: var(--bg-glass-dark) !important;
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-normal);
-            border-radius: 8px;
-        }
-
-        .plyr__menu__container .plyr__control {
-            color: var(--text-primary);
-        }
-
-        .plyr__menu__container .plyr__control:hover {
-            background: rgba(244, 63, 94, 0.1);
-        }
-
-        .plyr__menu__container .plyr__control[role="menuitemradio"][aria-checked="true"]::before {
-            background: var(--accent-rose);
-        }
-
-
-        .aspect-dropdown {
-            position: absolute;
-            bottom: calc(100% + 10px);
-            right: 0;
-            min-width: 180px;
-            background: var(--bg-glass-dark);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-normal);
-            border-radius: 8px;
-            padding: 0.5rem;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(10px);
-            transition: all 0.2s;
-            z-index: 1000;
-        }
-
-        .aspect-dropdown.active {
-            opacity: 1;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+            z-index: 30;
             visibility: visible;
-            transform: translateY(0);
+            opacity: 1;
         }
+        .hud.hidden-hud { opacity: 0; visibility: hidden; pointer-events: none; }
 
-        .aspect-item {
+        .double-tap-zone {
+            position: absolute;
+            top: 15%; bottom: 15%;
+            width: 38%;
+            z-index: 25;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 0.8125rem;
-            transition: all 0.2s;
-        }
-
-        .aspect-item:hover {
-            background: rgba(244, 63, 94, 0.1);
-            color: var(--accent-rose);
-        }
-
-        .aspect-item.active {
-            background: rgba(244, 63, 94, 0.2);
-            color: var(--accent-rose);
-        }
-
-
-
-        @media (max-width: 768px) {
-            .nav {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: var(--bg-glass-dark);
-                flex-direction: column;
-                padding: 1rem;
-                gap: 1rem;
-                border-bottom: 1px solid var(--border-subtle);
-                backdrop-filter: blur(20px);
-                z-index: 999;
-                animation: slideDown 0.3s ease-out;
-            }
-
-            .nav.active {
-                display: flex;
-            }
-
-            @keyframes slideDown {
-                from {
-                    opacity: 0;
-                    transform: translateY(-10px);
-                }
-
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .mobile-menu {
-                display: block;
-            }
-
-
-            .slogan {
-                padding: 5rem 1rem 0.5rem;
-                font-size: 0.9rem;
-            }
-
-            .container {
-                padding: 1rem 1rem 2rem;
-            }
-
-
-            .player-wrapper {
-                margin-bottom: 2rem;
-            }
-
-
-            .info-card {
-                padding: 1.5rem;
-                margin-bottom: 2rem;
-            }
-
-
-            .file-title {
-                font-size: 1.2rem;
-                margin-bottom: 0.75rem;
-            }
-
-
-            .cards-section {
-                margin-top: 5rem !important;
-            }
-
-
-            .file-meta {
-                margin-bottom: 1.5rem;
-            }
-
-
-            .cards-section {
-                margin-top: 0rem;
-            }
-
-
-            .actions {
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-
-
-            .actions .dropdown {
-                width: 100%;
-                display: flex;
-            }
-
-            .actions .dropdown .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-
-            .actions .dropdown-menu {
-                width: 100%;
-                min-width: 250px;
-                left: 50%;
-                transform: translateX(-50%) translateY(10px);
-                z-index: 1001;
-            }
-
-            .actions .dropdown-menu.active {
-                transform: translateX(-50%) translateY(0);
-            }
-
-            .btn {
-                padding: 0.5rem 0.75rem;
-                font-size: 0.85rem;
-            }
-
-
-            .audio-warning {
-                font-size: 0.6rem;
-                padding: 8px 12px;
-                margin: 1rem 0;
-            }
-
-            .cards-grid {
-                grid-template-columns: 1fr;
-            }
-
-
-            .plyr__controls {
-                padding-left: 5px;
-                padding-right: 5px;
-            }
-
-            .plyr__control {
-                padding: 5px;
-
-            }
-
-
-            .plyr__control[data-plyr="pip"],
-            .plyr__control[data-plyr="airplay"] {
-                display: none;
-            }
-
-
-            .plyr__progress__container {
-                flex: 1;
-
-                min-width: 100px;
-
-            }
-
-            .plyr__progress input[type="range"] {
-                height: 12px !important;
-
-                touch-action: manipulation;
-            }
-
-
-            .plyr__volume {
-                display: none !important;
-
-            }
-
-
-            @media (max-width: 380px) {
-                .plyr__time {
-                    display: none;
-                }
-            }
-
-
-            .aspect-dropdown {
-                min-width: 120px;
-
-                bottom: calc(100% + 5px);
-
-                max-height: 50vh;
-
-                overflow-y: auto;
-
-            }
-
-            .aspect-item {
-                padding: 0.3rem 0.5rem;
-                font-size: 0.65rem;
-
-            }
-
-            .aspect-item svg {
-                width: 12px;
-                height: 12px;
-            }
-
-
-            .volume-popup {
-                height: 100px;
-
-                width: 28px;
-                bottom: calc(100% + 5px);
-            }
-
-            .volume-percent {
-                font-size: 0.65rem;
-            }
-
-            .volume-slider-container {
-                height: 80px;
-            }
-
-            .volume-slider {
-                width: 80px !important;
-
-                margin-top: 38px !important;
-
-            }
-        }
-
-
-        button[data-plyr="volume-custom"] {
-            display: flex !important;
-            align-items: center;
             justify-content: center;
-            height: auto;
-            position: relative;
+            pointer-events: auto;
         }
-
-        .audio-warning {
-            position: static;
-            background: transparent;
-            color: rgb(251, 191, 36);
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
+        .dt-left { left: 0; }
+        .dt-right { right: 0; }
+        .minimal-skip-pill {
+            background: rgba(8, 14, 28, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 210, 255, 0.5);
+            padding: 8px 18px;
+            border-radius: 99px;
+            color: #00d2ff;
+            font-size: 0.85rem;
+            font-weight: 800;
             display: flex;
-            align-items: flex-start;
-            justify-content: center;
+            align-items: center;
             gap: 6px;
-            margin: 1.5rem 0;
-            text-align: center;
-        }
-
-        .audio-warning svg {
-            margin-top: 3px;
-        }
-
-        .audio-warning button {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 4px;
-            display: flex;
-            align-items: center;
-        }
-
-        button[data-plyr="volume-custom"] svg {
-            width: var(--plyr-control-icon-size, 18px);
-            height: var(--plyr-control-icon-size, 18px);
+            opacity: 0;
+            transform: scale(0.85);
             pointer-events: none;
         }
+        .skip-animate { animation: minimalSkipPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes minimalSkipPop {
+            0% { opacity: 0; transform: scale(0.8); }
+            35% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0; transform: scale(1); }
+        }
 
-        .volume-popup {
+        .progress-filled {
             position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 32px;
-            height: 120px;
-            background: var(--bg-glass-dark);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-normal);
-            border-radius: 8px;
+            left: 0; top: 0; height: 100%;
+            background: #00d2ff;
+            border-radius: 99px;
+            pointer-events: none;
+            width: 0%;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.9);
+        }
+        .progress-buffered {
+            position: absolute;
+            left: 0; top: 0; height: 100%;
+            background: rgba(255,255,255,0.25);
+            border-radius: 99px;
+            pointer-events: none;
+            width: 0%;
+        }
+
+        .vol-capsule {
+            background: rgba(12, 18, 32, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(16px);
+            border-radius: 99px;
+            padding: 2px 7px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .vol-capsule input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            width: 46px;
+            height: 4px;
+            cursor: pointer;
+        }
+        @media (min-width: 768px) { .vol-capsule input[type=range] { width: 62px; } }
+        .vol-capsule input[type=range]::-webkit-slider-runnable-track { background: rgba(255, 255, 255, 0.2); height: 3px; border-radius: 99px; }
+        .vol-capsule input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 10px; width: 10px; border-radius: 50%; background: #00d2ff; margin-top: -3.5px; box-shadow: 0 0 8px #00d2ff; }
+
+        #video-loader {
+            position: absolute;
+            inset: 0;
+            z-index: 42;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px 0;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.35);
         }
-
-        .volume-popup.active {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .volume-slider-container {
-            width: 100%;
-            height: 100px;
-            display: flex;
-            justify-content: center;
-            position: relative;
-        }
-
-        .volume-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100px !important;
-
-            flex-shrink: 0;
-            height: 4px !important;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            outline: none;
-            transform: rotate(-90deg);
-            transform-origin: center;
-            cursor: pointer;
-            margin-top: 48px !important;
-            padding: 0 !important;
-
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            background: var(--accent-rose);
+        #video-loader.hidden { display: none !important; }
+        .loader {
+            border: 3.5px solid rgba(255, 255, 255, 0.15);
+            border-top: 3.5px solid #00d2ff;
             border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
+            width: 46px; height: 46px;
+            animation: spin 0.75s linear infinite;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.45);
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .volume-percent {
+        #error-screen {
             position: absolute;
-            top: -25px;
+            inset: 0;
+            z-index: 45;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 4, 10, 0.94);
+            backdrop-filter: blur(16px);
+            padding: 1rem;
+        }
+        #error-screen.hidden { display: none !important; }
+
+        .glass-popup-backdrop {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100dvh;
+            background: rgba(2, 5, 12, 0.75);
+            backdrop-filter: blur(24px) saturate(190%);
+            -webkit-backdrop-filter: blur(24px) saturate(190%);
+            z-index: 2147483647;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .glass-popup-backdrop.active { opacity: 1; pointer-events: auto; }
+        .glass-popup-card {
+            background: rgba(12, 18, 36, 0.94);
+            backdrop-filter: blur(50px) saturate(210%);
+            -webkit-backdrop-filter: blur(50px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 1.5rem;
+            width: 100%;
+            max-width: 390px;
+            max-height: 90dvh;
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(0, 210, 255, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.22);
+            transform: scale(0.92);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-popup-backdrop.active .glass-popup-card { transform: scale(1); }
+
+        .toast {
+            position: fixed;
+            top: 72px;
             left: 50%;
-            transform: translateX(-50%);
-            font-size: 11px;
-            font-weight: 600;
-            color: white;
-            background: var(--accent-rose);
-            padding: 2px 5px;
-            border-radius: 4px;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(10, 18, 35, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 210, 255, 0.5);
+            border-radius: 99px;
+            padding: 7px 18px;
+            color: #fff;
+            z-index: 2147483647;
+            opacity: 0;
+            transition: all 0.28s;
+            box-shadow: 0 4px 20px rgba(0, 210, 255, 0.3);
             pointer-events: none;
             white-space: nowrap;
         }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-
-        .plyr__volume {
-            display: none !important;
+        .intent-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0.65rem 0.4rem;
+            border-radius: 0.85rem;
+            background: rgba(12, 18, 34, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.22s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
         }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-primary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--bg-secondary);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-rose);
-        }
-
-        html {
-            scroll-behavior: smooth;
-            scroll-padding-top: 70px;
+        @media (min-width: 640px) { .intent-card { padding: 0.95rem 0.65rem; border-radius: 1rem; } }
+        .intent-card:active { transform: scale(0.95); }
+        .intent-card:hover {
+            background: rgba(18, 28, 52, 0.9);
+            border-color: rgba(0, 210, 255, 0.45);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px -4px rgba(0, 210, 255, 0.25);
         }
     </style>
 </head>
+<body class="antialiased">
 
-<body>
-
-    <header class="header">
-        <div class="header-content">
-            <a href="https://t.me/dreamxbotz" class="logo"> DreamXbotz </a>
-
-            <nav class="nav">
-                <a href="#video-section">Stream</a>
-                <a href="#explore">Explore</a>
-                <a href="https://t.me/dreamxbotz">Contact</a>
-            </nav>
-
-            <button class="mobile-menu">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="3" y1="12" x2="21" y2="12"></line>
-                    <line x1="3" y1="6" x2="21" y2="6"></line>
-                    <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-            </button>
-        </div>
-    </header>
-
-
-    <div class="slogan">
-        <span class="slogan-text">Stream Effortlessly,</span> <span class="slogan-highlight">Anytime, Anywhere</span>
+    <!-- Ambient Dynamic Glow Layer -->
+    <div class="ambient-layer">
+        <div class="aura-blob blob-cyan"></div>
+        <div class="aura-blob blob-blue"></div>
+        <div class="aura-blob blob-violet"></div>
     </div>
 
+    <div id="toast" class="toast text-[11px] md:text-xs font-semibold">Notification</div>
 
-    <div class="container">
-
-        <section id="video-section" class="fade-in">
-            <div class="player-wrapper">
-                <div class="video-container">
-                    <video id="player" class="mkv-player" playsinline controls
-                        data-poster="https://i.ibb.co/MxYbt8M1/x.jpg">
-                        <source src="{{file_url}}" />
-                    </video>
-                </div>
+    <!-- Floating Glass Navbar (Join Button Spacing Fixed) -->
+    <nav class="glass-nav sticky top-0 px-3.5 md:px-8 py-2.5 md:py-3 flex items-center justify-between">
+        <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 brand-group cursor-pointer">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sapphire to-cobalt flex items-center justify-center shadow-[0_0_15px_rgba(0,210,255,0.6)] transition-transform duration-300 group-hover:scale-105">
+                <i class="fas fa-play text-black text-xs ml-0.5"></i>
             </div>
+            <span class="font-['Outfit'] font-black text-base md:text-xl tracking-wider brand-text">BOULTFLIX</span>
+        </a>
+        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-bold tracking-wide text-black transition inline-flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95 leading-none h-8">
+            <i class="fab fa-telegram-plane"></i><span>Join</span>
+        </a>
+    </nav>
 
+    <!-- VIEW 1: MAIN OTT STREAMING INTERFACE -->
+    <main id="player-view" class="container mx-auto px-2.5 sm:px-5 py-4 max-w-4xl my-auto flex-grow flex flex-col justify-center items-center relative z-10 w-full">
+        
+        <div class="w-full mb-2.5 px-1">
+            <h1 class="text-xs sm:text-sm md:text-base font-bold font-['Outfit'] break-all leading-snug text-white mb-1">{{file_name}}</h1>
+            <div class="flex items-center gap-2 text-[10px] md:text-xs text-gray-400">
+                <span class="flex items-center gap-1 text-gray-300"><i class="fas fa-database text-sapphire"></i> {{file_size}}</span>
+                <span class="w-1 h-1 rounded-full bg-gray-600"></span>
+                <span class="bg-sapphire/15 text-sapphire px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-bold border border-sapphire/30">DIRECT STREAM</span>
+            </div>
+        </div>
 
-            <div class="info-card">
-                <h1 class="file-title">{{file_name}}</h1>
+        <!-- Master Video Player Frame -->
+        <div class="glass-panel p-0.5 sm:p-1 mb-4 w-full">
+            <div class="player-container" id="player-container">
+                <video id="video-player" playsinline preload="metadata" crossorigin="anonymous"></video>
 
-                <div class="file-meta">
-                    <span class="meta-tag">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                        </svg>
-                        Now Streaming
-                    </span>
+                <!-- Subtitle Text Overlay (Clean VLC Font) -->
+                <div id="custom-sub-overlay"></div>
+
+                <!-- Network Buffer Spinner -->
+                <div id="video-loader" class="hidden">
+                    <div class="loader"></div>
                 </div>
 
-                <div class="actions">
-                    <button class="btn btn-primary" onclick="blazeDownload()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Download
-                    </button>
+                <!-- OTT Codec Notice Screen -->
+                <div id="error-screen" class="hidden">
+                    <div class="glass-panel p-5 max-w-xs sm:max-w-sm w-full text-center border-sapphire/30 shadow-[0_20px_50px_rgba(0,0,0,0.95)]">
+                        <div class="w-11 h-11 rounded-full bg-sapphire/15 text-sapphire flex items-center justify-center mx-auto mb-2.5 border border-sapphire/40">
+                            <i class="fas fa-satellite-dish text-base"></i>
+                        </div>
+                        <h4 class="font-bold text-xs sm:text-sm text-white font-['Outfit'] mb-1">Advanced Codec Notice</h4>
+                        <p class="text-gray-400 text-[11px] leading-relaxed mb-4">
+                            If audio is silent or video buffers on heavy x265, launch below in VLC or MX Player for full hardware decoding.
+                        </p>
+                        <div class="flex gap-2">
+                            <button onclick="retryPlayback()" class="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-semibold transition">Retry</button>
+                            <button onclick="launchApp('vlc')" class="flex-1 py-2 bg-gradient-to-r from-sapphire to-cobalt text-black rounded-xl text-xs font-extrabold transition">VLC Player</button>
+                        </div>
+                    </div>
+                </div>
 
-                    <button class="btn" onclick="vlc_player()">
-                        <img src="https://i.postimg.cc/15TQ4y7B/vlc.png" alt="VLC" />
-                        VLC Player
-                    </button>
+                <!-- Double-Tap Skip Zones (YouTube Style Skip) -->
+                <div class="double-tap-zone dt-left" id="dt-left">
+                    <div class="minimal-skip-pill" id="skip-left"><i class="fas fa-backward text-[10px]"></i> 10s</div>
+                </div>
+                <div class="double-tap-zone dt-right" id="dt-right">
+                    <div class="minimal-skip-pill" id="skip-right">10s <i class="fas fa-forward text-[10px]"></i></div>
+                </div>
 
-                    <button class="btn" onclick="mx_player()">
-                        <img src="https://i.postimg.cc/sx4Msv4T/mx.png" alt="MX" />
-                        MX Player
-                    </button>
+                <!-- HUD Controls Layer -->
+                <div class="hud" id="hud">
+                    <!-- Top HUD Bar (Audio Sync Slider Button Removed) -->
+                    <div class="p-2.5 sm:p-3 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent">
+                        <span class="text-[10px] sm:text-xs font-medium text-gray-200 truncate max-w-[60%] drop-shadow">{{file_name}}</span>
+                        <div class="flex items-center gap-1.5 ml-auto">
+                            <button class="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-[11px] sm:text-xs transition active:scale-90 text-gray-200" onclick="openPopup('aspect-popup')" title="Aspect Ratio">
+                                <i class="fas fa-crop-alt"></i>
+                            </button>
+                            <button class="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-[11px] sm:text-xs transition active:scale-90 text-gray-200" id="btn-pip" title="Picture-in-Picture">
+                                <i class="fas fa-compress-arrows-alt"></i>
+                            </button>
+                        </div>
+                    </div>
 
-                    <div class="dropdown">
-                        <button class="btn" onclick="toggleDropdown()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="1"></circle>
-                                <circle cx="19" cy="12" r="1"></circle>
-                                <circle cx="5" cy="12" r="1"></circle>
-                            </svg>
-                            More Players
+                    <!-- Center Play / Skip Controls -->
+                    <div id="center-controls" class="flex items-center justify-center gap-6 sm:gap-12 pointer-events-auto">
+                        <button class="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/55 backdrop-blur border border-white/15 hover:bg-white/20 flex items-center justify-center text-xs sm:text-base active:scale-90 transition" id="btn-rewind">
+                            <i class="fas fa-undo-alt"></i>
                         </button>
+                        
+                        <button class="w-12 h-12 sm:w-15 sm:h-15 rounded-full bg-gradient-to-br from-sapphire to-cobalt flex items-center justify-center text-base sm:text-xl shadow-[0_0_28px_rgba(0,210,255,0.65)] text-black active:scale-95 transition" id="btn-play">
+                            <i class="fas fa-play ml-0.5" id="play-icon"></i>
+                        </button>
+                        
+                        <button class="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-black/55 backdrop-blur border border-white/15 hover:bg-white/20 flex items-center justify-center text-xs sm:text-base active:scale-90 transition" id="btn-forward">
+                            <i class="fas fa-redo-alt"></i>
+                        </button>
+                    </div>
 
-                        <div class="dropdown-menu" id="players-dropdown">
-                            <div class="dropdown-grid">
-                                <a href="#" class="player-link" onclick="playit_player()">
-                                    <img src="https://i.postimg.cc/RVGWYJFF/playit.png" alt="PLAYit" />
-                                    <span>PLAYit</span>
-                                </a>
-                                <a href="#" class="player-link" onclick="km_player()">
-                                    <img src="https://i.postimg.cc/wT9tFQ9Z/km.png" alt="KM" />
-                                    <span>KMPlayer</span>
-                                </a>
-                                <a href="#" class="player-link" onclick="s_player()">
-                                    <img src="https://i.postimg.cc/XYJr6NGg/s.png" alt="S" />
-                                    <span>S Player</span>
-                                </a>
-                                <a href="#" class="player-link" onclick="hd_player()">
-                                    <img src="https://i.postimg.cc/rFT43LNh/hd.png" alt="HD" />
-                                    <span>HD Player</span>
-                                </a>
-                                <a href="#" class="player-link" onclick="mx_playerpro()">
-                                    <img src="https://i.postimg.cc/sx4Msv4T/mx.png" alt="MX Pro" />
-                                    <span>MX Pro</span>
-                                </a>
+                    <!-- Bottom Timeline & Controls (Quality Settings Gear Button Removed) -->
+                    <div class="p-2 sm:p-3 bg-gradient-to-t from-black/95 via-black/75 to-transparent">
+                        <div class="relative w-full h-4 sm:h-5 flex items-center group cursor-pointer mb-1" id="timeline-container">
+                            <div class="relative w-full h-1 bg-white/25 rounded-full overflow-hidden transition-all group-hover:h-1.5">
+                                <div class="progress-buffered" id="progress-buffered"></div>
+                                <div class="progress-filled" id="progress-filled"></div>
+                            </div>
+                            <div class="absolute w-2.5 h-2.5 bg-white rounded-full shadow-[0_0_8px_#fff] scale-0 group-hover:scale-100 transition-transform -ml-1 pointer-events-none" id="progress-thumb"></div>
+                            <div class="absolute bottom-5 bg-black/90 backdrop-blur border border-white/15 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] hidden transform -translate-x-1/2 pointer-events-none" id="timeline-tooltip">00:00</div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="text-[10px] sm:text-[11px] font-mono text-gray-300">
+                                    <span id="time-current">00:00</span> / <span id="time-total" class="text-gray-400">00:00</span>
+                                </div>
+                                <div class="vol-capsule">
+                                    <button id="btn-mute" class="text-gray-300 hover:text-sapphire text-[10px] sm:text-xs transition">
+                                        <i class="fas fa-volume-up" id="vol-icon"></i>
+                                    </button>
+                                    <input type="range" min="0" max="1" step="0.05" value="1" id="volume-slider">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-1.5 sm:gap-2">
+                                <button class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] sm:text-xs font-semibold active:scale-95" onclick="openPopup('speed-popup')">
+                                    <span id="speed-display">1x</span>
+                                </button>
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openAudioPopup()" title="Audio Tracks">
+                                    <i class="fas fa-music"></i>
+                                </button>
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openSubPopup()" title="Subtitles">
+                                    <i class="fas fa-closed-captioning"></i>
+                                </button>
+                                <!-- Persistent Orientation Toggle -->
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
+                                    <i class="fas fa-rotate" id="rotate-screen-icon"></i>
+                                </button>
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-fullscreen" title="Fullscreen">
+                                    <i class="fas fa-expand" id="fs-icon"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
+        <!-- Primary Action Grid (Classic Cyan Theme) -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-5 w-full">
+            <button onclick="openPopup('download-popup')" class="ott-btn-primary py-2.5 px-2 sm:p-3.5 flex items-center justify-center gap-2">
+                <i class="fas fa-download text-sapphire text-xs sm:text-sm"></i>
+                <span class="font-bold text-[11px] sm:text-xs text-white truncate">Fast Download</span>
+            </button>
 
-        <section id="explore" class="cards-section">
-            <div class="section-header">
-                <h2 class="section-title">Explore Our Universe</h2>
-                <p class="section-subtitle">
-                    Discover our channels and intelligent bots
+            <button id="btn-copy" class="ott-btn-secondary py-2.5 px-2 sm:p-3.5 flex items-center justify-center gap-2">
+                <i class="fas fa-copy text-gray-300 text-xs sm:text-sm"></i>
+                <span class="font-bold text-[11px] sm:text-xs text-gray-200 truncate">Copy Link</span>
+            </button>
+
+            <button onclick="triggerNativeDeviceCast()" class="ott-btn-secondary py-2.5 px-2 sm:p-3.5 flex items-center justify-center gap-2 relative overflow-hidden">
+                <i class="fab fa-chromecast text-sapphire text-xs sm:text-sm"></i>
+                <span class="font-bold text-[11px] sm:text-xs text-gray-200 truncate">Cast to Device</span>
+                <google-cast-launcher id="native-cast-launcher" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"></google-cast-launcher>
+            </button>
+        </div>
+
+        <!-- External Players Section -->
+        <div class="mb-3 w-full">
+            <div class="flex items-center gap-2.5 mb-2.5 px-1">
+                <div class="h-px flex-grow bg-white/10"></div>
+                <h2 class="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-gray-400">Open in External Player</h2>
+                <div class="h-px flex-grow bg-white/10"></div>
+            </div>
+            
+            <div class="grid grid-cols-4 gap-2 sm:gap-2.5 mb-3">
+                <button onclick="launchApp('vlc')" class="intent-card">
+                    <svg class="w-6 h-6 sm:w-7 sm:h-7 mb-1 drop-shadow-[0_0_8px_rgba(255,136,0,0.5)]" viewBox="0 0 48 48" fill="none">
+                        <path d="M24 4L14 36H34L24 4Z" fill="#FF8800"/>
+                        <path d="M19 20H29L30.5 25H17.5L19 20Z" fill="#FFFFFF"/>
+                        <path d="M16 29H32L33.5 34H14.5L16 29Z" fill="#FFFFFF"/>
+                        <path d="M8 38C8 36.9 8.9 36 10 36H38C39.1 36 40 39.1 40 38C40 39.1 39.1 40 38 40H10C8.9 40 8 39.1 8 38Z" fill="#FF8800"/>
+                    </svg>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">VLC</span>
+                </button>
+                <button onclick="launchApp('mx')" class="intent-card">
+                    <i class="fas fa-play-circle text-[#0088ff] text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(0,136,255,0.5)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">MX Player</span>
+                </button>
+                <button onclick="launchApp('mxpro')" class="intent-card">
+                    <i class="fas fa-play-circle text-[#0066cc] text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(0,102,204,0.5)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">MX Pro</span>
+                </button>
+                <button onclick="launchApp('potplayer')" class="intent-card">
+                    <i class="fas fa-tv text-[#ffd700] text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">PotPlayer</span>
+                </button>
+                <button onclick="launchApp('mpv')" class="intent-card">
+                    <i class="fas fa-film text-[#aa00ff] text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(170,0,255,0.5)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">MPV</span>
+                </button>
+                <button onclick="launchApp('just')" class="intent-card">
+                    <i class="fas fa-play text-[#00ccaa] text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(0,204,170,0.5)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">Just Player</span>
+                </button>
+                <button onclick="launchApp('km')" class="intent-card">
+                    <i class="fas fa-video text-gray-300 text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">KMPlayer</span>
+                </button>
+                <button onclick="launchApp('nova')" class="intent-card">
+                    <i class="fas fa-photo-video text-[#ff5500] text-xl sm:text-2xl mb-1 drop-shadow-[0_0_8px_rgba(255,85,0,0.5)]"></i>
+                    <span class="font-bold text-[10px] sm:text-xs text-gray-200">Nova</span>
+                </button>
+            </div>
+
+            <!-- Dual YouTube Guides -->
+            <div class="grid grid-cols-2 gap-2 sm:gap-3 mt-2.5">
+                <a href="https://www.youtube.com/results?search_query=how+to+stream+url+in+vlc+mx+player+adm+android" target="_blank" class="red-guide-card py-2.5 px-3 flex items-center justify-center gap-2">
+                    <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)] shrink-0">
+                        <i class="fab fa-youtube text-xs sm:text-sm"></i>
+                    </div>
+                    <span class="font-bold text-[10px] sm:text-xs text-red-100 truncate">Tutorial Guide (Mobile)</span>
+                </a>
+
+                <a href="https://www.youtube.com/results?search_query=how+to+open+network+stream+url+in+vlc+potplayer+pc" target="_blank" class="red-guide-card py-2.5 px-3 flex items-center justify-center gap-2">
+                    <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)] shrink-0">
+                        <i class="fab fa-youtube text-xs sm:text-sm"></i>
+                    </div>
+                    <span class="font-bold text-[10px] sm:text-xs text-red-100 truncate">Tutorial Guide (PC)</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW 2: IN-PAGE BROWSER DOWNLOAD SCREEN (Middle-Line Aligned Box) -->
+    <main id="download-view" class="container mx-auto px-3.5 py-8 md:py-12 max-w-xl my-auto flex-grow flex-col justify-center relative z-10 text-center hidden">
+        <div class="liquid-glass-card p-6 sm:p-9 flex flex-col items-center">
+            <div class="w-14 h-14 rounded-full bg-sapphire/15 border border-sapphire/40 text-sapphire flex items-center justify-center mx-auto mb-4 shadow-[0_0_25px_rgba(0,210,255,0.35)]">
+                <i class="fas fa-cloud-arrow-down text-2xl animate-bounce"></i>
+            </div>
+
+            <div class="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-sapphire/10 border border-sapphire/30 text-sapphire text-[10px] font-bold tracking-widest uppercase mb-4 leading-none">
+                <span class="w-1.5 h-1.5 rounded-full bg-sapphire animate-ping shrink-0"></span>
+                <span class="inline-block leading-none pt-0.5">DIRECT CLOUD PIPELINE INITIALIZED</span>
+            </div>
+
+            <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold font-['Outfit'] text-white mb-3 leading-tight">
+                Your Download Has Started
+            </h2>
+
+            <div class="bg-black/35 border border-white/10 rounded-2xl p-4 sm:p-5 text-left mb-5 text-xs sm:text-[13px] text-gray-300 leading-relaxed space-y-2.5 w-full">
+                <p>
+                    Your browser has initialized connection to the <b class="text-white">BoultFlix Media Pipeline</b>. The file transfer is beginning in your browser download manager.
+                </p>
+                <p class="text-gray-400 text-[11px]">
+                    <i class="fas fa-bolt text-sapphire mr-1"></i> <b>Speed Tip:</b> For maximum multi-threaded speeds without drops, copy the stream link into <b>ADM / 1DM</b> (Android) or <b>FDM / IDM</b> (PC).
+                </p>
+                <div class="pt-2 text-right font-['Outfit'] font-bold text-sapphire text-xs tracking-wide">
+                    &mdash; Regards, BoultFlix Team
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2.5 w-full">
+                <a id="manual-dl-fallback" href="#" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-sapphire to-cobalt text-black font-extrabold text-xs sm:text-sm shadow-[0_0_20px_rgba(0,210,255,0.4)] active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-download"></i>
+                    <span>Click Here If Not Started</span>
+                </a>
+                <button onclick="backToPlayerView()" class="py-3 px-5 rounded-xl bg-white/10 hover:bg-white/15 text-gray-200 font-semibold text-xs sm:text-sm transition active:scale-95">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Player
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- ROOT TOP-LAYER MODALS (Same Exact Modals & Cards) -->
+    <div id="global-modal-layer">
+
+        <!-- 1. Welcome Advisory Liquid Glass Popup (Only Text Edited as Specified) -->
+        <div id="welcome-popup" class="glass-popup-backdrop active" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-5 sm:p-6 border-sapphire/30 shadow-[0_25px_60px_rgba(0,0,0,0.95)]">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-sapphire animate-ping shadow-[0_0_12px_#00d2ff]"></span>
+                        <h3 class="font-extrabold text-sm sm:text-base font-['Outfit'] text-white tracking-wide">Playback & Speed Advisory</h3>
+                    </div>
+                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 hover:bg-red-500/20 text-gray-300 hover:text-red-400 flex items-center justify-center transition">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+
+                <div class="bg-black/40 border border-white/10 rounded-2xl p-4 text-xs text-gray-300 space-y-3 leading-relaxed mb-4">
+                    <p>
+                        <i class="fas fa-circle-play text-sapphire mr-1"></i> <b>Web Stream Notice:</b> If the movie contains advanced Dolby (DDP/AC3) or heavy x265 (HEVC) audio, browsers cannot play it natively. In that case, it is converted to AAC, or you can launch the stream below in <b>VLC</b>, <b>MX Player</b>, or <b>PotPlayer</b> for full hardware decoding and native surround sound.
+                    </p>
+                    <p>
+                        <i class="fas fa-bolt text-sapphire mr-1"></i> <b>Fast Downloads:</b> For interruption-free downloading on larger files, use <b>ADM / 1DM</b> (Mobile) or <b>FDM / IDM</b> (PC).
+                    </p>
+                    <p>
+                        <i class="fab fa-youtube text-red-400 mr-1"></i> <b>Tutorial Guide:</b> If you face any difficulty opening streams in external players, tap the <b>Tutorial Guide</b> buttons at the bottom for instant video instructions.
+                    </p>
+                </div>
+
+                <button onclick="closeAllPopups()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 text-black font-extrabold text-xs tracking-wide shadow-[0_0_20px_rgba(0,210,255,0.4)] active:scale-95 transition flex items-center justify-center gap-2">
+                    <span>Continue to Website</span>
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Resume Stream Modal -->
+        <div id="resume-modal" class="glass-popup-backdrop">
+            <div class="glass-popup-card p-5 sm:p-6 text-center">
+                <div class="w-11 h-11 rounded-full bg-sapphire/20 flex items-center justify-center mx-auto mb-3 border border-sapphire/50 text-sapphire">
+                    <i class="fas fa-history text-lg"></i>
+                </div>
+                <h3 class="text-sm sm:text-base font-bold mb-1 font-['Outfit']">Resume Playback?</h3>
+                <p class="text-gray-400 text-xs mb-4">Continue watching from <span id="resume-time" class="font-mono text-sapphire font-bold">00:00</span></p>
+                <div class="flex gap-2">
+                    <button onclick="startOver()" class="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-semibold text-xs active:scale-95 transition">Start Over</button>
+                    <button onclick="resumePlayback()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-sapphire to-cobalt text-black font-bold text-xs shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95 transition">Resume</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Download Options Popup -->
+        <div id="download-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-5 sm:p-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-sm font-['Outfit'] text-white">Download Options</h3>
+                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+                </div>
+                <p class="text-[11px] text-gray-400 mb-4 leading-relaxed">
+                    Copy the link into <b>ADM / 1DM</b> (Mobile) or <b>FDM / IDM</b> (PC) for multi-threaded speed, or download directly via your browser.
+                </p>
+                <div class="flex flex-col gap-2.5">
+                    <button onclick="copyDownloadLink()" class="w-full py-3 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 hover:bg-sapphire/30 text-sapphire text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95">
+                        <i class="fas fa-copy"></i>
+                        <span>Copy Link for ADM / 1DM / FDM</span>
+                    </button>
+                    <button onclick="directBrowserDownload()" class="w-full py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+                        <i class="fas fa-globe"></i>
+                        <span>Download via Browser</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Playback Speed Popup -->
+        <div id="speed-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-5">
+                <div class="flex justify-between items-center mb-3.5">
+                    <h3 class="font-bold text-sm font-['Outfit'] text-white">Playback Speed</h3>
+                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+                </div>
+                <div class="grid grid-cols-2 gap-2" id="speed-options"></div>
+            </div>
+        </div>
+
+        <!-- 5. Aspect Ratio Popup (16:9, 21:9, Crop to Fill, Fit) -->
+        <div id="aspect-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-5">
+                <div class="flex justify-between items-center mb-3.5">
+                    <h3 class="font-bold text-sm font-['Outfit'] text-white">Aspect Ratio</h3>
+                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+                </div>
+                <div class="flex flex-col gap-2" id="aspect-options">
+                    <button class="aspect-btn py-2.5 px-4 rounded-xl bg-sapphire/15 border border-sapphire/50 text-sapphire text-xs font-semibold text-left transition" onclick="setAspect('16/9', this)">16:9 Widescreen</button>
+                    <button class="aspect-btn py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left transition" onclick="setAspect('21/9', this)">21:9 CinemaScope</button>
+                    <button class="aspect-btn py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left transition" onclick="setAspect('fill', this)">Fill Screen (Crop to Fit)</button>
+                    <button class="aspect-btn py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left transition" onclick="setAspect('original', this)">Original Fit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Audio Tracks Popup (Seamless In-Player Audio Switch) -->
+        <div id="audio-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-sm font-['Outfit'] text-white">Audio Tracks</h3>
+                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+                </div>
+                <div class="flex flex-col gap-2" id="audio-track-list"></div>
+                <p class="text-[10px] text-gray-400 mt-3 text-center leading-normal">
+                    Audio plays in smooth AAC stereo in browser. If proprietary Dolby AC3/DDP 5.1 is required, launch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
                 </p>
             </div>
+        </div>
 
-            <div class="cards-grid">
-                <div class="card">
-                    <div class="card-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                        </svg>
-                    </div>
-                    <h3>Our Channels</h3>
-                    <p>
-                        Get exclusive content and real-time notifications from our premium
-                        channels
-                    </p>
-                    <div class="card-links">
-                        <a href="https://t.me/dreamxbotz" class="card-link">
-                            <span>DreamXbotz</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
-                        <a href="https://t.me/Blaze_Updatez" class="card-link">
-                            <span>Blaze Updates</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
-                        <a href="https://t.me/anime_cartoon_stickers" class="card-link">
-                            <span>Anime Stickers</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
-                    </div>
+        <!-- 7. Subtitles Popup (6 Sizes, Clean Original Speed) -->
+        <div id="sub-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-5">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-sm font-['Outfit'] text-white">Subtitles & Captions</h3>
+                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
                 </div>
-
-                <div class="card">
-                    <div class="card-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                        </svg>
-                    </div>
-                    <h3>Our Bots</h3>
-                    <p>
-                        Intelligent bots for enhanced streaming and automated assistance
-                    </p>
-                    <div class="card-links">
-                        <a href="https://t.me/dreamxbotz" class="card-link">
-                            <span>DreamXbotz</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
-                        <a href="https://t.me/Blaze_Moviesposter_downloaderbot" class="card-link">
-                            <span>PosterFlix Bot</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
-                        <a href="https://t.me/video_thumbcover_changerbot" class="card-link">
-                            <span>Thumb Changer</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
-                        <a href="https://t.me/Blaze_forward_bot" class="card-link">
-                            <span>Forward Bot Pro</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
+                
+                <div class="flex flex-col gap-2 mb-4 max-h-48 overflow-y-auto pr-1" id="sub-track-list"></div>
+                
+                <div>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">Caption Text Size</label>
+                    <div class="grid grid-cols-3 gap-2" id="sub-size-options">
+                        <button onclick="setSubSize(0.5, '50%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">50%</button>
+                        <button onclick="setSubSize(0.75, '75%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">75%</button>
+                        <button onclick="setSubSize(1, '100%', this)" class="sub-size-btn py-2 rounded-xl bg-sapphire/20 text-sapphire border border-sapphire/50 text-xs font-bold transition">100%</button>
+                        <button onclick="setSubSize(1.25, '125%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">125%</button>
+                        <button onclick="setSubSize(1.5, '150%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">150%</button>
+                        <button onclick="setSubSize(2.0, '200%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">200%</button>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
+
     </div>
 
-
-    <footer class="footer">
-        <p>
-            &copy; 2026 <a href="https://t.me/dreamxbotz">DreamXbotz</a>. All Rights
-            Reserved.
-        </p>
+    <!-- Footer -->
+    <footer class="glass-nav py-3.5 mt-auto">
+        <div class="container mx-auto px-4 flex flex-col items-center">
+            <div class="flex gap-3.5 mb-2">
+                <a href="https://t.me/BoultFlix" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sapphire hover:scale-105 transition shadow">
+                    <i class="fab fa-telegram-plane text-xs"></i>
+                </a>
+                <a href="https://youtube.com/" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-red-500 hover:scale-105 transition shadow">
+                    <i class="fab fa-youtube text-xs"></i>
+                </a>
+                <a href="https://instagram.com/" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-pink-500 hover:scale-105 transition shadow">
+                    <i class="fab fa-instagram text-xs"></i>
+                </a>
+            </div>
+            <p class="text-[10px] sm:text-[11px] text-gray-400 mb-0.5">Copyright &copy; 2026 BoultFlix | All Rights Reserved</p>
+            <p class="text-[9px] text-gray-500">Powered By Boultflix &mdash; This page is made by boultflix</p>
+        </div>
     </footer>
 
-
-    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Bharathboy/utils@main/jsmkv-polyfill.js"></script>
-
     <script>
-        function initPlayer() {
-            const video = document.querySelector("#player");
-            if (!video) {
-                console.error("Video element not found");
-                return;
-            }
+        const RAW_FILE_URL = `{{file_url}}`;
+        const FILE_NAME = `{{file_name}}`;
+        const SAVED_POS_KEY = `boultflix_pos_{{file_name}}`;
 
-            const source = video.querySelector("source");
-            const url = source?.src || "";
-            const cleanUrl = url.split("?")[0];
-            const ext = cleanUrl.split(".").pop()?.toLowerCase() || "";
-
-            if (ext === "mkv" && document.querySelector('script[src*="jsmkv"]')) {
-                video.classList.add("mkv-player");
-                setTimeout(() => initPlyr(video), 100);
-            } else if (
-                ["flv", "ts"].includes(ext) &&
-                typeof mpegts !== "undefined"
-            ) {
-                initMpegts(video, url);
-            } else {
-                setTimeout(() => initPlyr(video), 100);
-            }
-        }
-
-        function initPlyr(video) {
-            if (window.plyrPlayer) return;
-            if (typeof Plyr === "undefined") {
-                console.error("Plyr not loaded");
-                return;
-            }
-
-            const player = new Plyr(video, {
-                controls: [
-                    "play-large",
-                    "play",
-                    "progress",
-                    "current-time",
-                    "mute",
-                    "volume",
-                    "pip",
-                    "airplay",
-                    "fullscreen",
-                ],
-            });
-
-            window.plyrPlayer = player;
-            setTimeout(() => {
-                addCustomControls();
-            }, 200);
-        }
-
-        function addCustomControls() {
-            const controls = document.querySelector(".plyr__controls");
-            if (!controls) {
-                console.error("Plyr controls not found");
-                return;
-            }
-            const fullscreen = controls.querySelector('[data-plyr="fullscreen"]');
-            if (!fullscreen) {
-                console.error("Fullscreen button not found");
-                return;
-            }
-            const speedBtn = document.createElement("button");
-            speedBtn.className = "plyr__controls__item plyr__control";
-            speedBtn.type = "button";
-            speedBtn.setAttribute("data-plyr", "speed-custom");
-            speedBtn.innerHTML = `
-                <i data-lucide="gauge" style="width: 18px; height: 18px;"></i>
-                <span class="plyr__tooltip">Speed</span>
-            `;
-            lucide.createIcons({ root: speedBtn });
-
-            const speedDropdown = document.createElement("div");
-            speedDropdown.className = "aspect-dropdown";
-            speedDropdown.innerHTML = `
-                <div class="aspect-item" data-speed="0.5">
-                    <span>0.5x</span>
-                </div>
-                <div class="aspect-item" data-speed="0.75">
-                    <span>0.75x</span>
-                </div>
-                <div class="aspect-item active" data-speed="1">
-                    <span>1x Normal</span>
-                    <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                </div>
-                <div class="aspect-item" data-speed="1.25">
-                    <span>1.25x</span>
-                </div>
-                <div class="aspect-item" data-speed="1.5">
-                    <span>1.5x</span>
-                </div>
-                <div class="aspect-item" data-speed="1.75">
-                    <span>1.75x</span>
-                </div>
-                <div class="aspect-item" data-speed="2">
-                    <span>2x</span>
-                </div>
-            `;
-
-            controls.insertBefore(speedBtn, fullscreen);
-            speedBtn.appendChild(speedDropdown);
-            lucide.createIcons({ root: speedDropdown });
-            speedBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                speedDropdown.classList.toggle("active");
-
-                const volumePopups = document.querySelectorAll(
-                    ".volume-popup.active"
-                );
-                volumePopups.forEach((p) => p.classList.remove("active"));
-
-                const aspectDropdowns = document.querySelectorAll(
-                    ".aspect-dropdown.active"
-                );
-                aspectDropdowns.forEach((dropdown) => {
-                    if (dropdown !== speedDropdown) {
-                        dropdown.classList.remove("active");
-                    }
-                });
-            });
-
-            speedDropdown.querySelectorAll(".aspect-item").forEach((item) => {
-                item.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const speed = parseFloat(item.dataset.speed);
-                    const video = document.querySelector("#player");
-                    if (video) {
-                        video.playbackRate = speed;
-                    }
-
-                    speedDropdown.querySelectorAll(".aspect-item").forEach((i) => {
-                        i.classList.remove("active");
-                        const checkmark = i.querySelector("svg");
-                        if (checkmark) checkmark.remove();
-                    });
-
-                    item.classList.add("active");
-                    const checkmark = document.createElement("i");
-                    checkmark.setAttribute("data-lucide", "check");
-                    checkmark.style.width = "14px";
-                    checkmark.style.height = "14px";
-
-                    item.appendChild(checkmark);
-                    lucide.createIcons({ root: item });
-
-                    speedDropdown.classList.remove("active");
-                });
-            });
-            document.addEventListener("click", (e) => {
-                if (!speedBtn.contains(e.target)) {
-                    speedDropdown.classList.remove("active");
-                }
-            });
-
-            const aspectBtn = document.createElement("button");
-            aspectBtn.className = "plyr__controls__item plyr__control";
-            aspectBtn.type = "button";
-            aspectBtn.setAttribute("data-plyr", "aspect-ratio");
-            aspectBtn.innerHTML = `
-
-                <i data-lucide="rectangle-horizontal" style="width: 18px; height: 18px;"></i>
-                <span class="plyr__tooltip">Aspect Ratio</span>
-            `;
-            lucide.createIcons({ root: aspectBtn });
-
-            const dropdown = document.createElement("div");
-            dropdown.className = "aspect-dropdown";
-            dropdown.innerHTML = `
-                <div class="aspect-item" data-ratio="original" data-aspect="original">
-                    <span>Original</span>
-                </div>
-                <div class="aspect-item" data-ratio="1:1" data-aspect="1">
-                    <span>1:1 Square</span>
-                </div>
-                <div class="aspect-item" data-ratio="4:3" data-aspect="1.333">
-                    <span>4:3 Classic</span>
-                </div>
-                <div class="aspect-item active" data-ratio="16:9" data-aspect="1.778">
-                    <span>16:9 Wide</span>
-                    <i data-lucide="check" style="width: 14px; height: 14px;"></i>
-                </div>
-                <div class="aspect-item" data-ratio="1.85:1" data-aspect="1.85">
-                    <span>1.85:1 Cinema</span>
-                </div>
-
-                <div class="aspect-item" data-ratio="21:9" data-aspect="2.333">
-                    <span>21:9 Ultrawide</span>
-                </div>
-                <div class="aspect-item" data-ratio="cover" data-aspect="cover">
-                    <span>Fill Screen</span>
-                </div>
-            `;
-
-            controls.insertBefore(aspectBtn, fullscreen);
-            aspectBtn.appendChild(dropdown);
-            lucide.createIcons({ root: dropdown });
-
-            const volumeBtn = document.createElement("button");
-            volumeBtn.className = "plyr__controls__item plyr__control";
-            volumeBtn.type = "button";
-            volumeBtn.setAttribute("data-plyr", "volume-custom");
-            volumeBtn.innerHTML = `
-                <svg class="volume-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                   <path class="vol-high" d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                   <path class="vol-mute" d="M23 9l-6 6m0-6l6 6" style="display:none;"></path>
-                </svg>
-                <span class="plyr__tooltip">Volume</span>
-            `;
-
-            const volumePopup = document.createElement("div");
-            volumePopup.className = "volume-popup";
-            volumePopup.innerHTML = `
-                <div class="volume-percent">100%</div>
-                <div class="volume-slider-container">
-                    <input type="range" min="0" max="1" step="0.05" value="1" class="volume-slider">
-                </div>
-            `;
-
-            volumeBtn.appendChild(volumePopup);
-
-            controls.insertBefore(volumeBtn, speedBtn);
-
-            const video = document.querySelector("#player");
-            const volSlider = volumePopup.querySelector(".volume-slider");
-            const volIconHigh = volumeBtn.querySelector(".vol-high");
-            const volIconMute = volumeBtn.querySelector(".vol-mute");
-
-            const volPercent = volumePopup.querySelector(".volume-percent");
-
-            function updateVolumeUI(vol, muted) {
-                if (volSlider) volSlider.value = vol;
-                if (volPercent) volPercent.textContent = Math.round(vol * 100) + "%";
-
-                if (muted || vol === 0) {
-                    if (volIconHigh) volIconHigh.style.display = "none";
-                    if (volIconMute) volIconMute.style.display = "block";
-                } else {
-                    if (volIconHigh) volIconHigh.style.display = "block";
-                    if (volIconMute) volIconMute.style.display = "none";
-                }
-            }
-
-            if (video) {
-                updateVolumeUI(video.volume, video.muted);
-            }
-
-            volumeBtn.addEventListener("click", (e) => {
-                if (e.target === volSlider || e.target.closest(".volume-popup"))
-                    return;
-
-                e.stopPropagation();
-                volumePopup.classList.toggle("active");
-
-                const otherDropdowns = document.querySelectorAll(
-                    ".aspect-dropdown.active"
-                );
-                otherDropdowns.forEach((d) => d.classList.remove("active"));
-            });
-
-            document.addEventListener("click", (e) => {
-                if (!volumeBtn.contains(e.target)) {
-                    volumePopup.classList.remove("active");
-                }
-            });
-
-            if (volSlider) {
-                volSlider.addEventListener("input", (e) => {
-                    const val = parseFloat(e.target.value);
-                    if (video) {
-                        video.volume = val;
-                        video.muted = val === 0;
-                        updateVolumeUI(val, video.muted);
-                    }
-                });
-
-                volSlider.addEventListener("click", (e) => e.stopPropagation());
-            }
-
-            if (video) {
-                video.addEventListener("volumechange", () => {
-                    updateVolumeUI(video.volume, video.muted);
-                });
-            }
-            aspectBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                dropdown.classList.toggle("active");
-
-                const volumePopups = document.querySelectorAll(
-                    ".volume-popup.active"
-                );
-                volumePopups.forEach((p) => p.classList.remove("active"));
-
-                const otherDropdowns = document.querySelectorAll(
-                    ".aspect-dropdown.active"
-                );
-                otherDropdowns.forEach((d) => {
-                    if (d !== dropdown) d.classList.remove("active");
-                });
-            });
-
-            dropdown.querySelectorAll(".aspect-item").forEach((item) => {
-                item.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    const aspect = item.dataset.aspect;
-                    const video = document.querySelector("#player");
-                    const container = document.querySelector(".video-container");
-
-                    if (video && container) {
-                        video.style.width = "100%";
-                        video.style.height = "100%";
-                        video.style.top = "0";
-                        video.style.left = "0";
-                        video.style.transform = "none";
-
-                        if (aspect === "cover") {
-                            video.style.objectFit = "cover";
-                            video.style.objectPosition = "center";
-                        } else if (aspect === "original") {
-                            video.style.objectFit = "contain";
-                            video.style.objectPosition = "center";
-                        } else {
-                            const targetRatio = parseFloat(aspect);
-                            const containerRatio = 16 / 9;
-
-                            if (targetRatio < containerRatio) {
-                                const widthPercent = (targetRatio / containerRatio) * 100;
-                                video.style.width = `${widthPercent}%`;
-                                video.style.height = "100%";
-                                video.style.left = `${(100 - widthPercent) / 2}%`;
-                                video.style.objectFit = "fill";
-                            } else {
-                                const heightPercent = (containerRatio / targetRatio) * 100;
-                                video.style.width = "100%";
-                                video.style.height = `${heightPercent}%`;
-                                video.style.top = `${(100 - heightPercent) / 2}%`;
-                                video.style.objectFit = "fill";
-                            }
-                        }
-                    }
-
-                    dropdown.querySelectorAll(".aspect-item").forEach((i) => {
-                        i.classList.remove("active");
-                        const checkmark = i.querySelector("svg");
-                        if (checkmark) checkmark.remove();
-                    });
-
-                    item.classList.add("active");
-                    const checkmark = document.createElement("i");
-                    checkmark.setAttribute("data-lucide", "check");
-                    checkmark.style.width = "14px";
-                    checkmark.style.height = "14px";
-
-                    item.appendChild(checkmark);
-                    lucide.createIcons({ root: item });
-
-                    dropdown.classList.remove("active");
-                });
-            });
-
-            document.addEventListener("click", (e) => {
-                if (!aspectBtn.contains(e.target)) {
-                    dropdown.classList.remove("active");
-                }
-            });
-        }
-
-        function initMpegts(video, url) {
+        function resolveWorkingStreamUrl(raw) {
+            if (!raw || raw.includes('{{')) return '';
             try {
-                const player = mpegts.createPlayer({
-                    type: "flv",
-                    url,
-                    isLive: false,
-                });
-                player.attachMediaElement(video);
-                player.load();
-                window.mpegtsPlayer = player;
-                initPlyr(video);
-            } catch (err) {
-                console.error("mpegts failed:", err);
-                initPlyr(video);
+                const parsed = new URL(raw, window.location.origin);
+                if (parsed.hostname.includes('workers.dev') && !window.location.hostname.includes('workers.dev')) {
+                    parsed.hostname = window.location.hostname;
+                    parsed.protocol = window.location.protocol;
+                    parsed.port = window.location.port;
+                }
+                return parsed.href;
+            } catch (e) {
+                return raw.startsWith('http') ? raw : `${window.location.origin}${raw.startsWith('/') ? '' : '/'}${raw}`;
             }
         }
-        function toggleDropdown() {
-            const dropdown = document.getElementById("players-dropdown");
-            dropdown.classList.toggle("active");
+
+        const FILE_URL = resolveWorkingStreamUrl(RAW_FILE_URL);
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1);
+
+        const video = document.getElementById('video-player');
+        const playerContainer = document.getElementById('player-container');
+        const globalModalLayer = document.getElementById('global-modal-layer');
+        const customSubOverlay = document.getElementById('custom-sub-overlay');
+        const hud = document.getElementById('hud');
+        let hudTimeout;
+        let isDragging = false;
+        let wasPlayingBeforePopup = false;
+
+        const centerControls = document.getElementById('center-controls');
+        const btnPlay = document.getElementById('btn-play');
+        const playIcon = document.getElementById('play-icon');
+        const timeCurrent = document.getElementById('time-current');
+        const timeTotal = document.getElementById('time-total');
+        const progressFilled = document.getElementById('progress-filled');
+        const progressBuffered = document.getElementById('progress-buffered');
+        const progressThumb = document.getElementById('progress-thumb');
+        const timelineContainer = document.getElementById('timeline-container');
+        const timelineTooltip = document.getElementById('timeline-tooltip');
+        const errorScreen = document.getElementById('error-screen');
+        const videoLoader = document.getElementById('video-loader');
+
+        let detectedAudioMeta = [];
+        let detectedSubMeta = [];
+        let activeAudioIdx = 0;
+        let activeSubIdx = -1;
+
+        // Auto Extract Audio/Sub Tracks
+        function inferTracksFromFilename(name) {
+            const lower = (name || '').toLowerCase();
+            const audios = [];
+            if (lower.includes('hindi') || lower.includes('hin')) audios.push('Hindi (Default)');
+            if (lower.includes('eng') || lower.includes('dual')) audios.push('English');
+            if (lower.includes('tam')) audios.push('Tamil');
+            if (lower.includes('tel')) audios.push('Telugu');
+            if (lower.includes('jap')) audios.push('Japanese');
+            if (lower.includes('kor')) audios.push('Korean');
+            if (audios.length === 0) audios.push('Audio Track 1 (Default)');
+            detectedAudioMeta = audios;
+
+            const subs = [];
+            if (lower.includes('esub') || lower.includes('sub') || lower.includes('mkv') || lower.includes('web-dl')) {
+                subs.push('English - [SDH]');
+            }
+            if (lower.includes('hdhub4u')) {
+                subs.push('HDHub4u.Ag (SRT)');
+            }
+            if (subs.length === 0) {
+                subs.push('English Subtitles');
+            }
+            detectedSubMeta = subs;
+        }
+        inferTracksFromFilename(FILE_NAME);
+
+        function getTranscodedUrl(audioIdx = 0) {
+            if (!FILE_URL) return '';
+            const sep = FILE_URL.includes('?') ? '&' : '?';
+            return `${FILE_URL}${sep}transcode=1&audio=${audioIdx}`;
         }
 
-        function blazeDownload() {
-            const a = document.createElement("a");
-            a.href = "{{file_url}}";
-            a.download = "{{file_name}}";
-            a.click();
+        function initPlayer() {
+            errorScreen.classList.add('hidden');
+            if (!FILE_URL) {
+                videoLoader.classList.add('hidden');
+                return;
+            }
+            videoLoader.classList.remove('hidden');
+            showCenterControls(false);
+
+            if (FILE_URL.endsWith('.m3u8') && window.Hls && Hls.isSupported()) {
+                const hls = new Hls({ maxBufferLength: 30, enableWorker: true });
+                hls.loadSource(FILE_URL);
+                hls.attachMedia(video);
+            } else {
+                // Connect with backend transcoding for browser audio compatibility
+                video.src = getTranscodedUrl(activeAudioIdx);
+            }
         }
 
-        function buildIntentUrl(url, packageName, action = "android.intent.action.VIEW", type = "video/*") {
-            const parsed = new URL(url);
-            const intentPath = `${parsed.host}${parsed.pathname}${parsed.search}`;
-            const typePart = type ? `type=${type};` : "";
-            return `intent://${intentPath}#Intent;scheme=${parsed.protocol.replace(":", "")};action=${action};${typePart}package=${packageName};end`;
+        function showCenterControls(show) {
+            if (show) centerControls.classList.remove('opacity-0', 'pointer-events-none');
+            else centerControls.classList.add('opacity-0', 'pointer-events-none');
         }
 
-        function vlc_player(event) {
-            const url = "{{file_url}}";
-            window.location.href = buildIntentUrl(url, "org.videolan.vlc");
+        function retryPlayback() {
+            if (!FILE_URL) return;
+            errorScreen.classList.add('hidden');
+            videoLoader.classList.remove('hidden');
+            const currentPos = video.currentTime || 0;
+            video.src = getTranscodedUrl(activeAudioIdx);
+            video.currentTime = currentPos;
+            video.play().catch(() => {});
         }
 
-        function mx_player() {
-            window.location.href = buildIntentUrl("{{file_url}}", "com.mxtech.videoplayer.ad");
+        let errorRetryCount = 0;
+        video.addEventListener('error', () => {
+            if (!FILE_URL) return;
+            if (errorRetryCount < 1 && video.currentTime > 0) {
+                errorRetryCount++;
+                setTimeout(retryPlayback, 800);
+                return;
+            }
+            videoLoader.classList.add('hidden');
+            errorScreen.classList.remove('hidden');
+            showCenterControls(false);
+        });
+
+        video.addEventListener('loadstart', () => { if (FILE_URL) videoLoader.classList.remove('hidden'); });
+        video.addEventListener('waiting', () => { videoLoader.classList.remove('hidden'); showCenterControls(false); });
+        video.addEventListener('seeking', () => { videoLoader.classList.remove('hidden'); });
+        video.addEventListener('seeked', () => { videoLoader.classList.add('hidden'); showCenterControls(true); });
+        video.addEventListener('canplay', () => { 
+            videoLoader.classList.add('hidden'); 
+            errorScreen.classList.add('hidden'); 
+            showCenterControls(true); 
+        });
+        video.addEventListener('playing', () => { 
+            errorRetryCount = 0; 
+            videoLoader.classList.add('hidden'); 
+            errorScreen.classList.add('hidden'); 
+            showCenterControls(true); 
+        });
+
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return "00:00";
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
-        function mx_playerpro() {
-            window.location.href = buildIntentUrl("{{file_url}}", "com.mxtech.videoplayer.pro");
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
-        function playit_player() {
-            // PLAYit works best with its native deep-link
-            window.location.href =
-                `playit://playerv2/video?url=${encodeURIComponent("{{file_url}}")}`;
+        function showHudAndCursor() {
+            hud.classList.remove('hidden-hud');
+            playerContainer.classList.remove('hide-cursor');
+            customSubOverlay.style.bottom = '15%';
+            clearTimeout(hudTimeout);
+            if (!video.paused) {
+                hudTimeout = setTimeout(() => {
+                    hud.classList.add('hidden-hud');
+                    playerContainer.classList.add('hide-cursor');
+                    customSubOverlay.style.bottom = '7%';
+                }, 3000);
+            }
         }
 
-        function km_player() {
-            window.location.href = buildIntentUrl("{{file_url}}", "com.kmplayer");
+        function togglePlay() {
+            if (!FILE_URL) {
+                showToast("Stream URL not active in local preview");
+                return;
+            }
+            if (video.paused) {
+                video.play().catch(() => {});
+            } else {
+                video.pause();
+            }
         }
 
-        function s_player() {
-            window.location.href = buildIntentUrl(
-                "{{file_url}}",
-                "com.young.simple.player",
-                "com.young.simple.player.playback_online",
-                ""
-            );
+        video.addEventListener('play', () => {
+            playIcon.className = 'fas fa-pause';
+            showHudAndCursor();
+        });
+
+        video.addEventListener('pause', () => {
+            playIcon.className = 'fas fa-play ml-0.5';
+            videoLoader.classList.add('hidden');
+            showCenterControls(true);
+            hud.classList.remove('hidden-hud');
+            playerContainer.classList.remove('hide-cursor');
+            customSubOverlay.style.bottom = '15%';
+            clearTimeout(hudTimeout);
+        });
+
+        btnPlay.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
+
+        if (!isMobile) {
+            playerContainer.addEventListener('mousemove', showHudAndCursor);
+            playerContainer.addEventListener('click', (e) => {
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('#timeline-container') || e.target.closest('#error-screen') || e.target.closest('.double-tap-zone')) return;
+                togglePlay();
+            });
+        } else {
+            let lastScreenTap = 0;
+            playerContainer.addEventListener('touchend', (e) => {
+                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('#timeline-container') || e.target.closest('#error-screen') || e.target.closest('.double-tap-zone')) return;
+                const now = Date.now();
+                if (now - lastScreenTap < 300) return;
+                if (hud.classList.contains('hidden-hud')) {
+                    showHudAndCursor();
+                } else {
+                    togglePlay();
+                }
+            });
         }
 
-        function hd_player() {
-            // Correct HD Player package
-            window.location.href = buildIntentUrl("{{file_url}}", "uplayer.video.player");
+        let isSeekingPending = false;
+        function seek(offset) {
+            if (isNaN(video.duration) || isSeekingPending) return;
+            isSeekingPending = true;
+            video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + offset));
+            setTimeout(() => { isSeekingPending = false; }, 300);
         }
 
-        document.addEventListener("click", (e) => {
-            if (!e.target.closest(".dropdown")) {
-                const playersDropdown = document.getElementById("players-dropdown");
-                if (playersDropdown) {
-                    playersDropdown.classList.remove("active");
+        document.getElementById('btn-rewind').addEventListener('click', (e) => { e.stopPropagation(); seek(-10); showToast('-10s'); });
+        document.getElementById('btn-forward').addEventListener('click', (e) => { e.stopPropagation(); seek(10); showToast('+10s'); });
+
+        // YouTube-style Double Tap Skip with Haptic Vibration
+        let lastTapLeft = 0, lastTapRight = 0;
+        document.getElementById('dt-left').addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTapLeft < 320) {
+                e.preventDefault(); e.stopPropagation(); seek(-10);
+                if (navigator.vibrate) navigator.vibrate(40);
+                const pill = document.getElementById('skip-left');
+                pill.classList.remove('skip-animate'); void pill.offsetWidth; pill.classList.add('skip-animate');
+            } else {
+                if (hud.classList.contains('hidden-hud')) showHudAndCursor(); else togglePlay();
+            }
+            lastTapLeft = now;
+        });
+
+        document.getElementById('dt-right').addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTapRight < 320) {
+                e.preventDefault(); e.stopPropagation(); seek(10);
+                if (navigator.vibrate) navigator.vibrate(40);
+                const pill = document.getElementById('skip-right');
+                pill.classList.remove('skip-animate'); void pill.offsetWidth; pill.classList.add('skip-animate');
+            } else {
+                if (hud.classList.contains('hidden-hud')) showHudAndCursor(); else togglePlay();
+            }
+            lastTapRight = now;
+        });
+
+        video.addEventListener('loadedmetadata', () => {
+            timeTotal.textContent = formatTime(video.duration);
+            videoLoader.classList.add('hidden');
+            showCenterControls(true);
+            bindSubtitleCueRenderer();
+        });
+
+        video.addEventListener('timeupdate', () => {
+            if (!isDragging && video.duration) {
+                const pct = (video.currentTime / video.duration) * 100;
+                progressFilled.style.width = `${pct}%`;
+                progressThumb.style.left = `${pct}%`;
+                timeCurrent.textContent = formatTime(video.currentTime);
+            }
+            if (video.currentTime > 5 && video.currentTime < video.duration - 10) {
+                if (Math.floor(video.currentTime) % 3 === 0) {
+                    localStorage.setItem(SAVED_POS_KEY, video.currentTime);
                 }
             }
         });
 
-        function checkAudioSupport() {
-            const video = document.createElement("video");
-            if (video.canPlayType('audio/mp4; codecs="ec-3"') === "") {
-                const videoSection = document.querySelector("#video-section");
-                if (videoSection && !document.querySelector(".audio-warning")) {
-                    const warning = document.createElement("div");
-                    warning.className = "audio-warning";
-                    warning.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                            <line x1="12" y1="9" x2="12" y2="13"></line>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
-                        <span>Browser does not support EAC3 audio. If no sound, please use External Players.</span>
-                     `;
-                    videoSection.appendChild(warning);
-                }
+        video.addEventListener('progress', () => {
+            if (video.buffered.length > 0 && video.duration) {
+                const end = video.buffered.end(video.buffered.length - 1);
+                progressBuffered.style.width = `${(end / video.duration) * 100}%`;
             }
+        });
+
+        function updateTimeline(e) {
+            if (!video.duration) return;
+            const rect = timelineContainer.getBoundingClientRect();
+            let pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            progressFilled.style.width = `${pos * 100}%`;
+            progressThumb.style.left = `${pos * 100}%`;
+            const hoverTime = pos * video.duration;
+            timelineTooltip.textContent = formatTime(hoverTime);
+            timelineTooltip.style.left = `${pos * 100}%`;
+            if (isDragging) video.currentTime = hoverTime;
         }
 
-        function cleanFileName() {
-            const fileTitle = document.querySelector(".file-title");
-            if (fileTitle) {
-                let cleanedName = fileTitle.textContent;
-                cleanedName = cleanedName
-                    .replace(/\./g, " ")
-                    .replace(/\[/g, " ")
-                    .replace(/\]/g, " ")
-                    .replace(/\{/g, " ")
-                    .replace(/\}/g, " ")
-                    .replace(/_/g, " ")
-                    .replace(/\.mkv/gi, " ")
-                    .replace(/\.mp4/gi, " ")
-                    .replace(/mkv/gi, " ")
-                    .replace(/mp4/gi, " ")
-                    .replace(/\s+/g, " ")
-                    .trim();
-                fileTitle.textContent = cleanedName;
+        timelineContainer.addEventListener('mousedown', (e) => { isDragging = true; updateTimeline(e); });
+        document.addEventListener('mousemove', (e) => { if (isDragging) updateTimeline(e); });
+        document.addEventListener('mouseup', () => { isDragging = false; });
+        timelineContainer.addEventListener('mousemove', (e) => {
+            if (!isDragging && video.duration) {
+                const rect = timelineContainer.getBoundingClientRect();
+                let pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                timelineTooltip.textContent = formatTime(pos * video.duration);
+                timelineTooltip.style.left = `${pos * 100}%`;
             }
-        }
+        });
+        timelineContainer.addEventListener('mouseenter', () => timelineTooltip.classList.remove('hidden'));
+        timelineContainer.addEventListener('mouseleave', () => timelineTooltip.classList.add('hidden'));
 
-        function scrollToVideoSection() {
-            if (window.innerWidth > 768) {
-                const videoSection = document.querySelector("#video-section");
-                if (videoSection) {
-                    setTimeout(() => {
-                        videoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 100);
-                }
-            }
-        }
+        timelineContainer.addEventListener('touchstart', (e) => { isDragging = true; updateTimeline(e.touches[0]); }, {passive: true});
+        timelineContainer.addEventListener('touchmove', (e) => { if (isDragging) updateTimeline(e.touches[0]); }, {passive: true});
+        timelineContainer.addEventListener('touchend', () => { isDragging = false; });
 
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", () => {
-                cleanFileName();
-                scrollToVideoSection();
-                initPlayer();
-                checkAudioSupport();
+        // Volume Controls
+        const volSlider = document.getElementById('volume-slider');
+        const btnMute = document.getElementById('btn-mute');
+        const volIcon = document.getElementById('vol-icon');
+        volSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = (e.target.value == 0);
+            volIcon.className = video.muted ? 'fas fa-volume-mute text-sapphire' : 'fas fa-volume-up';
+        });
+        btnMute.addEventListener('click', (e) => {
+            e.stopPropagation();
+            video.muted = !video.muted;
+            volSlider.value = video.muted ? 0 : (video.volume || 1);
+            volIcon.className = video.muted ? 'fas fa-volume-mute text-sapphire' : 'fas fa-volume-up';
+        });
 
-                const mobileMenuBtn = document.querySelector(".mobile-menu");
-                const nav = document.querySelector(".nav");
-
-                if (mobileMenuBtn && nav) {
-                    mobileMenuBtn.addEventListener("click", (e) => {
-                        e.stopPropagation();
-                        nav.classList.toggle("active");
-                    });
-
-                    nav.querySelectorAll("a").forEach((link) => {
-                        link.addEventListener("click", () => {
-                            nav.classList.remove("active");
-                        });
-                    });
-
-                    document.addEventListener("click", (e) => {
-                        if (
-                            !nav.contains(e.target) &&
-                            !mobileMenuBtn.contains(e.target)
-                        ) {
-                            nav.classList.remove("active");
-                        }
-                    });
-                }
-            });
-        } else {
-            cleanFileName();
-            scrollToVideoSection();
-            initPlayer();
-            checkAudioSupport();
-            const mobileMenuBtn = document.querySelector(".mobile-menu");
-            const nav = document.querySelector(".nav");
-            if (mobileMenuBtn && nav) {
-                mobileMenuBtn.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    nav.classList.toggle("active");
-                });
-                nav.querySelectorAll("a").forEach((link) => {
-                    link.addEventListener("click", () =>
-                        nav.classList.remove("active")
-                    );
-                });
-                document.addEventListener("click", (e) => {
-                    if (!nav.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-                        nav.classList.remove("active");
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (document.querySelector('.glass-popup-backdrop.active')) return;
+            switch(e.code) {
+                case 'Space': case 'KeyK':
+                    e.preventDefault(); togglePlay(); break;
+                case 'ArrowLeft':
+                    e.preventDefault(); showHudAndCursor();
+                    if (video.duration) {
+                        video.currentTime = Math.max(0, video.currentTime - 5);
+                        const pct = (video.currentTime / video.duration) * 100;
+                        progressFilled.style.width = `${pct}%`; progressThumb.style.left = `${pct}%`;
+                        timeCurrent.textContent = formatTime(video.currentTime);
                     }
-                });
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault(); showHudAndCursor();
+                    if (video.duration) {
+                        video.currentTime = Math.min(video.duration, video.currentTime + 5);
+                        const pct = (video.currentTime / video.duration) * 100;
+                        progressFilled.style.width = `${pct}%`; progressThumb.style.left = `${pct}%`;
+                        timeCurrent.textContent = formatTime(video.currentTime);
+                    }
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault(); video.volume = Math.min(1, video.volume + 0.05);
+                    volSlider.value = video.volume; volIcon.className = 'fas fa-volume-up';
+                    showToast(`Volume: ${Math.round(video.volume * 100)}%`); break;
+                case 'ArrowDown':
+                    e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05);
+                    volSlider.value = video.volume;
+                    if (video.volume === 0) volIcon.className = 'fas fa-volume-mute text-sapphire';
+                    showToast(`Volume: ${Math.round(video.volume * 100)}%`); break;
+                case 'KeyF':
+                    e.preventDefault(); toggleFullscreen(); break;
+            }
+        });
+
+        // Persistent Orientation Toggle
+        let isLandscapeMode = false;
+        async function youtubeStyleLandscapeToggle(e) {
+            if (e) e.stopPropagation();
+            isLandscapeMode = !isLandscapeMode;
+            const rotIcon = document.getElementById('rotate-screen-icon');
+            const fsIcon = document.getElementById('fs-icon');
+
+            if (isLandscapeMode) {
+                try {
+                    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                        if (playerContainer.requestFullscreen) await playerContainer.requestFullscreen();
+                        else if (playerContainer.webkitRequestFullscreen) await playerContainer.webkitRequestFullscreen();
+                    }
+                } catch (err) {}
+
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {
+                        playerContainer.classList.add('css-landscape');
+                    });
+                } else {
+                    playerContainer.classList.add('css-landscape');
+                }
+                rotIcon.className = 'fas fa-mobile-screen';
+                fsIcon.className = 'fas fa-compress';
+                showToast("Landscape Mode");
+            } else {
+                if (screen.orientation && screen.orientation.unlock) {
+                    try { screen.orientation.unlock(); } catch (err) {}
+                }
+                playerContainer.classList.remove('css-landscape');
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                }
+                rotIcon.className = 'fas fa-rotate';
+                fsIcon.className = 'fas fa-expand';
+                showToast("Portrait Mode");
+            }
+            showHudAndCursor();
+        }
+
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+        btnFullscreen.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isMobile) youtubeStyleLandscapeToggle(e);
+            else toggleFullscreen();
+        });
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (playerContainer.requestFullscreen) playerContainer.requestFullscreen();
+                else if (playerContainer.webkitRequestFullscreen) playerContainer.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+            showHudAndCursor();
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const fsIcon = document.getElementById('fs-icon');
+            const rotIcon = document.getElementById('rotate-screen-icon');
+            if (document.fullscreenElement) {
+                document.fullscreenElement.appendChild(globalModalLayer);
+                fsIcon.className = 'fas fa-compress';
+            } else {
+                document.body.appendChild(globalModalLayer);
+                playerContainer.classList.remove('css-landscape');
+                isLandscapeMode = false;
+                fsIcon.className = 'fas fa-expand';
+                rotIcon.className = 'fas fa-rotate';
+            }
+        });
+
+        document.getElementById('btn-pip').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (document.pictureInPictureElement) document.exitPictureInPicture();
+            else if (document.pictureInPictureEnabled) video.requestPictureInPicture();
+        });
+
+        // Modal Open / Close with Auto-Resume Feature
+        function openPopup(id) {
+            closeAllPopups();
+            wasPlayingBeforePopup = (!video.paused && !video.ended);
+            if (wasPlayingBeforePopup) video.pause();
+            document.getElementById(id).classList.add('active');
+        }
+        function closeAllPopups() {
+            const hasOpen = !!document.querySelector('.glass-popup-backdrop.active');
+            document.querySelectorAll('.glass-popup-backdrop').forEach(p => p.classList.remove('active'));
+            if (hasOpen && wasPlayingBeforePopup) {
+                video.play().catch(() => {});
+                wasPlayingBeforePopup = false;
             }
         }
+        function closePopupOnBackdrop(e, backdropElem) {
+            if (e.target === backdropElem) closeAllPopups();
+        }
+
+        // Playback Speed Options
+        const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+        let currentSpeed = 1;
+        const speedOptionsContainer = document.getElementById('speed-options');
+
+        function renderSpeedButtons() {
+            speedOptionsContainer.innerHTML = '';
+            speeds.forEach(speed => {
+                const isSelected = (speed === currentSpeed);
+                const btn = document.createElement('button');
+                btn.className = isSelected
+                    ? 'py-2.5 px-3 rounded-xl bg-sapphire/20 text-sapphire border border-sapphire/50 text-xs font-bold shadow-[0_0_15px_rgba(0,210,255,0.2)] transition active:scale-95'
+                    : 'py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-transparent text-xs font-semibold transition active:scale-95';
+                btn.textContent = `${speed}x`;
+                btn.onclick = () => {
+                    currentSpeed = speed;
+                    video.playbackRate = speed;
+                    document.getElementById('speed-display').textContent = `${speed}x`;
+                    renderSpeedButtons();
+                    closeAllPopups();
+                    showToast(`Speed: ${speed}x`);
+                };
+                speedOptionsContainer.appendChild(btn);
+            });
+        }
+        renderSpeedButtons();
+
+        // Aspect Ratio Handler
+        function setAspect(mode, btnElem) {
+            if (mode === '16/9') {
+                video.style.objectFit = 'contain';
+                playerContainer.style.aspectRatio = '16/9';
+            } else if (mode === '21/9') {
+                video.style.objectFit = 'cover';
+                playerContainer.style.aspectRatio = '21/9';
+            } else if (mode === 'fill') {
+                video.style.objectFit = 'cover';
+                playerContainer.style.aspectRatio = '16/9';
+            } else {
+                video.style.objectFit = 'contain';
+                playerContainer.style.aspectRatio = 'auto';
+            }
+
+            document.querySelectorAll('.aspect-btn').forEach(b => {
+                b.className = 'aspect-btn py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left transition';
+            });
+            if (btnElem) {
+                btnElem.className = 'aspect-btn py-2.5 px-4 rounded-xl bg-sapphire/15 border border-sapphire/50 text-sapphire text-xs font-semibold text-left transition';
+            }
+            closeAllPopups();
+            showToast(`Aspect Ratio: ${mode}`);
+        }
+
+        // Subtitle Cue Parser (VLC Font)
+        function bindSubtitleCueRenderer() {
+            if (!video.textTracks) return;
+            for (let i = 0; i < video.textTracks.length; i++) {
+                const track = video.textTracks[i];
+                track.oncuechange = () => {
+                    if (track.mode === 'showing' && track.activeCues && track.activeCues.length > 0) {
+                        const lines = Array.from(track.activeCues).map(c => c.text.replace(/<[^>]*>/g, '')).join('<br>');
+                        customSubOverlay.innerHTML = lines;
+                    } else if (activeSubIdx === -1) {
+                        customSubOverlay.innerHTML = '';
+                    }
+                };
+            }
+        }
+
+        function openSubPopup() {
+            const subList = document.getElementById('sub-track-list');
+            subList.innerHTML = '';
+
+            const offBtn = document.createElement('button');
+            const isOff = (activeSubIdx === -1);
+            offBtn.className = isOff
+                ? 'w-full py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
+                : 'w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+            offBtn.innerHTML = `<span>Off</span> ${isOff ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+            offBtn.onclick = () => {
+                activeSubIdx = -1;
+                customSubOverlay.innerHTML = '';
+                if (video.textTracks) {
+                    for (let j = 0; j < video.textTracks.length; j++) video.textTracks[j].mode = 'disabled';
+                }
+                showToast("Subtitles Off");
+                closeAllPopups();
+            };
+            subList.appendChild(offBtn);
+
+            const nativeCount = (video.textTracks && video.textTracks.length) ? video.textTracks.length : 0;
+            const totalSubs = nativeCount > 0 ? nativeCount : detectedSubMeta.length;
+
+            for (let i = 0; i < totalSubs; i++) {
+                const isSelected = (activeSubIdx === i);
+                const trackLabel = nativeCount > 0
+                    ? (video.textTracks[i].label || video.textTracks[i].language || `Subtitle Track ${i + 1}`)
+                    : detectedSubMeta[i];
+
+                const btn = document.createElement('button');
+                btn.className = isSelected
+                    ? 'w-full py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
+                    : 'w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+                btn.innerHTML = `<span>${trackLabel}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+                btn.onclick = () => {
+                    activeSubIdx = i;
+                    if (nativeCount > 0) {
+                        for (let j = 0; j < video.textTracks.length; j++) {
+                            video.textTracks[j].mode = (j === i) ? 'showing' : 'disabled';
+                        }
+                        bindSubtitleCueRenderer();
+                    } else {
+                        customSubOverlay.innerHTML = `[${trackLabel}]`;
+                        setTimeout(() => {
+                            if (activeSubIdx === i) customSubOverlay.innerHTML = '';
+                        }, 2000);
+                    }
+                    showToast(`Subtitle: ${trackLabel}`);
+                    closeAllPopups();
+                };
+                subList.appendChild(btn);
+            }
+            openPopup('sub-popup');
+        }
+
+        function setSubSize(scaleVal, labelPct, btnElem) {
+            document.documentElement.style.setProperty('--sub-scale', scaleVal);
+            document.querySelectorAll('.sub-size-btn').forEach(b => {
+                b.className = 'sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition';
+            });
+            btnElem.className = 'sub-size-btn py-2 rounded-xl bg-sapphire/20 text-sapphire border border-sapphire/50 text-xs font-bold transition';
+            showToast(`Subtitle Size: ${labelPct}`);
+        }
+
+        // Multi-Audio Switcher (Zero-Reload / Instant Track Shift)
+        function openAudioPopup() {
+            const list = document.getElementById('audio-track-list');
+            list.innerHTML = '';
+
+            const trackCount = detectedAudioMeta.length;
+            for (let i = 0; i < trackCount; i++) {
+                const isSelected = (activeAudioIdx === i);
+                let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
+
+                const btn = document.createElement('button');
+                btn.className = isSelected
+                    ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
+                    : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+                btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+                
+                btn.onclick = () => {
+                    if (activeAudioIdx !== i) {
+                        activeAudioIdx = i;
+                        const curTime = video.currentTime;
+                        video.src = getTranscodedUrl(i);
+                        video.currentTime = curTime;
+                        video.play().catch(() => {});
+                    }
+                    showToast(`Audio: ${label}`);
+                    closeAllPopups();
+                };
+                list.appendChild(btn);
+            }
+            openPopup('audio-popup');
+        }
+
+        // Direct Browser Download
+        function copyDownloadLink() {
+            if (!FILE_URL) return;
+            navigator.clipboard.writeText(FILE_URL).then(() => {
+                showToast("Link Copied! Paste in ADM / 1DM / FDM");
+                closeAllPopups();
+            });
+        }
+
+        function directBrowserDownload() {
+            closeAllPopups();
+            video.pause();
+            
+            document.getElementById('player-view').classList.add('hidden');
+            const dlView = document.getElementById('download-view');
+            dlView.classList.remove('hidden');
+            dlView.classList.add('flex');
+
+            const fallbackBtn = document.getElementById('manual-dl-fallback');
+            fallbackBtn.href = FILE_URL;
+            fallbackBtn.setAttribute('download', FILE_NAME);
+
+            if (FILE_URL && FILE_URL.startsWith('http')) {
+                const dlLink = document.createElement('a');
+                dlLink.href = FILE_URL;
+                dlLink.setAttribute('download', FILE_NAME);
+                dlLink.target = '_blank';
+                document.body.appendChild(dlLink);
+                dlLink.click();
+                document.body.removeChild(dlLink);
+            }
+            showToast("Starting Browser Download...");
+        }
+
+        function backToPlayerView() {
+            document.getElementById('download-view').classList.add('hidden');
+            document.getElementById('download-view').classList.remove('flex');
+            document.getElementById('player-view').classList.remove('hidden');
+        }
+
+        document.getElementById('btn-copy').addEventListener('click', () => {
+            if (!FILE_URL) return;
+            navigator.clipboard.writeText(FILE_URL).then(() => showToast('Stream Link Copied!'));
+        });
+
+        function triggerNativeDeviceCast() {
+            if (video.remote && typeof video.remote.prompt === 'function') {
+                video.remote.prompt().catch(() => triggerPresentationCast());
+                return;
+            }
+            triggerPresentationCast();
+        }
+
+        function triggerPresentationCast() {
+            if (window.cast && cast.framework) {
+                try {
+                    cast.framework.CastContext.getInstance().requestSession();
+                    return;
+                } catch (e) {}
+            }
+            if (window.PresentationRequest && FILE_URL) {
+                try {
+                    const req = new PresentationRequest([FILE_URL]);
+                    req.start().catch(() => {});
+                    return;
+                } catch (e) {}
+            }
+            showToast("Searching for Cast devices on your Wi-Fi...");
+        }
+
+        // External Player Launcher
+        function launchApp(type) {
+            if (!FILE_URL) {
+                showToast("Stream URL required");
+                return;
+            }
+            video.pause();
+
+            if (isMobile) {
+                const cleanUrl = FILE_URL.replace(/^https?:\/\//, '');
+                const scheme = FILE_URL.startsWith('https') ? 'https' : 'http';
+                const packages = {
+                    vlc: 'org.videolan.vlc',
+                    mx: 'com.mxtech.videoplayer.ad',
+                    mxpro: 'com.mxtech.videoplayer.pro',
+                    mpv: 'is.xyz.mpv',
+                    just: 'com.brouken.player',
+                    km: 'com.kmplayer',
+                    nova: 'org.courville.nova'
+                };
+                if (packages[type]) {
+                    window.location.href = `intent://${cleanUrl}#Intent;scheme=${scheme};type=video/*;package=${packages[type]};S.title=${encodeURIComponent(FILE_NAME)};end`;
+                } else if (type === 'potplayer') {
+                    window.location.href = `vlc://${FILE_URL}`;
+                }
+            } else {
+                if (type === 'potplayer') {
+                    navigator.clipboard.writeText(FILE_URL).catch(() => {});
+                    window.location.href = `potplayer://${FILE_URL}`;
+                    showToast("Opening PotPlayer...");
+                } else if (type === 'vlc') {
+                    navigator.clipboard.writeText(FILE_URL).catch(() => {});
+                    const m3uContent = `#EXTM3U\n#EXTINF:-1,${FILE_NAME}\n#EXTVLCOPT:network-caching=5000\n#EXTVLCOPT:http-reconnect=true\n${FILE_URL}`;
+                    const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `BoultFlix - ${FILE_NAME}.m3u`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast("Launching VLC Playlist...");
+                } else {
+                    navigator.clipboard.writeText(FILE_URL).then(() => {
+                        showToast(`${type.toUpperCase()}: Stream Link Copied (Press Ctrl+V in Player)`);
+                    });
+                }
+            }
+        }
+
+        window.addEventListener('mousemove', e => {
+            document.documentElement.style.setProperty('--x', e.clientX + 'px');
+            document.documentElement.style.setProperty('--y', e.clientY + 'px');
+        });
+
+        window.resumePlayback = function() {
+            const savedPos = localStorage.getItem(SAVED_POS_KEY);
+            if (savedPos) video.currentTime = parseFloat(savedPos);
+            closeAllPopups();
+            togglePlay();
+        };
+        window.startOver = function() {
+            video.currentTime = 0;
+            localStorage.removeItem(SAVED_POS_KEY);
+            closeAllPopups();
+            togglePlay();
+        };
+
+        initPlayer();
+
+        window.__onGCastApiAvailable = function(isAvailable) {
+            if (isAvailable) {
+                cast.framework.CastContext.getInstance().setOptions({
+                    receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+                });
+            }
+        };
     </script>
 </body>
-
 </html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://i.ibb.co/mFdT56V5/20260922-071000.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Access Restricted - BoultFlix</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#020408',
+                        sapphire: '#00d2ff',
+                        violet: '#7928ca',
+                        cobalt: '#0051ff'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --x: 50vw;
+            --y: 50vh;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: #02040a;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Interactive Cursor Ambient Glow */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(700px circle at var(--x) var(--y), rgba(0, 210, 255, 0.14), transparent 52%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Ambient Dynamic Background Mesh */
+        .ambient-layer {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -2;
+            pointer-events: none;
+            overflow: hidden;
+            background: #02040a;
+        }
+        .aura-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.38;
+            animation: auraFloat 18s infinite alternate ease-in-out;
+        }
+        .blob-cyan {
+            width: 55vw; height: 55vw;
+            background: radial-gradient(circle, #00d2ff 0%, transparent 70%);
+            top: -15%; left: -10%;
+        }
+        .blob-blue {
+            width: 60vw; height: 60vw;
+            background: radial-gradient(circle, #0051ff 0%, transparent 70%);
+            bottom: -20%; right: -15%;
+            animation-delay: -5s;
+        }
+        .blob-violet {
+            width: 45vw; height: 45vw;
+            background: radial-gradient(circle, #7928ca 0%, transparent 70%);
+            top: 35%; left: 30%;
+            animation-delay: -10s;
+        }
+
+        @keyframes auraFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(4vw, 5vh) scale(1.08); }
+            100% { transform: translate(-4vw, -4vh) scale(0.95); }
+        }
+
+        .glass-nav {
+            background: rgba(6, 11, 22, 0.75);
+            backdrop-filter: blur(35px) saturate(200%);
+            -webkit-backdrop-filter: blur(35px) saturate(200%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+            z-index: 40;
+        }
+
+        /* Liquid Glass Interactive Card */
+        .liquid-glass-card {
+            background: rgba(10, 16, 32, 0.55);
+            backdrop-filter: blur(45px) saturate(220%);
+            -webkit-backdrop-filter: blur(45px) saturate(220%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2rem;
+            position: relative;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 210, 255, 0.08);
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+
+        /* Glowing Border on Hover */
+        .liquid-glass-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 2rem;
+            padding: 1.5px;
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.55), transparent 45%, rgba(121, 40, 202, 0.55));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.3;
+            transition: opacity 0.35s ease;
+        }
+
+        @media (pointer: fine) {
+            .liquid-glass-card:hover {
+                border-color: rgba(0, 210, 255, 0.45);
+                transform: translateY(-4px);
+                box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.95), 0 0 50px rgba(0, 210, 255, 0.3);
+            }
+            .liquid-glass-card:hover::after {
+                opacity: 1;
+            }
+        }
+
+        .pulse-badge {
+            animation: badgePulse 2.8s infinite alternate ease-in-out;
+        }
+        @keyframes badgePulse {
+            0% { box-shadow: 0 0 10px rgba(0, 210, 255, 0.25); border-color: rgba(0, 210, 255, 0.35); }
+            100% { box-shadow: 0 0 25px rgba(0, 210, 255, 0.65); border-color: rgba(0, 210, 255, 0.85); }
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #00d2ff 0%, #0051ff 100%);
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.45);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 35px rgba(0, 210, 255, 0.7);
+        }
+        .btn-gradient:active { transform: scale(0.97); }
+
+        .disclaimer-glass-box {
+            background: rgba(14, 22, 40, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.25rem;
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="antialiased flex flex-col justify-between min-h-screen">
+
+    <!-- Ambient Mesh Layer -->
+    <div class="ambient-layer">
+        <div class="aura-blob blob-cyan"></div>
+        <div class="aura-blob blob-blue"></div>
+        <div class="aura-blob blob-violet"></div>
+    </div>
+
+    <!-- Combined Floating Glass Navbar - ONLY THIS PART CHANGED -->
+    <nav class="glass-nav sticky top-0 px-4 md:px-8 py-3.5 flex items-center justify-between">
+        <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 group cursor-pointer select-none">
+            <div class="w-2.5 h-2.5 rounded-full bg-sapphire shadow-[0_0_12px_#00d2ff] animate-pulse group-hover:scale-125 transition-transform"></div>
+            <span class="font-['Outfit'] font-black text-lg md:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-100 to-gray-300 group-hover:from-sapphire group-hover:to-white transition-all">BOULTFLIX</span>
+        </a>
+        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt px-4 py-1.5 rounded-full text-xs font-bold tracking-wide text-black transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95">
+            <i class="fab fa-telegram-plane"></i> Join Channel
+        </a>
+    </nav>
+
+    <!-- Main Content Section -->
+    <main class="container mx-auto px-4 py-8 md:py-14 max-w-2xl my-auto flex-grow flex flex-col justify-center relative z-10 text-center">
+        
+        <div class="liquid-glass-card p-6 md:p-10">
+            
+            <!-- System Advisory Tag -->
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sapphire/15 border border-sapphire/40 text-sapphire text-[11px] font-bold tracking-widest uppercase mb-5 pulse-badge">
+                <i class="fas fa-shield-halved text-xs"></i>
+                SYSTEM ADVISORY // ACCESS RESTRICTED
+            </div>
+
+            <!-- Stylist Clean Header -->
+            <h1 class="text-2xl md:text-3xl font-extrabold font-['Outfit'] text-white mb-4 tracking-tight leading-snug">
+                Direct Access Restricted ⛔
+            </h1>
+
+            <!-- Liquid Glass Disclaimer Container (Proper English Notice) -->
+            <div class="disclaimer-glass-box p-5 md:p-6 text-left mb-6 text-xs md:text-sm text-gray-300 leading-relaxed space-y-3.5">
+                <p>
+                    <span class="text-sapphire font-bold">Notice:</span> This web domain does not function as an open public website or standalone portal. It is an automated service node exclusively reserved for the <b class="text-white">BoultFlix Ecosystem</b>.
+                </p>
+                <p>
+                    Direct URL queries and unauthorized browser sessions cannot be processed without cryptographic session authorization.
+                </p>
+                <p class="text-gray-300">
+                    To access our complete collection of latest blockbuster <b>Movies, Trending Web Series, Popular K-Dramas, and Anime</b> in pristine <b>Ultra HD & 1080p</b> fully <b>Free-Of-Cost</b>, Please access our official Telegram bot 🤖
+                </p>
+            </div>
+
+            <!-- Big Glowing Hyperlink Button -->
+            <div class="mb-7">
+                <a href="https://t.me/BoultflixMovieBot" target="_blank" class="btn-gradient inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-black font-extrabold text-sm md:text-base tracking-wide group w-full sm:w-auto">
+                    <i class="fab fa-telegram-plane text-xl group-hover:scale-110 transition-transform"></i>
+                    <span>Launch Official Bot: <span class="underline decoration-black/60 font-black">@BoultflixMovieBot</span></span>
+                </a>
+                <p class="text-[11px] text-gray-400 mt-2.5">Skip the scrolling Start the cinema 🎥🍿</p>
+            </div>
+
+            <!-- Secondary Actions -->
+            <div class="flex items-center justify-center gap-4 pt-4 border-t border-white/10 text-xs">
+                <a href="https://t.me/BoultFlix" target="_blank" class="text-gray-400 hover:text-sapphire transition flex items-center gap-1.5 font-medium">
+                    <i class="fas fa-bullhorn text-sapphire"></i> Telegram Channel
+                </a>
+                <span class="text-gray-600">&bull;</span>
+                <a href="https://t.me/BoultFlixSupportBot" target="_blank" class="text-gray-400 hover:text-sapphire transition flex items-center gap-1.5 font-medium">
+                    <i class="fas fa-headset text-sapphire"></i> 24/7 Support
+                </a>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-nav py-4 mt-auto">
+        <div class="container mx-auto px-4 flex flex-col items-center">
+            <div class="flex gap-4 mb-2.5">
+                <a href="https://t.me/BoultFlix" target="_blank" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sapphire hover:scale-105 transition shadow">
+                    <i class="fab fa-telegram-plane text-sm"></i>
+                </a>
+                <a href="https://youtube.com/" target="_blank" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-red-500 hover:scale-105 transition shadow">
+                    <i class="fab fa-youtube text-sm"></i>
+                </a>
+                <a href="https://instagram.com/" target="_blank" class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-pink-500 hover:scale-105 transition shadow">
+                    <i class="fab fa-instagram text-sm"></i>
+                </a>
+            </div>
+            <p class="text-[11px] text-gray-400 mb-0.5">Copyright &copy; 2026 BoultFlix | All Rights Reserved</p>
+            <p class="text-[9px] text-gray-500">Powered By Boultflix &mdash; This page is made by boultflix</p>
+        </div>
+    </footer>
+
+    <!-- Interactive Mouse Follower -->
+    <script>
+        document.addEventListener('mousemove', e => {
+            document.documentElement.style.setProperty('--x', e.clientX + 'px');
+            document.documentElement.style.setProperty('--y', e.clientY + 'px');
+        });
+    </script>
+</body>
+</html>
