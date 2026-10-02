@@ -94,7 +94,7 @@
         .blob-blue { width: 62vw; height: 62vw; background: radial-gradient(circle, #0051ff 0%, transparent 70%); bottom: -18%; right: -12%; animation-delay: -5s; }
         .blob-violet { width: 48vw; height: 48vw; background: radial-gradient(circle, #7928ca 0%, transparent 70%); top: 30%; left: 25%; animation-delay: -9s; }
 
-        /* Phone & Tablet Screen: Remove blobs & set smooth gradient */
+        /* Mobile Screen: Clean Deep Space Gradient */
         @media (max-width: 768px) {
             body::before, .aura-blob { display: none !important; }
             .ambient-layer { 
@@ -108,6 +108,7 @@
             100% { transform: translate(-4vw, -4vh) scale(0.95); }
         }
 
+        /* Seamless Edge-to-Edge Glass Navbar */
         .glass-nav {
             background: rgba(6, 11, 24, 0.88);
             backdrop-filter: blur(35px) saturate(210%);
@@ -115,7 +116,9 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
             z-index: 40;
-            width: 100%;
+            width: 100vw;
+            margin-left: calc(-50vw + 50%);
+            margin-right: calc(-50vw + 50%);
         }
 
         .brand-text {
@@ -249,9 +252,10 @@
             z-index: 10;
         }
 
+        /* VLC Player Minimal Subtitles: Bold White + Soft Drop Shadow, No Box */
         #custom-sub-overlay {
             position: absolute;
-            bottom: 11%;
+            bottom: 12%;
             left: 5%;
             right: 5%;
             text-align: center;
@@ -260,7 +264,7 @@
             font-family: Arial, Helvetica, sans-serif;
             font-weight: 700;
             color: #ffffff;
-            font-size: calc(clamp(1.05rem, 2.4vw, 1.55rem) * var(--sub-scale));
+            font-size: calc(clamp(1.15rem, 2.5vw, 1.65rem) * var(--sub-scale));
             text-shadow: 
                 0 1px 2px #000000,
                 0 2px 4px #000000,
@@ -314,7 +318,7 @@
         .skip-animate { animation: minimalSkipPop 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes minimalSkipPop {
             0% { opacity: 0; transform: scale(0.8); }
-            35% { opacity: 1; transform: scale(1.05); }
+            35% { opacity: 1; transform: scale(1.1); }
             100% { opacity: 0; transform: scale(1); }
         }
 
@@ -480,7 +484,7 @@
 
     <div id="toast" class="toast text-[11px] md:text-xs font-semibold">Notification</div>
 
-    <!-- Floating Glass Navbar (Fixed Border & Balanced Join Spacing) -->
+    <!-- Edge-to-Edge Floating Glass Navbar (Fixed Border & Balanced Join Spacing) -->
     <nav class="glass-nav sticky top-0 px-3.5 md:px-8 py-2.5 md:py-3 flex items-center justify-between">
         <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 brand-group cursor-pointer">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sapphire to-cobalt flex items-center justify-center shadow-[0_0_15px_rgba(0,210,255,0.6)] transition-transform duration-300 group-hover:scale-105">
@@ -508,9 +512,9 @@
         <!-- Master Video Player Frame -->
         <div class="glass-panel p-0.5 sm:p-1 mb-4 w-full">
             <div class="player-container" id="player-container">
-                <video id="video-player" playsinline preload="metadata" crossorigin="anonymous"></video>
+                <video id="video-player" playsinline preload="auto" crossorigin="anonymous"></video>
 
-                <!-- Subtitle Text Overlay (Clean VLC Font) -->
+                <!-- Subtitle Text Overlay (Clean VLC Style) -->
                 <div id="custom-sub-overlay"></div>
 
                 <!-- Network Buffer Spinner -->
@@ -601,17 +605,17 @@
                                 <button class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] sm:text-xs font-semibold active:scale-95" onclick="openPopup('speed-popup')">
                                     <span id="speed-display">1x</span>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" onclick="openAudioPopup()" title="Audio Tracks">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openAudioPopup()" title="Audio Tracks">
                                     <i class="fas fa-music"></i>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" onclick="openSubPopup()" title="Subtitles">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openSubPopup()" title="Subtitles">
                                     <i class="fas fa-closed-captioning"></i>
                                 </button>
                                 <!-- Persistent Orientation Toggle -->
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
                                     <i class="fas fa-rotate" id="rotate-screen-icon"></i>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" id="btn-fullscreen" title="Fullscreen">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-fullscreen" title="Fullscreen">
                                     <i class="fas fa-expand" id="fs-icon"></i>
                                 </button>
                             </div>
@@ -707,7 +711,7 @@
         </div>
     </main>
 
-    <!-- VIEW 2: IN-PAGE BROWSER DOWNLOAD SCREEN (Middle-Line Aligned Box) -->
+    <!-- VIEW 2: IN-PAGE BROWSER DOWNLOAD SCREEN (Centered Capsule) -->
     <main id="download-view" class="container mx-auto px-3.5 py-8 md:py-12 max-w-xl my-auto flex-grow flex-col justify-center relative z-10 text-center hidden">
         <div class="liquid-glass-card p-6 sm:p-9 flex flex-col items-center">
             <div class="w-14 h-14 rounded-full bg-sapphire/15 border border-sapphire/40 text-sapphire flex items-center justify-center mx-auto mb-4 shadow-[0_0_25px_rgba(0,210,255,0.35)]">
@@ -856,12 +860,12 @@
                 </div>
                 <div class="flex flex-col gap-2" id="audio-track-list"></div>
                 <p class="text-[10px] text-gray-400 mt-3 text-center leading-normal">
-                    Audio plays in smooth AAC stereo in browser. If proprietary Dolby AC3/DDP 5.1 is required, launch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
+                    Audio plays in smooth high-speed sync in browser. If proprietary Dolby AC3/DDP 5.1 is required, launch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
                 </p>
             </div>
         </div>
 
-        <!-- 7. Subtitles Popup (Exact 6 Sizes Maintained) -->
+        <!-- 7. Subtitles Popup (Clean VLC 6 Sizes) -->
         <div id="sub-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -954,9 +958,9 @@
         let detectedAudioMeta = [];
         let detectedSubMeta = [];
         let activeAudioIdx = 0;
-        let activeSubIdx = -1;
+        let activeSubIdx = 0;
 
-        // Auto Extract Audio/Sub Tracks
+        // Auto Extract Track Metadata
         function inferTracksFromFilename(name) {
             const lower = (name || '').toLowerCase();
             const audios = [];
@@ -971,10 +975,10 @@
 
             const subs = [];
             if (lower.includes('esub') || lower.includes('sub') || lower.includes('mkv') || lower.includes('web-dl')) {
-                subs.push('English - [SDH]');
+                subs.push('English [Embedded Track]');
             }
             if (lower.includes('hdhub4u')) {
-                subs.push('HDHub4u.Ag (SRT)');
+                subs.push('HDHub4u.Ag (Embedded)');
             }
             if (subs.length === 0) {
                 subs.push('English Subtitles');
@@ -982,12 +986,6 @@
             detectedSubMeta = subs;
         }
         inferTracksFromFilename(FILE_NAME);
-
-        function getTranscodedUrl(audioIdx = 0, startTime = 0) {
-            if (!FILE_URL) return '';
-            const sep = FILE_URL.includes('?') ? '&' : '?';
-            return `${FILE_URL}${sep}transcode=1&audio=${audioIdx}&start=${Math.floor(startTime)}`;
-        }
 
         function initPlayer() {
             errorScreen.classList.add('hidden');
@@ -1003,7 +1001,8 @@
                 hls.loadSource(FILE_URL);
                 hls.attachMedia(video);
             } else {
-                video.src = getTranscodedUrl(activeAudioIdx, 0);
+                // High Speed Direct Stream Connection (Byte-Range Enabled)
+                video.src = FILE_URL;
             }
         }
 
@@ -1017,7 +1016,8 @@
             errorScreen.classList.add('hidden');
             videoLoader.classList.remove('hidden');
             const currentPos = video.currentTime || 0;
-            video.src = getTranscodedUrl(activeAudioIdx, currentPos);
+            video.src = FILE_URL;
+            video.currentTime = currentPos;
             video.play().catch(() => {});
         }
 
@@ -1135,7 +1135,7 @@
             if (isNaN(video.duration) || isSeekingPending) return;
             isSeekingPending = true;
             video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + offset));
-            setTimeout(() => { isSeekingPending = false; }, 300);
+            setTimeout(() => { isSeekingPending = false; }, 200);
         }
 
         document.getElementById('btn-rewind').addEventListener('click', (e) => { e.stopPropagation(); seek(-10); showToast('-10s'); });
@@ -1362,7 +1362,7 @@
             else if (document.pictureInPictureEnabled) video.requestPictureInPicture();
         });
 
-        // Popup Handlers with Auto-Resume Feature
+        // Modal Open / Close with Auto-Resume Feature
         function openPopup(id) {
             closeAllPopups();
             wasPlayingBeforePopup = (!video.paused && !video.ended);
@@ -1370,9 +1370,9 @@
             document.getElementById(id).classList.add('active');
         }
         function closeAllPopups() {
-            const hadActivePopup = !!document.querySelector('.glass-popup-backdrop.active');
+            const hasOpen = !!document.querySelector('.glass-popup-backdrop.active');
             document.querySelectorAll('.glass-popup-backdrop').forEach(p => p.classList.remove('active'));
-            if (hadActivePopup && wasPlayingBeforePopup) {
+            if (hasOpen && wasPlayingBeforePopup) {
                 video.play().catch(() => {});
                 wasPlayingBeforePopup = false;
             }
@@ -1434,7 +1434,7 @@
             showToast(`Aspect Ratio: ${mode}`);
         }
 
-        // Subtitle Cue Parser (Runs at Exact Original Speed, VLC Font)
+        // Subtitle Cue Parser (VLC Minimal Bold Font, No Box)
         function bindSubtitleCueRenderer() {
             if (!video.textTracks) return;
             for (let i = 0; i < video.textTracks.length; i++) {
@@ -1493,6 +1493,7 @@
                         }
                         bindSubtitleCueRenderer();
                     } else {
+                        // Native VLC text overlay indicator
                         customSubOverlay.innerHTML = `[${trackLabel}]`;
                         setTimeout(() => {
                             if (activeSubIdx === i) customSubOverlay.innerHTML = '';
@@ -1517,15 +1518,21 @@
             showToast(`Subtitle Size: ${labelPct}`);
         }
 
-        // Multi-Audio Track Switcher (Saved Position)
+        // Multi-Audio Track Switcher (Zero-Refresh Instant Switch)
         function openAudioPopup() {
             const list = document.getElementById('audio-track-list');
             list.innerHTML = '';
 
-            const trackCount = detectedAudioMeta.length;
+            const nativeAudioCount = (video.audioTracks && video.audioTracks.length) ? video.audioTracks.length : 0;
+            const trackCount = nativeAudioCount > 0 ? nativeAudioCount : detectedAudioMeta.length;
+
             for (let i = 0; i < trackCount; i++) {
                 const isSelected = (activeAudioIdx === i);
                 let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
+                if (nativeAudioCount > 0 && (video.audioTracks[i].label || video.audioTracks[i].language)) {
+                    const rawLang = video.audioTracks[i].label || video.audioTracks[i].language;
+                    label = i === 0 && !rawLang.toLowerCase().includes('default') ? `${rawLang} (Default)` : rawLang;
+                }
 
                 const btn = document.createElement('button');
                 btn.className = isSelected
@@ -1534,11 +1541,11 @@
                 btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
                 
                 btn.onclick = () => {
-                    if (activeAudioIdx !== i) {
-                        activeAudioIdx = i;
-                        const curTime = video.currentTime || 0;
-                        video.src = getTranscodedUrl(i, curTime);
-                        video.play().catch(() => {});
+                    activeAudioIdx = i;
+                    if (nativeAudioCount > 0) {
+                        for (let j = 0; j < video.audioTracks.length; j++) {
+                            video.audioTracks[j].enabled = (j === i);
+                        }
                     }
                     showToast(`Audio: ${label}`);
                     closeAllPopups();
@@ -1548,7 +1555,7 @@
             openPopup('audio-popup');
         }
 
-        // Direct Browser Download
+        // Direct Fast Browser Download
         function copyDownloadLink() {
             if (!FILE_URL) return;
             navigator.clipboard.writeText(RAW_FILE_URL).then(() => {
@@ -1608,7 +1615,7 @@
                     return;
                 } catch (e) {}
             }
-            if (window.PresentationRequest && FILE_URL) {
+            if (window.PresentationRequest && RAW_FILE_URL) {
                 try {
                     const req = new PresentationRequest([RAW_FILE_URL]);
                     req.start().catch(() => {});
@@ -1618,9 +1625,9 @@
             showToast("Searching for Cast devices on your Wi-Fi...");
         }
 
-        // External Player Launcher (Direct URL For Maximum Speed)
+        // External Player Launcher (Direct Telegram High-Speed Pipeline)
         function launchApp(type) {
-            if (!FILE_URL) {
+            if (!RAW_FILE_URL) {
                 showToast("Stream URL required");
                 return;
             }
