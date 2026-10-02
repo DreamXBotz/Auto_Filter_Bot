@@ -1,35 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-<meta charset="UTF-8">
-    <link rel="icon" type="image/png" href="https://i.ibb.co/whDTG0V6/20260923-071000.png">
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="https://i.ibb.co/mFdT56V5/20260922-071000.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>{{file_name}} - Boultflix</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsmk@0.4.2/dist/jsmkv.min.js"></script>
-
-    <style>
-      :root {
-        --bg-primary: rgb(2, 6, 23);
-        --bg-secondary: rgb(30, 41, 59);
-        --bg-glass: rgba(15, 23, 42, 0.6);
-        --bg-glass-dark: rgba(2, 6, 23, 0.85);
-
-        --accent-rose: rgb(244, 63, 94);
-        --accent-rose-light: rgb(251, 113, 133);
-        --accent-blue: rgb(37, 99, 235);
-        --accent-amber: rgb(251, 191, 36);
-
-        --text-primary: rgb(248, 250, 252);
-        --text-secondary: rgb(203, 213, 225);
-        --text-muted: rgb(148, 163, 184);
-      }
-    </style>
+    <title>{{file_name}} - BoultFlix</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -84,7 +59,7 @@
             position: relative;
         }
 
-        /* Ambient Dynamic Cursor Radial Glow */
+        /* Ambient Dynamic Cursor Radial Glow (PC Only) */
         body::before {
             content: '';
             position: fixed;
@@ -117,6 +92,12 @@
         .blob-cyan { width: 55vw; height: 55vw; background: radial-gradient(circle, #00d2ff 0%, transparent 68%); top: -12%; left: -10%; }
         .blob-blue { width: 62vw; height: 62vw; background: radial-gradient(circle, #0051ff 0%, transparent 70%); bottom: -18%; right: -12%; animation-delay: -5s; }
         .blob-violet { width: 48vw; height: 48vw; background: radial-gradient(circle, #7928ca 0%, transparent 70%); top: 30%; left: 25%; animation-delay: -9s; }
+
+        /* Mobile & Tablet Optimizations: Remove heavy dynamic layers */
+        @media (max-width: 768px) {
+            body::before, .aura-blob { display: none !important; }
+            .ambient-layer { background: linear-gradient(135deg, #02040a 0%, #081021 100%) !important; }
+        }
 
         @keyframes auraFloat {
             0% { transform: translate(0, 0) scale(1); }
@@ -213,7 +194,7 @@
             transform: translateY(-2px);
         }
 
-        /* Movie Frame Architecture: Locked to Absolute Geometric Center */
+        /* Movie Frame Architecture */
         .player-container {
             aspect-ratio: 16 / 9;
             background: #000000;
@@ -254,7 +235,6 @@
             background: #000000 !important;
         }
 
-        /* Video Always Anchored Exactly in the Middle */
         video {
             position: absolute;
             inset: 0;
@@ -267,18 +247,12 @@
             z-index: 10;
         }
 
-        /* Aesthetic Rotating Gear Animation */
-        .gear-rotating {
-            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
+        /* Continuous Smooth 360° Rotate Animation */
         .gear-btn:hover .gear-rotating,
-        .gear-btn:active .gear-rotating {
-            transform: rotate(180deg);
-        }
         .gear-spinning-active {
-            animation: gearSpin 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            animation: continuousGearSpin 2s linear infinite !important;
         }
-        @keyframes gearSpin {
+        @keyframes continuousGearSpin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
@@ -523,12 +497,12 @@
             </div>
             <span class="font-['Outfit'] font-black text-base md:text-xl tracking-wider brand-text">BOULTFLIX</span>
         </a>
-        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-3.5 md:px-4 py-1.5 rounded-full text-[11px] md:text-xs font-bold tracking-wide text-black transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95">
-            <i class="fab fa-telegram-plane"></i> Join
+        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-bold tracking-wide text-black transition flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95 leading-none h-8">
+            <i class="fab fa-telegram-plane"></i> <span>Join</span>
         </a>
     </nav>
 
-    <!-- VIEW 1: MAIN OTT STREAMING INTERFACE (Perfect Geometric Centering) -->
+    <!-- VIEW 1: MAIN OTT STREAMING INTERFACE -->
     <main id="player-view" class="container mx-auto px-2.5 sm:px-5 py-4 max-w-4xl my-auto flex-grow flex flex-col justify-center items-center relative z-10 w-full">
         
         <div class="w-full mb-2.5 px-1">
@@ -756,9 +730,9 @@
                 <i class="fas fa-cloud-arrow-down text-2xl animate-bounce"></i>
             </div>
 
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sapphire/10 border border-sapphire/30 text-sapphire text-[10px] font-bold tracking-widest uppercase mb-3">
-                <span class="w-1.5 h-1.5 rounded-full bg-sapphire animate-ping"></span>
-                DIRECT CLOUD PIPELINE INITIALIZED
+            <div class="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-sapphire/10 border border-sapphire/30 text-sapphire text-[10px] font-bold tracking-widest uppercase mb-4 leading-none">
+                <span class="w-1.5 h-1.5 rounded-full bg-sapphire animate-ping block"></span>
+                <span>DIRECT CLOUD PIPELINE INITIALIZED</span>
             </div>
 
             <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold font-['Outfit'] text-white mb-3 leading-tight">
@@ -792,7 +766,7 @@
     <!-- ROOT TOP-LAYER MODALS -->
     <div id="global-modal-layer">
 
-        <!-- 1. Welcome Advisory Liquid Glass Popup (With Dop-Dop Pulsing Dot & Classic Heading) -->
+        <!-- 1. Welcome Advisory Liquid Glass Popup -->
         <div id="welcome-popup" class="glass-popup-backdrop active" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5 sm:p-6 border-sapphire/30 shadow-[0_25px_60px_rgba(0,0,0,0.95)]">
                 <div class="flex justify-between items-center mb-3">
@@ -807,7 +781,7 @@
 
                 <div class="bg-black/40 border border-white/10 rounded-2xl p-4 text-xs text-gray-300 space-y-3 leading-relaxed mb-4">
                     <p>
-                        <i class="fas fa-circle-play text-sapphire mr-1"></i> <b>Web Stream Notice:</b> Standard movies stream smoothly in your browser. If a video uses advanced <b>x265 (HEVC)</b> or <b>Dolby 5.1/AC3 Audio</b> and you hear no sound, launch the stream in <b>VLC</b>, <b>MX Player</b>, or <b>PotPlayer</b> below for full hardware acceleration.
+                        <i class="fas fa-circle-play text-sapphire mr-1"></i> <b>Web Stream Notice:</b> Standard movies stream smoothly in your browser. If a video uses advanced Dolby (DDP/AC3) or heavy x265 (HEVC) audio, browsers cannot play it natively. In that case, it is converted to AAC, or you can launch the stream below in <b>VLC</b>, <b>MX Player</b>, or <b>PotPlayer</b> for native hardware decoding and original multichannel surround sound.
                     </p>
                     <p>
                         <i class="fas fa-bolt text-sapphire mr-1"></i> <b>Fast Downloads:</b> For interruption-free downloading on larger files, use <b>ADM / 1DM</b> (Mobile) or <b>FDM / IDM</b> (PC).
@@ -873,7 +847,7 @@
             </div>
         </div>
 
-        <!-- 5. Quality Selector (Downgrade Only) -->
+        <!-- 5. Quality Selector -->
         <div id="quality-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3.5">
@@ -884,11 +858,11 @@
                     <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
                 </div>
                 <div class="flex flex-col gap-2" id="quality-options-list"></div>
-                <p class="text-[10px] text-gray-400 mt-3 text-center">Quality cannot exceed source media resolution.</p>
+                <p class="text-[10px] text-gray-400 mt-3 text-center">Quality calibrated according to source stream height & metadata.</p>
             </div>
         </div>
 
-        <!-- 6. Aspect Ratio Popup (16:9, 21:9, Crop to Fill, Fit) -->
+        <!-- 6. Aspect Ratio Popup -->
         <div id="aspect-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3.5">
@@ -913,12 +887,12 @@
                 </div>
                 <div class="flex flex-col gap-2" id="audio-track-list"></div>
                 <p class="text-[10px] text-gray-400 mt-3 text-center leading-normal">
-                    If proprietary Dolby AC3/DDP audio is completely silent in your browser, switch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
+                    Switch audio without refreshing. If advanced Dolby surround is required, launch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
                 </p>
             </div>
         </div>
 
-        <!-- 8. Subtitles Popup (6 Sizes, Clean Original Speed) -->
+        <!-- 8. Subtitles Popup -->
         <div id="sub-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -942,7 +916,7 @@
             </div>
         </div>
 
-        <!-- 9. Headphone Audio Delay Sync Popup (-2000ms to +2000ms) -->
+        <!-- 9. Headphone Audio Delay Sync Popup -->
         <div id="audio-delay-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -1013,6 +987,7 @@
         const hud = document.getElementById('hud');
         let hudTimeout;
         let isDragging = false;
+        let hlsInstance = null;
 
         const centerControls = document.getElementById('center-controls');
         const btnPlay = document.getElementById('btn-play');
@@ -1059,24 +1034,24 @@
         }
         inferTracksFromFilename(FILE_NAME);
 
-        // Quality Detection from Real Source (No False 2160p)
+        // Quality Detection Fix: Calibrate cleanly without overrating
         let availableQualities = [];
         let currentQuality = 'Auto';
         function initQualityOptions() {
             let sourceRes = 1080;
+            const lower = FILE_NAME.toLowerCase();
+            if (/\b(2160p|4k|uhd)\b/.test(lower)) sourceRes = 2160;
+            else if (/\b(1080p|fhd)\b/.test(lower)) sourceRes = 1080;
+            else if (/\b(720p|hd)\b/.test(lower)) sourceRes = 720;
+            else if (/\b(480p|sd)\b/.test(lower)) sourceRes = 480;
+            else if (/\b(360p)\b/.test(lower)) sourceRes = 360;
+
             if (video.videoHeight && video.videoHeight > 0) {
                 if (video.videoHeight >= 1800) sourceRes = 2160;
-                else if (video.videoHeight >= 900) sourceRes = 1080;
-                else if (video.videoHeight >= 650) sourceRes = 720;
-                else if (video.videoHeight >= 400) sourceRes = 480;
-                else sourceRes = 360;
-            } else {
-                if (/\b(2160p|4k|uhd)\b/i.test(FILE_NAME)) sourceRes = 2160;
-                else if (/\b(1080p|fhd)\b/i.test(FILE_NAME)) sourceRes = 1080;
-                else if (/\b(720p|hd)\b/i.test(FILE_NAME)) sourceRes = 720;
-                else if (/\b(480p|sd)\b/i.test(FILE_NAME)) sourceRes = 480;
-                else if (/\b(360p)\b/i.test(FILE_NAME)) sourceRes = 360;
-                else sourceRes = 1080;
+                else if (video.videoHeight >= 850 && video.videoHeight < 1800) sourceRes = 1080;
+                else if (video.videoHeight >= 550 && video.videoHeight < 850) sourceRes = 720;
+                else if (video.videoHeight >= 400 && video.videoHeight < 550) sourceRes = 480;
+                else if (video.videoHeight < 400) sourceRes = 360;
             }
 
             const allRes = [
@@ -1088,6 +1063,7 @@
             ];
 
             availableQualities = allRes.filter(q => q.res <= sourceRes);
+            if (availableQualities.length === 0) availableQualities.push({ label: 'Original', res: sourceRes });
             currentQuality = availableQualities[0].label;
             renderQualityMenu();
         }
@@ -1115,17 +1091,14 @@
         }
         initQualityOptions();
 
-        // Aesthetic Gear Trigger with Spin Animation
+        // Aesthetic Gear Trigger with Smooth Infinite Rotation
         function triggerGearSpin(btnElem) {
             const gearIcon = document.getElementById('quality-gear-icon');
             gearIcon.classList.add('gear-spinning-active');
-            setTimeout(() => {
-                gearIcon.classList.remove('gear-spinning-active');
-                openPopup('quality-popup');
-            }, 300);
+            openPopup('quality-popup');
         }
 
-        // WebAudio DDP5.1 Multi-Channel Downmix Engine
+        // WebAudio Engine with Auto-Flushing on Seek
         let audioCtx = null;
         let delayNode = null;
         let currentDelayMs = 0;
@@ -1136,8 +1109,8 @@
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     audioCtx = new AudioContext();
                     const source = audioCtx.createMediaElementSource(video);
-                    delayNode = audioCtx.createDelay(5.0);
-                    delayNode.delayTime.value = 0;
+                    delayNode = audioCtx.createDelay(3.0);
+                    delayNode.delayTime.value = Math.max(0, currentDelayMs / 1000);
                     
                     audioCtx.destination.channelCount = 2;
                     audioCtx.destination.channelCountMode = 'explicit';
@@ -1152,6 +1125,14 @@
             } catch (e) {}
         }
 
+        function flushAudioNodes() {
+            if (delayNode && audioCtx) {
+                const targetDelay = Math.max(0, currentDelayMs / 1000);
+                delayNode.delayTime.cancelScheduledValues(audioCtx.currentTime);
+                delayNode.delayTime.setValueAtTime(targetDelay, audioCtx.currentTime);
+            }
+        }
+
         function initPlayer() {
             errorScreen.classList.add('hidden');
             if (!FILE_URL) {
@@ -1162,9 +1143,12 @@
             showCenterControls(false);
 
             if (FILE_URL.endsWith('.m3u8') && window.Hls && Hls.isSupported()) {
-                const hls = new Hls({ maxBufferLength: 30, enableWorker: true });
-                hls.loadSource(FILE_URL);
-                hls.attachMedia(video);
+                hlsInstance = new Hls({ maxBufferLength: 30, enableWorker: true });
+                hlsInstance.loadSource(FILE_URL);
+                hlsInstance.attachMedia(video);
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    initQualityOptions();
+                });
             } else {
                 video.src = FILE_URL;
             }
@@ -1200,8 +1184,15 @@
 
         video.addEventListener('loadstart', () => { if (FILE_URL) videoLoader.classList.remove('hidden'); });
         video.addEventListener('waiting', () => { videoLoader.classList.remove('hidden'); showCenterControls(false); });
-        video.addEventListener('seeking', () => { videoLoader.classList.remove('hidden'); });
-        video.addEventListener('seeked', () => { videoLoader.classList.add('hidden'); showCenterControls(true); });
+        video.addEventListener('seeking', () => { 
+            videoLoader.classList.remove('hidden'); 
+            flushAudioNodes();
+        });
+        video.addEventListener('seeked', () => { 
+            videoLoader.classList.add('hidden'); 
+            showCenterControls(true); 
+            flushAudioNodes();
+        });
         video.addEventListener('canplay', () => { 
             videoLoader.classList.add('hidden'); 
             errorScreen.classList.add('hidden'); 
@@ -1534,12 +1525,16 @@
             else if (document.pictureInPictureEnabled) video.requestPictureInPicture();
         });
 
+        // Popup Handlers (Auto-pause active playback)
         function openPopup(id) {
             closeAllPopups();
+            if (!video.paused) video.pause();
             document.getElementById(id).classList.add('active');
         }
         function closeAllPopups() {
             document.querySelectorAll('.glass-popup-backdrop').forEach(p => p.classList.remove('active'));
+            const gearIcon = document.getElementById('quality-gear-icon');
+            if (gearIcon) gearIcon.classList.remove('gear-spinning-active');
         }
         function closePopupOnBackdrop(e, backdropElem) {
             if (e.target === backdropElem) closeAllPopups();
@@ -1572,7 +1567,7 @@
         }
         renderSpeedButtons();
 
-        // Aspect Ratio Handler (16:9, 21:9, Crop to Fill, Fit)
+        // Aspect Ratio Handler
         function setAspect(mode, btnElem) {
             if (mode === '16/9') {
                 video.style.objectFit = 'contain';
@@ -1598,7 +1593,7 @@
             showToast(`Aspect Ratio: ${mode}`);
         }
 
-        // Subtitle Cue Parser (Runs at Exact Original Speed, VLC Font)
+        // Subtitle Cue Parser (VLC Font)
         function bindSubtitleCueRenderer() {
             if (!video.textTracks) return;
             for (let i = 0; i < video.textTracks.length; i++) {
@@ -1679,46 +1674,63 @@
             showToast(`Subtitle Size: ${labelPct}`);
         }
 
-        // Multi-Audio Track Switcher
+        // Multi-Audio Track Switcher (Seamless In-Player)
         function openAudioPopup() {
             const list = document.getElementById('audio-track-list');
             list.innerHTML = '';
 
-            const nativeAudioCount = (video.audioTracks && video.audioTracks.length) ? video.audioTracks.length : 0;
-            const trackCount = nativeAudioCount > 0 ? nativeAudioCount : detectedAudioMeta.length;
+            if (hlsInstance && hlsInstance.audioTracks && hlsInstance.audioTracks.length > 0) {
+                hlsInstance.audioTracks.forEach((track, index) => {
+                    const isSelected = (hlsInstance.audioTrack === index);
+                    const btn = document.createElement('button');
+                    btn.className = isSelected
+                        ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
+                        : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+                    btn.innerHTML = `<span>${track.name || `Audio Track ${index + 1}`}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+                    btn.onclick = () => {
+                        hlsInstance.audioTrack = index;
+                        showToast(`Audio Track: ${track.name || index + 1}`);
+                        closeAllPopups();
+                    };
+                    list.appendChild(btn);
+                });
+            } else {
+                const nativeAudioCount = (video.audioTracks && video.audioTracks.length) ? video.audioTracks.length : 0;
+                const trackCount = nativeAudioCount > 0 ? nativeAudioCount : detectedAudioMeta.length;
 
-            for (let i = 0; i < trackCount; i++) {
-                const isSelected = (activeAudioIdx === i);
-                let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
-                if (nativeAudioCount > 0 && (video.audioTracks[i].label || video.audioTracks[i].language)) {
-                    const rawLang = video.audioTracks[i].label || video.audioTracks[i].language;
-                    label = i === 0 && !rawLang.toLowerCase().includes('default') ? `${rawLang} (Default)` : rawLang;
-                }
-
-                const btn = document.createElement('button');
-                btn.className = isSelected
-                    ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
-                    : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
-                btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
-                
-                btn.onclick = () => {
-                    activeAudioIdx = i;
-                    if (nativeAudioCount > 0) {
-                        for (let j = 0; j < video.audioTracks.length; j++) {
-                            video.audioTracks[j].enabled = (j === i);
-                        }
+                for (let i = 0; i < trackCount; i++) {
+                    const isSelected = (activeAudioIdx === i);
+                    let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
+                    if (nativeAudioCount > 0 && (video.audioTracks[i].label || video.audioTracks[i].language)) {
+                        const rawLang = video.audioTracks[i].label || video.audioTracks[i].language;
+                        label = i === 0 && !rawLang.toLowerCase().includes('default') ? `${rawLang} (Default)` : rawLang;
                     }
-                    const cur = video.currentTime;
-                    video.currentTime = Math.max(0, cur - 0.05);
-                    showToast(`Audio: ${label}`);
-                    closeAllPopups();
-                };
-                list.appendChild(btn);
+
+                    const btn = document.createElement('button');
+                    btn.className = isSelected
+                        ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
+                        : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+                    btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+                    
+                    btn.onclick = () => {
+                        activeAudioIdx = i;
+                        if (nativeAudioCount > 0) {
+                            for (let j = 0; j < video.audioTracks.length; j++) {
+                                video.audioTracks[j].enabled = (j === i);
+                            }
+                        }
+                        const cur = video.currentTime;
+                        video.currentTime = Math.max(0, cur - 0.05);
+                        showToast(`Audio: ${label}`);
+                        closeAllPopups();
+                    };
+                    list.appendChild(btn);
+                }
             }
             openPopup('audio-popup');
         }
 
-        // Earphone Audio Delay Sync Slider (-2000ms to +2000ms)
+        // Earphone Audio Delay Sync Slider
         function updateDelayUI(val) {
             currentDelayMs = parseInt(val) || 0;
             delayDisplay.textContent = `${currentDelayMs > 0 ? '+' : ''}${currentDelayMs} ms`;
@@ -1741,7 +1753,7 @@
             showToast("Audio Delay Reset");
         }
 
-        // Direct Browser Download (Native Media Pipe - Never HTML)
+        // Direct Browser Download
         function copyDownloadLink() {
             if (!FILE_URL) return;
             navigator.clipboard.writeText(FILE_URL).then(() => {
