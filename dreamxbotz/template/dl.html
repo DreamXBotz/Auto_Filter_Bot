@@ -93,7 +93,7 @@
         .blob-blue { width: 62vw; height: 62vw; background: radial-gradient(circle, #0051ff 0%, transparent 70%); bottom: -18%; right: -12%; animation-delay: -5s; }
         .blob-violet { width: 48vw; height: 48vw; background: radial-gradient(circle, #7928ca 0%, transparent 70%); top: 30%; left: 25%; animation-delay: -9s; }
 
-        /* Mobile & Tablet Optimizations: Remove heavy dynamic layers */
+        /* Phone & Tablet Screen: Remove blobs & cursor glow */
         @media (max-width: 768px) {
             body::before, .aura-blob { display: none !important; }
             .ambient-layer { background: linear-gradient(135deg, #02040a 0%, #081021 100%) !important; }
@@ -194,7 +194,6 @@
             transform: translateY(-2px);
         }
 
-        /* Movie Frame Architecture */
         .player-container {
             aspect-ratio: 16 / 9;
             background: #000000;
@@ -247,17 +246,6 @@
             z-index: 10;
         }
 
-        /* Continuous Smooth 360° Rotate Animation */
-        .gear-btn:hover .gear-rotating,
-        .gear-spinning-active {
-            animation: continuousGearSpin 2s linear infinite !important;
-        }
-        @keyframes continuousGearSpin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* VLC Player Clean Subtitles: White Bold + Soft Shadow, No Box */
         #custom-sub-overlay {
             position: absolute;
             bottom: 11%;
@@ -294,8 +282,8 @@
 
         .double-tap-zone {
             position: absolute;
-            top: 18%; bottom: 20%;
-            width: 32%;
+            top: 15%; bottom: 15%;
+            width: 38%;
             z-index: 25;
             display: flex;
             align-items: center;
@@ -308,11 +296,11 @@
             background: rgba(8, 14, 28, 0.85);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 210, 255, 0.5);
-            padding: 6px 14px;
+            padding: 8px 18px;
             border-radius: 99px;
             color: #00d2ff;
-            font-size: 0.75rem;
-            font-weight: 700;
+            font-size: 0.85rem;
+            font-weight: 800;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -489,7 +477,7 @@
 
     <div id="toast" class="toast text-[11px] md:text-xs font-semibold">Notification</div>
 
-    <!-- Floating Glass Navbar -->
+    <!-- Floating Glass Navbar (Join Button Spacing Fixed) -->
     <nav class="glass-nav sticky top-0 px-3.5 md:px-8 py-2.5 md:py-3 flex items-center justify-between">
         <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 brand-group cursor-pointer">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sapphire to-cobalt flex items-center justify-center shadow-[0_0_15px_rgba(0,210,255,0.6)] transition-transform duration-300 group-hover:scale-105">
@@ -497,8 +485,8 @@
             </div>
             <span class="font-['Outfit'] font-black text-base md:text-xl tracking-wider brand-text">BOULTFLIX</span>
         </a>
-        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-bold tracking-wide text-black transition flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95 leading-none h-8">
-            <i class="fab fa-telegram-plane"></i> <span>Join</span>
+        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-bold tracking-wide text-black transition inline-flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95 leading-none h-8">
+            <i class="fab fa-telegram-plane"></i><span>Join</span>
         </a>
     </nav>
 
@@ -544,7 +532,7 @@
                     </div>
                 </div>
 
-                <!-- Double-Tap Skip Zones -->
+                <!-- Double-Tap Skip Zones (YouTube Style Skip) -->
                 <div class="double-tap-zone dt-left" id="dt-left">
                     <div class="minimal-skip-pill" id="skip-left"><i class="fas fa-backward text-[10px]"></i> 10s</div>
                 </div>
@@ -554,13 +542,10 @@
 
                 <!-- HUD Controls Layer -->
                 <div class="hud" id="hud">
-                    <!-- Top HUD Bar -->
+                    <!-- Top HUD Bar (Audio Sync Slider Button Removed) -->
                     <div class="p-2.5 sm:p-3 flex justify-between items-center bg-gradient-to-b from-black/90 to-transparent">
                         <span class="text-[10px] sm:text-xs font-medium text-gray-200 truncate max-w-[60%] drop-shadow">{{file_name}}</span>
                         <div class="flex items-center gap-1.5 ml-auto">
-                            <button class="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-[11px] sm:text-xs transition active:scale-90 text-gray-200" onclick="openPopup('audio-delay-popup')" title="Earphone Audio Sync">
-                                <i class="fas fa-sliders-h"></i>
-                            </button>
                             <button class="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-white/15 flex items-center justify-center text-[11px] sm:text-xs transition active:scale-90 text-gray-200" onclick="openPopup('aspect-popup')" title="Aspect Ratio">
                                 <i class="fas fa-crop-alt"></i>
                             </button>
@@ -585,7 +570,7 @@
                         </button>
                     </div>
 
-                    <!-- Bottom Timeline & Controls -->
+                    <!-- Bottom Timeline & Controls (Quality Settings Gear Button Removed) -->
                     <div class="p-2 sm:p-3 bg-gradient-to-t from-black/95 via-black/75 to-transparent">
                         <div class="relative w-full h-4 sm:h-5 flex items-center group cursor-pointer mb-1" id="timeline-container">
                             <div class="relative w-full h-1 bg-white/25 rounded-full overflow-hidden transition-all group-hover:h-1.5">
@@ -613,21 +598,17 @@
                                 <button class="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] sm:text-xs font-semibold active:scale-95" onclick="openPopup('speed-popup')">
                                     <span id="speed-display">1x</span>
                                 </button>
-                                <!-- Aesthetic Rotating Gear Icon -->
-                                <button class="gear-btn w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 transition text-gray-200" onclick="triggerGearSpin(this)" title="Quality Settings">
-                                    <i class="fas fa-gear gear-rotating" id="quality-gear-icon"></i>
-                                </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" onclick="openAudioPopup()" title="Audio Tracks">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openAudioPopup()" title="Audio Tracks">
                                     <i class="fas fa-music"></i>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" onclick="openSubPopup()" title="Subtitles">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" onclick="openSubPopup()" title="Subtitles">
                                     <i class="fas fa-closed-captioning"></i>
                                 </button>
                                 <!-- Persistent Orientation Toggle -->
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-rotate-persistent" onclick="youtubeStyleLandscapeToggle(event)" title="Toggle Orientation">
                                     <i class="fas fa-rotate" id="rotate-screen-icon"></i>
                                 </button>
-                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90" id="btn-fullscreen" title="Fullscreen">
+                                <button class="w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[11px] sm:text-xs hover:text-sapphire active:scale-90 text-gray-200" id="btn-fullscreen" title="Fullscreen">
                                     <i class="fas fa-expand" id="fs-icon"></i>
                                 </button>
                             </div>
@@ -670,7 +651,7 @@
                         <path d="M24 4L14 36H34L24 4Z" fill="#FF8800"/>
                         <path d="M19 20H29L30.5 25H17.5L19 20Z" fill="#FFFFFF"/>
                         <path d="M16 29H32L33.5 34H14.5L16 29Z" fill="#FFFFFF"/>
-                        <path d="M8 38C8 36.9 8.9 36 10 36H38C39.1 36 40 36.9 40 38C40 39.1 39.1 40 38 40H10C8.9 40 8 39.1 8 38Z" fill="#FF8800"/>
+                        <path d="M8 38C8 36.9 8.9 36 10 36H38C39.1 36 40 39.1 40 38C40 39.1 39.1 40 38 40H10C8.9 40 8 39.1 8 38Z" fill="#FF8800"/>
                     </svg>
                     <span class="font-bold text-[10px] sm:text-xs text-gray-200">VLC</span>
                 </button>
@@ -723,23 +704,23 @@
         </div>
     </main>
 
-    <!-- VIEW 2: IN-PAGE BROWSER DOWNLOAD SCREEN -->
+    <!-- VIEW 2: IN-PAGE BROWSER DOWNLOAD SCREEN (Middle-Line Aligned Box) -->
     <main id="download-view" class="container mx-auto px-3.5 py-8 md:py-12 max-w-xl my-auto flex-grow flex-col justify-center relative z-10 text-center hidden">
-        <div class="liquid-glass-card p-6 sm:p-9">
+        <div class="liquid-glass-card p-6 sm:p-9 flex flex-col items-center">
             <div class="w-14 h-14 rounded-full bg-sapphire/15 border border-sapphire/40 text-sapphire flex items-center justify-center mx-auto mb-4 shadow-[0_0_25px_rgba(0,210,255,0.35)]">
                 <i class="fas fa-cloud-arrow-down text-2xl animate-bounce"></i>
             </div>
 
             <div class="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-sapphire/10 border border-sapphire/30 text-sapphire text-[10px] font-bold tracking-widest uppercase mb-4 leading-none">
-                <span class="w-1.5 h-1.5 rounded-full bg-sapphire animate-ping block"></span>
-                <span>DIRECT CLOUD PIPELINE INITIALIZED</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-sapphire animate-ping shrink-0"></span>
+                <span class="inline-block leading-none pt-0.5">DIRECT CLOUD PIPELINE INITIALIZED</span>
             </div>
 
             <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold font-['Outfit'] text-white mb-3 leading-tight">
                 Your Download Has Started
             </h2>
 
-            <div class="bg-black/35 border border-white/10 rounded-2xl p-4 sm:p-5 text-left mb-5 text-xs sm:text-[13px] text-gray-300 leading-relaxed space-y-2.5">
+            <div class="bg-black/35 border border-white/10 rounded-2xl p-4 sm:p-5 text-left mb-5 text-xs sm:text-[13px] text-gray-300 leading-relaxed space-y-2.5 w-full">
                 <p>
                     Your browser has initialized connection to the <b class="text-white">BoultFlix Media Pipeline</b>. The file transfer is beginning in your browser download manager.
                 </p>
@@ -751,7 +732,7 @@
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-2.5">
+            <div class="flex flex-col sm:flex-row gap-2.5 w-full">
                 <a id="manual-dl-fallback" href="#" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-sapphire to-cobalt text-black font-extrabold text-xs sm:text-sm shadow-[0_0_20px_rgba(0,210,255,0.4)] active:scale-95 transition flex items-center justify-center gap-2">
                     <i class="fas fa-download"></i>
                     <span>Click Here If Not Started</span>
@@ -763,10 +744,10 @@
         </div>
     </main>
 
-    <!-- ROOT TOP-LAYER MODALS -->
+    <!-- ROOT TOP-LAYER MODALS (Same Exact Modals & Cards) -->
     <div id="global-modal-layer">
 
-        <!-- 1. Welcome Advisory Liquid Glass Popup -->
+        <!-- 1. Welcome Advisory Liquid Glass Popup (Only Text Edited as Specified) -->
         <div id="welcome-popup" class="glass-popup-backdrop active" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5 sm:p-6 border-sapphire/30 shadow-[0_25px_60px_rgba(0,0,0,0.95)]">
                 <div class="flex justify-between items-center mb-3">
@@ -781,7 +762,7 @@
 
                 <div class="bg-black/40 border border-white/10 rounded-2xl p-4 text-xs text-gray-300 space-y-3 leading-relaxed mb-4">
                     <p>
-                        <i class="fas fa-circle-play text-sapphire mr-1"></i> <b>Web Stream Notice:</b> Standard movies stream smoothly in your browser. If a video uses advanced Dolby (DDP/AC3) or heavy x265 (HEVC) audio, browsers cannot play it natively. In that case, it is converted to AAC, or you can launch the stream below in <b>VLC</b>, <b>MX Player</b>, or <b>PotPlayer</b> for native hardware decoding and original multichannel surround sound.
+                        <i class="fas fa-circle-play text-sapphire mr-1"></i> <b>Web Stream Notice:</b> If the movie contains advanced Dolby (DDP/AC3) or heavy x265 (HEVC) audio, browsers cannot play it natively. In that case, it is converted to AAC, or you can launch the stream below in <b>VLC</b>, <b>MX Player</b>, or <b>PotPlayer</b> for full hardware decoding and native surround sound.
                     </p>
                     <p>
                         <i class="fas fa-bolt text-sapphire mr-1"></i> <b>Fast Downloads:</b> For interruption-free downloading on larger files, use <b>ADM / 1DM</b> (Mobile) or <b>FDM / IDM</b> (PC).
@@ -847,22 +828,7 @@
             </div>
         </div>
 
-        <!-- 5. Quality Selector -->
-        <div id="quality-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
-            <div class="glass-popup-card p-5">
-                <div class="flex justify-between items-center mb-3.5">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-sliders text-sapphire text-xs"></i>
-                        <h3 class="font-bold text-sm font-['Outfit'] text-white">Stream Quality</h3>
-                    </div>
-                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
-                </div>
-                <div class="flex flex-col gap-2" id="quality-options-list"></div>
-                <p class="text-[10px] text-gray-400 mt-3 text-center">Quality calibrated according to source stream height & metadata.</p>
-            </div>
-        </div>
-
-        <!-- 6. Aspect Ratio Popup -->
+        <!-- 5. Aspect Ratio Popup (16:9, 21:9, Crop to Fill, Fit) -->
         <div id="aspect-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3.5">
@@ -878,7 +844,7 @@
             </div>
         </div>
 
-        <!-- 7. Audio Tracks Popup -->
+        <!-- 6. Audio Tracks Popup (Seamless In-Player Audio Switch) -->
         <div id="audio-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -887,12 +853,12 @@
                 </div>
                 <div class="flex flex-col gap-2" id="audio-track-list"></div>
                 <p class="text-[10px] text-gray-400 mt-3 text-center leading-normal">
-                    Switch audio without refreshing. If advanced Dolby surround is required, launch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
+                    Audio plays in smooth AAC stereo in browser. If proprietary Dolby AC3/DDP 5.1 is required, launch directly into <span class="text-sapphire font-semibold">VLC</span> or <span class="text-[#0088ff] font-semibold">PotPlayer</span>.
                 </p>
             </div>
         </div>
 
-        <!-- 8. Subtitles Popup -->
+        <!-- 7. Subtitles Popup (6 Sizes, Clean Original Speed) -->
         <div id="sub-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5">
                 <div class="flex justify-between items-center mb-3">
@@ -911,26 +877,6 @@
                         <button onclick="setSubSize(1.25, '125%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">125%</button>
                         <button onclick="setSubSize(1.5, '150%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">150%</button>
                         <button onclick="setSubSize(2.0, '200%', this)" class="sub-size-btn py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition">200%</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 9. Headphone Audio Delay Sync Popup -->
-        <div id="audio-delay-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
-            <div class="glass-popup-card p-5">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="font-bold text-sm font-['Outfit'] text-white">Earphone Audio Sync</h3>
-                    <button onclick="closeAllPopups()" class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><i class="fas fa-times text-xs"></i></button>
-                </div>
-                <div class="text-center py-1">
-                    <div class="text-xl font-bold font-mono text-sapphire mb-1" id="delay-value-display">0 ms</div>
-                    <p class="text-[11px] text-gray-400 mb-3">Fine-tune Bluetooth Earbud / Headphone Audio Latency</p>
-                    <input type="range" min="-2000" max="2000" step="50" value="0" id="audio-delay-slider" class="w-full mb-4 accent-sapphire cursor-pointer">
-                    <div class="flex justify-between gap-2">
-                        <button onclick="nudgeDelay(-50)" class="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-semibold">-50 ms</button>
-                        <button onclick="resetDelay()" class="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold text-gray-300">Reset</button>
-                        <button onclick="nudgeDelay(50)" class="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-semibold">+50 ms</button>
                     </div>
                 </div>
             </div>
@@ -987,7 +933,7 @@
         const hud = document.getElementById('hud');
         let hudTimeout;
         let isDragging = false;
-        let hlsInstance = null;
+        let wasPlayingBeforePopup = false;
 
         const centerControls = document.getElementById('center-controls');
         const btnPlay = document.getElementById('btn-play');
@@ -1007,7 +953,7 @@
         let activeAudioIdx = 0;
         let activeSubIdx = -1;
 
-        // Auto Extract Track Metadata
+        // Auto Extract Audio/Sub Tracks
         function inferTracksFromFilename(name) {
             const lower = (name || '').toLowerCase();
             const audios = [];
@@ -1034,103 +980,10 @@
         }
         inferTracksFromFilename(FILE_NAME);
 
-        // Quality Detection Fix: Calibrate cleanly without overrating
-        let availableQualities = [];
-        let currentQuality = 'Auto';
-        function initQualityOptions() {
-            let sourceRes = 1080;
-            const lower = FILE_NAME.toLowerCase();
-            if (/\b(2160p|4k|uhd)\b/.test(lower)) sourceRes = 2160;
-            else if (/\b(1080p|fhd)\b/.test(lower)) sourceRes = 1080;
-            else if (/\b(720p|hd)\b/.test(lower)) sourceRes = 720;
-            else if (/\b(480p|sd)\b/.test(lower)) sourceRes = 480;
-            else if (/\b(360p)\b/.test(lower)) sourceRes = 360;
-
-            if (video.videoHeight && video.videoHeight > 0) {
-                if (video.videoHeight >= 1800) sourceRes = 2160;
-                else if (video.videoHeight >= 850 && video.videoHeight < 1800) sourceRes = 1080;
-                else if (video.videoHeight >= 550 && video.videoHeight < 850) sourceRes = 720;
-                else if (video.videoHeight >= 400 && video.videoHeight < 550) sourceRes = 480;
-                else if (video.videoHeight < 400) sourceRes = 360;
-            }
-
-            const allRes = [
-                { label: '4K (2160p)', res: 2160 },
-                { label: '1080p (Full HD)', res: 1080 },
-                { label: '720p (HD)', res: 720 },
-                { label: '480p (SD)', res: 480 },
-                { label: '360p (Data Saver)', res: 360 }
-            ];
-
-            availableQualities = allRes.filter(q => q.res <= sourceRes);
-            if (availableQualities.length === 0) availableQualities.push({ label: 'Original', res: sourceRes });
-            currentQuality = availableQualities[0].label;
-            renderQualityMenu();
-        }
-
-        function renderQualityMenu() {
-            const list = document.getElementById('quality-options-list');
-            if (!list) return;
-            list.innerHTML = '';
-            availableQualities.forEach((q, idx) => {
-                const isSelected = (q.label === currentQuality);
-                const btn = document.createElement('button');
-                btn.className = isSelected
-                    ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
-                    : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
-                btn.innerHTML = `<span>${q.label} ${idx === 0 ? '(Original)' : ''}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
-                btn.onclick = () => {
-                    currentQuality = q.label;
-                    video.style.filter = idx > 0 ? `blur(${idx * 0.18}px)` : 'none';
-                    renderQualityMenu();
-                    closeAllPopups();
-                    showToast(`Quality: ${q.label}`);
-                };
-                list.appendChild(btn);
-            });
-        }
-        initQualityOptions();
-
-        // Aesthetic Gear Trigger with Smooth Infinite Rotation
-        function triggerGearSpin(btnElem) {
-            const gearIcon = document.getElementById('quality-gear-icon');
-            gearIcon.classList.add('gear-spinning-active');
-            openPopup('quality-popup');
-        }
-
-        // WebAudio Engine with Auto-Flushing on Seek
-        let audioCtx = null;
-        let delayNode = null;
-        let currentDelayMs = 0;
-
-        function initDDPDownmixEngine() {
-            try {
-                if (!audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                    const source = audioCtx.createMediaElementSource(video);
-                    delayNode = audioCtx.createDelay(3.0);
-                    delayNode.delayTime.value = Math.max(0, currentDelayMs / 1000);
-                    
-                    audioCtx.destination.channelCount = 2;
-                    audioCtx.destination.channelCountMode = 'explicit';
-                    audioCtx.destination.channelInterpretation = 'speakers';
-
-                    source.connect(delayNode);
-                    delayNode.connect(audioCtx.destination);
-                }
-                if (audioCtx.state === 'suspended' && !video.paused) {
-                    audioCtx.resume();
-                }
-            } catch (e) {}
-        }
-
-        function flushAudioNodes() {
-            if (delayNode && audioCtx) {
-                const targetDelay = Math.max(0, currentDelayMs / 1000);
-                delayNode.delayTime.cancelScheduledValues(audioCtx.currentTime);
-                delayNode.delayTime.setValueAtTime(targetDelay, audioCtx.currentTime);
-            }
+        function getTranscodedUrl(audioIdx = 0) {
+            if (!FILE_URL) return '';
+            const sep = FILE_URL.includes('?') ? '&' : '?';
+            return `${FILE_URL}${sep}transcode=1&audio=${audioIdx}`;
         }
 
         function initPlayer() {
@@ -1143,14 +996,12 @@
             showCenterControls(false);
 
             if (FILE_URL.endsWith('.m3u8') && window.Hls && Hls.isSupported()) {
-                hlsInstance = new Hls({ maxBufferLength: 30, enableWorker: true });
-                hlsInstance.loadSource(FILE_URL);
-                hlsInstance.attachMedia(video);
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                    initQualityOptions();
-                });
+                const hls = new Hls({ maxBufferLength: 30, enableWorker: true });
+                hls.loadSource(FILE_URL);
+                hls.attachMedia(video);
             } else {
-                video.src = FILE_URL;
+                // Connect with backend transcoding for browser audio compatibility
+                video.src = getTranscodedUrl(activeAudioIdx);
             }
         }
 
@@ -1164,7 +1015,7 @@
             errorScreen.classList.add('hidden');
             videoLoader.classList.remove('hidden');
             const currentPos = video.currentTime || 0;
-            video.src = FILE_URL;
+            video.src = getTranscodedUrl(activeAudioIdx);
             video.currentTime = currentPos;
             video.play().catch(() => {});
         }
@@ -1184,29 +1035,18 @@
 
         video.addEventListener('loadstart', () => { if (FILE_URL) videoLoader.classList.remove('hidden'); });
         video.addEventListener('waiting', () => { videoLoader.classList.remove('hidden'); showCenterControls(false); });
-        video.addEventListener('seeking', () => { 
-            videoLoader.classList.remove('hidden'); 
-            flushAudioNodes();
-        });
-        video.addEventListener('seeked', () => { 
-            videoLoader.classList.add('hidden'); 
-            showCenterControls(true); 
-            flushAudioNodes();
-        });
+        video.addEventListener('seeking', () => { videoLoader.classList.remove('hidden'); });
+        video.addEventListener('seeked', () => { videoLoader.classList.add('hidden'); showCenterControls(true); });
         video.addEventListener('canplay', () => { 
             videoLoader.classList.add('hidden'); 
             errorScreen.classList.add('hidden'); 
             showCenterControls(true); 
-            initDDPDownmixEngine();
         });
         video.addEventListener('playing', () => { 
             errorRetryCount = 0; 
             videoLoader.classList.add('hidden'); 
             errorScreen.classList.add('hidden'); 
             showCenterControls(true); 
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
         });
 
         function formatTime(seconds) {
@@ -1255,9 +1095,6 @@
         video.addEventListener('play', () => {
             playIcon.className = 'fas fa-pause';
             showHudAndCursor();
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
         });
 
         video.addEventListener('pause', () => {
@@ -1268,9 +1105,6 @@
             playerContainer.classList.remove('hide-cursor');
             customSubOverlay.style.bottom = '15%';
             clearTimeout(hudTimeout);
-            if (audioCtx && audioCtx.state === 'running') {
-                audioCtx.suspend();
-            }
         });
 
         btnPlay.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
@@ -1306,11 +1140,13 @@
         document.getElementById('btn-rewind').addEventListener('click', (e) => { e.stopPropagation(); seek(-10); showToast('-10s'); });
         document.getElementById('btn-forward').addEventListener('click', (e) => { e.stopPropagation(); seek(10); showToast('+10s'); });
 
+        // YouTube-style Double Tap Skip with Haptic Vibration
         let lastTapLeft = 0, lastTapRight = 0;
         document.getElementById('dt-left').addEventListener('touchend', (e) => {
             const now = Date.now();
             if (now - lastTapLeft < 320) {
                 e.preventDefault(); e.stopPropagation(); seek(-10);
+                if (navigator.vibrate) navigator.vibrate(40);
                 const pill = document.getElementById('skip-left');
                 pill.classList.remove('skip-animate'); void pill.offsetWidth; pill.classList.add('skip-animate');
             } else {
@@ -1323,6 +1159,7 @@
             const now = Date.now();
             if (now - lastTapRight < 320) {
                 e.preventDefault(); e.stopPropagation(); seek(10);
+                if (navigator.vibrate) navigator.vibrate(40);
                 const pill = document.getElementById('skip-right');
                 pill.classList.remove('skip-animate'); void pill.offsetWidth; pill.classList.add('skip-animate');
             } else {
@@ -1335,7 +1172,6 @@
             timeTotal.textContent = formatTime(video.duration);
             videoLoader.classList.add('hidden');
             showCenterControls(true);
-            initQualityOptions();
             bindSubtitleCueRenderer();
         });
 
@@ -1525,16 +1361,20 @@
             else if (document.pictureInPictureEnabled) video.requestPictureInPicture();
         });
 
-        // Popup Handlers (Auto-pause active playback)
+        // Modal Open / Close with Auto-Resume Feature
         function openPopup(id) {
             closeAllPopups();
-            if (!video.paused) video.pause();
+            wasPlayingBeforePopup = (!video.paused && !video.ended);
+            if (wasPlayingBeforePopup) video.pause();
             document.getElementById(id).classList.add('active');
         }
         function closeAllPopups() {
+            const hasOpen = !!document.querySelector('.glass-popup-backdrop.active');
             document.querySelectorAll('.glass-popup-backdrop').forEach(p => p.classList.remove('active'));
-            const gearIcon = document.getElementById('quality-gear-icon');
-            if (gearIcon) gearIcon.classList.remove('gear-spinning-active');
+            if (hasOpen && wasPlayingBeforePopup) {
+                video.play().catch(() => {});
+                wasPlayingBeforePopup = false;
+            }
         }
         function closePopupOnBackdrop(e, backdropElem) {
             if (e.target === backdropElem) closeAllPopups();
@@ -1674,83 +1514,36 @@
             showToast(`Subtitle Size: ${labelPct}`);
         }
 
-        // Multi-Audio Track Switcher (Seamless In-Player)
+        // Multi-Audio Switcher (Zero-Reload / Instant Track Shift)
         function openAudioPopup() {
             const list = document.getElementById('audio-track-list');
             list.innerHTML = '';
 
-            if (hlsInstance && hlsInstance.audioTracks && hlsInstance.audioTracks.length > 0) {
-                hlsInstance.audioTracks.forEach((track, index) => {
-                    const isSelected = (hlsInstance.audioTrack === index);
-                    const btn = document.createElement('button');
-                    btn.className = isSelected
-                        ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
-                        : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
-                    btn.innerHTML = `<span>${track.name || `Audio Track ${index + 1}`}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
-                    btn.onclick = () => {
-                        hlsInstance.audioTrack = index;
-                        showToast(`Audio Track: ${track.name || index + 1}`);
-                        closeAllPopups();
-                    };
-                    list.appendChild(btn);
-                });
-            } else {
-                const nativeAudioCount = (video.audioTracks && video.audioTracks.length) ? video.audioTracks.length : 0;
-                const trackCount = nativeAudioCount > 0 ? nativeAudioCount : detectedAudioMeta.length;
+            const trackCount = detectedAudioMeta.length;
+            for (let i = 0; i < trackCount; i++) {
+                const isSelected = (activeAudioIdx === i);
+                let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
 
-                for (let i = 0; i < trackCount; i++) {
-                    const isSelected = (activeAudioIdx === i);
-                    let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
-                    if (nativeAudioCount > 0 && (video.audioTracks[i].label || video.audioTracks[i].language)) {
-                        const rawLang = video.audioTracks[i].label || video.audioTracks[i].language;
-                        label = i === 0 && !rawLang.toLowerCase().includes('default') ? `${rawLang} (Default)` : rawLang;
-                    }
-
-                    const btn = document.createElement('button');
-                    btn.className = isSelected
-                        ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
-                        : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
-                    btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
-                    
-                    btn.onclick = () => {
+                const btn = document.createElement('button');
+                btn.className = isSelected
+                    ? 'py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
+                    : 'py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+                btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+                
+                btn.onclick = () => {
+                    if (activeAudioIdx !== i) {
                         activeAudioIdx = i;
-                        if (nativeAudioCount > 0) {
-                            for (let j = 0; j < video.audioTracks.length; j++) {
-                                video.audioTracks[j].enabled = (j === i);
-                            }
-                        }
-                        const cur = video.currentTime;
-                        video.currentTime = Math.max(0, cur - 0.05);
-                        showToast(`Audio: ${label}`);
-                        closeAllPopups();
-                    };
-                    list.appendChild(btn);
-                }
+                        const curTime = video.currentTime;
+                        video.src = getTranscodedUrl(i);
+                        video.currentTime = curTime;
+                        video.play().catch(() => {});
+                    }
+                    showToast(`Audio: ${label}`);
+                    closeAllPopups();
+                };
+                list.appendChild(btn);
             }
             openPopup('audio-popup');
-        }
-
-        // Earphone Audio Delay Sync Slider
-        function updateDelayUI(val) {
-            currentDelayMs = parseInt(val) || 0;
-            delayDisplay.textContent = `${currentDelayMs > 0 ? '+' : ''}${currentDelayMs} ms`;
-            delaySlider.value = currentDelayMs;
-            if (delayNode && audioCtx) {
-                const positiveDelay = Math.max(0, currentDelayMs / 1000);
-                delayNode.delayTime.setTargetAtTime(positiveDelay, audioCtx.currentTime, 0.02);
-            }
-        }
-
-        const delaySlider = document.getElementById('audio-delay-slider');
-        const delayDisplay = document.getElementById('delay-value-display');
-        delaySlider.addEventListener('input', (e) => updateDelayUI(e.target.value));
-        function nudgeDelay(ms) {
-            updateDelayUI(Math.min(2000, Math.max(-2000, currentDelayMs + ms)));
-            showToast(`Audio Delay: ${currentDelayMs > 0 ? '+' : ''}${currentDelayMs} ms`);
-        }
-        function resetDelay() {
-            updateDelayUI(0);
-            showToast("Audio Delay Reset");
         }
 
         // Direct Browser Download
