@@ -30,7 +30,6 @@ try:
 except ImportError:
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# Global Semaphore to prevent 429 Too Many Requests (Queueing API calls)
 gemini_semaphore = asyncio.Semaphore(1)
 
 PIRACY_STRIP_REGEX = re.compile(
@@ -195,9 +194,6 @@ def is_good_title_match(query: str, found_title: str) -> bool:
         return True
     return False
 
-# =========================================================================
-# QUEUED GEMINI AI IDENTIFIER (NO 429/503, STRICT JSON)
-# =========================================================================
 async def identify_movie_with_gemini(filename: str, caption: str = "", duration_mins: Optional[int] = None) -> dict:
     key = GEMINI_API_KEY.strip()
     if not key:
@@ -222,16 +218,15 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
         "generationConfig": {
             "temperature": 0.1,
             "maxOutputTokens": 200,
-            "responseMimeType": "application/json"  # STRICTLY ENFORCE JSON
+            "responseMimeType": "application/json"
         }
     }
     headers = {"Content-Type": "application/json"}
-    models = ["gemini-3.8-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+    models = ["gemini-1.5-flash", "gemini-1.5-pro"]
     timeout = aiohttp.ClientTimeout(total=7)
 
-    # Queue system to process 1 request at a time and avoid 429 limits
     async with gemini_semaphore:
-        await asyncio.sleep(2)  # Delay between requests to save Free Tier
+        await asyncio.sleep(2.5) 
         async with aiohttp.ClientSession(timeout=timeout) as session:
             for model in models:
                 endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
@@ -240,10 +235,12 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
                         if resp.status == 200:
                             data = await resp.json()
                             raw_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+                            raw_text = re.sub(r"```[^\n]*\n", "", raw_text)
+                            raw_text = raw_text.replace("```", "").strip()
                             try:
                                 return json.loads(raw_text)
                             except json.JSONDecodeError:
-                                logger.warning(f"[GEMINI JSON ERROR] {model} returned bad JSON")
+                                logger.warning(f"[GEMINI JSON ERROR] {model} returned bad JSON: {raw_text}")
                                 return {}
                         elif resp.status == 429:
                             logger.warning(f"[GEMINI 429] Too many requests on {model}. Retrying...")
@@ -675,7 +672,6 @@ async def extract_media_info_ai(filename: str, caption: str, prelim_name: str, c
     filename_clean = clean_mentions_links(filename)
     unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
-    # Episode handling natively! Gemini is explicitly restricted from doing this.
     local_season, local_episode = extract_season_episode(filename)
     tag = "#SERIES" if local_season is not None else "#MOVIE"
 
@@ -701,7 +697,6 @@ async def extract_media_info_ai(filename: str, caption: str, prelim_name: str, c
         year_match = YEAR_PATTERN.search(unified)
         year = year_match.group(0) if year_match else None
 
-    # Determine exact final title based on priority
     if cached_doc:
         base_name = cached_doc["_id"]
     elif ai_title:
@@ -716,6 +711,8 @@ async def extract_media_info_ai(filename: str, caption: str, prelim_name: str, c
         base_name = f"{base_name} Season {local_season}"
 
     if not base_name: base_name = normalize(filename_clean)
+
+    logger.info(f"[IDENTIFIED MOVIE] BaseName: '{base_name}' | Title: '{ai_title}' | OTT: {ai_ott} | S: {local_season} E: {local_episode}")
 
     return {
         "processed": normalize(filename_clean),
@@ -770,13 +767,17 @@ async def media_handler(bot, message):
 
 async def process_and_send_update(bot, filename, caption, file_runtime_mins=None):
     try:
-        # Pre-calculate pure local text name to act as a Smart Lock Key
         filename_clean = clean_mentions_links(filename)
         base_raw = AUDIO_CHANNELS_PATTERN.sub(" ", filename_clean)
         prelim_name = normalize(remove_ignored_words(_strip_season_episode_tokens(base_raw)))
+        
+        # Determine exact local preliminary base name including season to match exact DB records
+        local_season, _ = extract_season_episode(filename)
+        if local_season is not None:
+            prelim_name = f"{prelim_name} Season {local_season}"
+            
         clean_prelim = get_clean_title(prelim_name)
 
-        # LOCK SYSTEM: Keeps files of the same movie grouped before sending to Gemini!
         lock = locks[clean_prelim]
         async with lock:
             await _process_with_lock(bot, filename, caption, filename_clean, prelim_name, clean_prelim, file_runtime_mins)
@@ -786,17 +787,16 @@ async def process_and_send_update(bot, filename, caption, file_runtime_mins=None
 async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name, clean_prelim, file_runtime_mins=None):
     if not hasattr(db, "movie_updates"): db.movie_updates = db.db.movie_updates
 
-    # DB CHECK #1 (using pure local regex name to prevent Gemini API spam)
+    # FIRST PASS DB CHECK - BYPASS API IMMEDIATELY IF FOUND
     cached_doc = await db.movie_updates.find_one({
         "$or": [{"clean_title": clean_prelim}, {"_id": prelim_name}]
     })
 
-    # Extractor handles Gemini calls. Skips automatically if DB cache exists.
     media_info = await extract_media_info_ai(filename_clean, caption, prelim_name, cached_doc, file_runtime_mins)
     base_name = media_info["base_name"]
     clean_title = get_clean_title(base_name)
 
-    # DB CHECK #2 (In case Gemini returned a clean Title that differs from regex)
+    # SECOND PASS DB CHECK - in case Gemini fetched a different final title
     if not cached_doc:
         cached_doc = await db.movie_updates.find_one({
             "$or": [{"clean_title": clean_title}, {"_id": base_name}]
@@ -935,7 +935,6 @@ async def _process_with_lock(bot, filename, caption, filename_clean, prelim_name
 
         await send_movie_update(bot, base_name)
     else:
-        # Check if the exact filename is already uploaded
         if any(f.get("filename") == filename for f in cached_doc.get("files", [])): return
         update_fields = {"$push": {"files": file_data}}
         if (not cached_doc.get("runtime") or str(cached_doc.get("runtime")) == "N/A") and final_file_runtime != "N/A":
@@ -1013,7 +1012,7 @@ async def update_movie_message(bot, base_name):
                 await bot.edit_message_caption(chat_id=MOVIE_UPDATE_CHANNEL, message_id=message_id, caption=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
             else:
                 await bot.edit_message_text(chat_id=MOVIE_UPDATE_CHANNEL, message_id=message_id, text=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML, disable_web_page_preview=not LINK_PREVIEW)
-        # Handle message exact match auto-skip gracefully (No duplicate bot blocking)
+        # Prevents redundant API calls if exact same qualities are found.
         except MessageNotModified:
             pass
         except MessageIdInvalid:
