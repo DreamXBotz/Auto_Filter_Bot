@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="https://i.ibb.co/mFdT56V5/20260922-071000.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>{{file_name}} - BoultFlix</title>
+    <!-- Filename Update -->
+    <title>Boultflix - {{file_name}}</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -108,7 +109,7 @@
             100% { transform: translate(-4vw, -4vh) scale(0.95); }
         }
 
-        /* Seamless Edge-to-Edge Glass Navbar */
+        /* FIX 1: Seamless Edge-to-Edge Glass Navbar (w-full instead of 100vw hack) */
         .glass-nav {
             background: rgba(6, 11, 24, 0.88);
             backdrop-filter: blur(35px) saturate(210%);
@@ -116,9 +117,7 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
             z-index: 40;
-            width: 100vw;
-            margin-left: calc(-50vw + 50%);
-            margin-right: calc(-50vw + 50%);
+            width: 100%;
         }
 
         .brand-text {
@@ -484,7 +483,7 @@
 
     <div id="toast" class="toast text-[11px] md:text-xs font-semibold">Notification</div>
 
-    <!-- Edge-to-Edge Floating Glass Navbar (Fixed Border & Balanced Join Spacing) -->
+    <!-- Edge-to-Edge Floating Glass Navbar -->
     <nav class="glass-nav sticky top-0 px-3.5 md:px-8 py-2.5 md:py-3 flex items-center justify-between">
         <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 brand-group cursor-pointer">
             <div class="w-8 h-8 rounded-full bg-gradient-to-br from-sapphire to-cobalt flex items-center justify-center shadow-[0_0_15px_rgba(0,210,255,0.6)] transition-transform duration-300 group-hover:scale-105">
@@ -500,8 +499,9 @@
     <!-- VIEW 1: MAIN OTT STREAMING INTERFACE -->
     <main id="player-view" class="container mx-auto px-2.5 sm:px-5 py-4 max-w-4xl my-auto flex-grow flex flex-col justify-center items-center relative z-10 w-full">
         
+        <!-- Filename Update -->
         <div class="w-full mb-2.5 px-1">
-            <h1 class="text-xs sm:text-sm md:text-base font-bold font-['Outfit'] break-all leading-snug text-white mb-1">{{file_name}}</h1>
+            <h1 class="text-xs sm:text-sm md:text-base font-bold font-['Outfit'] break-all leading-snug text-white mb-1"> {{file_name}}</h1>
             <div class="flex items-center gap-2 text-[10px] md:text-xs text-gray-400">
                 <span class="flex items-center gap-1 text-gray-300"><i class="fas fa-database text-sapphire"></i> {{file_size}}</span>
                 <span class="w-1 h-1 rounded-full bg-gray-600"></span>
@@ -627,6 +627,7 @@
 
         <!-- Primary Action Grid (Classic Cyan Theme) -->
         <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-5 w-full">
+            <!-- Download Button restored to open popup exactly as uploaded -->
             <button onclick="openPopup('download-popup')" class="ott-btn-primary py-2.5 px-2 sm:p-3.5 flex items-center justify-center gap-2">
                 <i class="fas fa-download text-sapphire text-xs sm:text-sm"></i>
                 <span class="font-bold text-[11px] sm:text-xs text-white truncate">Fast Download</span>
@@ -754,6 +755,42 @@
     <!-- ROOT TOP-LAYER MODALS -->
     <div id="global-modal-layer">
 
+        <!-- 💥 NEW: DDP5.1 NEON ALERT POPUP -->
+        <div id="ddp-alert-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-6 text-center border-sapphire/40 shadow-[0_0_40px_rgba(0,210,255,0.25)]">
+                <i class="fas fa-volume-up text-4xl text-sapphire mb-3 drop-shadow-[0_0_12px_#00d2ff]"></i>
+                <h3 class="text-lg font-black font-['Outfit'] text-white mb-2">Notice</h3>
+                <p class="text-sm text-gray-300 leading-relaxed mb-5">
+                    This file contains DDP5.1 etc audio which is not browser playable so we converted it to AAC to play it in browser so if you want proper experience of streaming use external players.
+                </p>
+                <button onclick="closeAllPopups()" class="ott-btn-primary w-full py-2.5 text-white font-bold rounded-xl text-sm transition active:scale-95">Continue</button>
+            </div>
+        </div>
+
+        <!-- 💥 NEW: AUDIO ALERT POPUP -->
+        <div id="audio-alert-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-6 text-center border-violet/40 shadow-[0_0_40px_rgba(121,40,202,0.3)]">
+                <i class="fas fa-headphones-alt text-4xl text-purple-400 mb-3 drop-shadow-[0_0_12px_#c084fc]"></i>
+                <h3 class="text-lg font-black font-['Outfit'] text-white mb-2">Multi-Audio</h3>
+                <p class="text-sm text-gray-300 leading-relaxed mb-5">
+                    To switch to this audio and get proper freedom of streaming without downloading kindly play the movie in any of the external players.<br><br><span class="text-purple-400 font-bold">~Reg Boultflix</span>
+                </p>
+                <button onclick="closeAllPopups()" class="w-full py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold rounded-xl text-sm transition active:scale-95">Close</button>
+            </div>
+        </div>
+
+        <!-- 💥 NEW: SUBTITLE ALERT POPUP -->
+        <div id="sub-alert-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
+            <div class="glass-popup-card p-6 text-center border-cobalt/40 shadow-[0_0_40px_rgba(0,81,255,0.3)]">
+                <i class="fas fa-closed-captioning text-4xl text-blue-400 mb-3 drop-shadow-[0_0_12px_#60a5fa]"></i>
+                <h3 class="text-lg font-black font-['Outfit'] text-white mb-2">Subtitles</h3>
+                <p class="text-sm text-gray-300 leading-relaxed mb-5">
+                    To enable this subtitle and get proper freedom of streaming without downloading kindly play the movie in any of the external players.<br><br><span class="text-blue-400 font-bold">~Reg-Boultflix</span>
+                </p>
+                <button onclick="closeAllPopups()" class="w-full py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-bold rounded-xl text-sm transition active:scale-95">Close</button>
+            </div>
+        </div>
+
         <!-- 1. Welcome Advisory Liquid Glass Popup -->
         <div id="welcome-popup" class="glass-popup-backdrop active" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5 sm:p-6 border-sapphire/30 shadow-[0_25px_60px_rgba(0,0,0,0.95)]">
@@ -801,7 +838,7 @@
             </div>
         </div>
 
-        <!-- 3. Download Options Popup -->
+        <!-- 3. Download Options Popup (Original Download Modal Intact) -->
         <div id="download-popup" class="glass-popup-backdrop" onclick="closePopupOnBackdrop(event, this)">
             <div class="glass-popup-card p-5 sm:p-6">
                 <div class="flex justify-between items-center mb-3">
@@ -816,6 +853,7 @@
                         <i class="fas fa-copy"></i>
                         <span>Copy Link for ADM / 1DM / FDM</span>
                     </button>
+                    <!-- 💥 Instant Download Button linked to dl=1 -->
                     <button onclick="directBrowserDownload()" class="w-full py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-semibold flex items-center justify-center gap-2 transition active:scale-95">
                         <i class="fas fa-globe"></i>
                         <span>Download via Browser</span>
@@ -892,7 +930,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="glass-nav py-3.5 mt-auto">
+    <footer class="glass-nav py-3.5 mt-auto border-t border-white/10">
         <div class="container mx-auto px-4 flex flex-col items-center">
             <div class="flex gap-3.5 mb-2">
                 <a href="https://t.me/BoultFlix" target="_blank" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-sapphire hover:scale-105 transition shadow">
@@ -958,7 +996,7 @@
         let detectedAudioMeta = [];
         let detectedSubMeta = [];
         let activeAudioIdx = 0;
-        let activeSubIdx = 0;
+        let activeSubIdx = -1; // OFF by default
 
         // Auto Extract Track Metadata
         function inferTracksFromFilename(name) {
@@ -993,6 +1031,16 @@
                 videoLoader.classList.add('hidden');
                 return;
             }
+            
+            // 💥 DDP5.1 Checker Logic
+            const ln = FILE_NAME.toLowerCase();
+            if(ln.includes('ddp') || ln.includes('ac3') || ln.includes('5.1') || ln.includes('dts') || ln.includes('truehd')) {
+                if(!sessionStorage.getItem('ddp_shown_' + FILE_NAME)) {
+                    sessionStorage.setItem('ddp_shown_' + FILE_NAME, 'true');
+                    openPopup('ddp-alert-popup');
+                }
+            }
+
             videoLoader.classList.remove('hidden');
             showCenterControls(false);
 
@@ -1001,7 +1049,6 @@
                 hls.loadSource(FILE_URL);
                 hls.attachMedia(video);
             } else {
-                // High Speed Direct Stream Connection (Byte-Range Enabled)
                 video.src = FILE_URL;
             }
         }
@@ -1141,7 +1188,6 @@
         document.getElementById('btn-rewind').addEventListener('click', (e) => { e.stopPropagation(); seek(-10); showToast('-10s'); });
         document.getElementById('btn-forward').addEventListener('click', (e) => { e.stopPropagation(); seek(10); showToast('+10s'); });
 
-        // YouTube-style Double Tap Skip with Haptic Vibration
         let lastTapLeft = 0, lastTapRight = 0;
         document.getElementById('dt-left').addEventListener('touchend', (e) => {
             const now = Date.now();
@@ -1434,7 +1480,7 @@
             showToast(`Aspect Ratio: ${mode}`);
         }
 
-        // Subtitle Cue Parser (VLC Minimal Bold Font, No Box)
+        // Subtitle Cue Parser
         function bindSubtitleCueRenderer() {
             if (!video.textTracks) return;
             for (let i = 0; i < video.textTracks.length; i++) {
@@ -1450,6 +1496,7 @@
             }
         }
 
+        // 💥 FAKE SUBTITLE SWITCHER LOGIC
         function openSubPopup() {
             const subList = document.getElementById('sub-track-list');
             subList.innerHTML = '';
@@ -1459,7 +1506,7 @@
             offBtn.className = isOff
                 ? 'w-full py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
                 : 'w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
-            offBtn.innerHTML = `<span>Off</span> ${isOff ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+            offBtn.innerHTML = `<span>Off (Default)</span> ${isOff ? '<i class="fas fa-check text-xs"></i>' : ''}`;
             offBtn.onclick = () => {
                 activeSubIdx = -1;
                 customSubOverlay.innerHTML = '';
@@ -1471,36 +1518,12 @@
             };
             subList.appendChild(offBtn);
 
-            const nativeCount = (video.textTracks && video.textTracks.length) ? video.textTracks.length : 0;
-            const totalSubs = nativeCount > 0 ? nativeCount : detectedSubMeta.length;
-
-            for (let i = 0; i < totalSubs; i++) {
-                const isSelected = (activeSubIdx === i);
-                const trackLabel = nativeCount > 0
-                    ? (video.textTracks[i].label || video.textTracks[i].language || `Subtitle Track ${i + 1}`)
-                    : detectedSubMeta[i];
-
+            for (let i = 0; i < detectedSubMeta.length; i++) {
                 const btn = document.createElement('button');
-                btn.className = isSelected
-                    ? 'w-full py-2.5 px-4 rounded-xl bg-sapphire/20 border border-sapphire/50 text-sapphire text-xs font-bold text-left flex justify-between items-center transition'
-                    : 'w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
-                btn.innerHTML = `<span>${trackLabel}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
+                btn.className = 'w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold text-left flex justify-between items-center transition';
+                btn.innerHTML = `<span>${detectedSubMeta[i]}</span>`;
                 btn.onclick = () => {
-                    activeSubIdx = i;
-                    if (nativeCount > 0) {
-                        for (let j = 0; j < video.textTracks.length; j++) {
-                            video.textTracks[j].mode = (j === i) ? 'showing' : 'disabled';
-                        }
-                        bindSubtitleCueRenderer();
-                    } else {
-                        // Native VLC text overlay indicator
-                        customSubOverlay.innerHTML = `[${trackLabel}]`;
-                        setTimeout(() => {
-                            if (activeSubIdx === i) customSubOverlay.innerHTML = '';
-                        }, 2000);
-                    }
-                    showToast(`Subtitle: ${trackLabel}`);
-                    closeAllPopups();
+                    openPopup('sub-alert-popup'); 
                 };
                 subList.appendChild(btn);
             }
@@ -1518,21 +1541,14 @@
             showToast(`Subtitle Size: ${labelPct}`);
         }
 
-        // Multi-Audio Track Switcher (Zero-Refresh Instant Switch)
+        // 💥 FAKE AUDIO TRACK SWITCHER LOGIC
         function openAudioPopup() {
             const list = document.getElementById('audio-track-list');
             list.innerHTML = '';
 
-            const nativeAudioCount = (video.audioTracks && video.audioTracks.length) ? video.audioTracks.length : 0;
-            const trackCount = nativeAudioCount > 0 ? nativeAudioCount : detectedAudioMeta.length;
-
-            for (let i = 0; i < trackCount; i++) {
+            for (let i = 0; i < detectedAudioMeta.length; i++) {
                 const isSelected = (activeAudioIdx === i);
-                let label = detectedAudioMeta[i] || `Audio Track ${i + 1}`;
-                if (nativeAudioCount > 0 && (video.audioTracks[i].label || video.audioTracks[i].language)) {
-                    const rawLang = video.audioTracks[i].label || video.audioTracks[i].language;
-                    label = i === 0 && !rawLang.toLowerCase().includes('default') ? `${rawLang} (Default)` : rawLang;
-                }
+                let label = detectedAudioMeta[i];
 
                 const btn = document.createElement('button');
                 btn.className = isSelected
@@ -1541,21 +1557,20 @@
                 btn.innerHTML = `<span>${label}</span> ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ''}`;
                 
                 btn.onclick = () => {
-                    activeAudioIdx = i;
-                    if (nativeAudioCount > 0) {
-                        for (let j = 0; j < video.audioTracks.length; j++) {
-                            video.audioTracks[j].enabled = (j === i);
-                        }
+                    if(i !== 0) {
+                        openPopup('audio-alert-popup'); 
+                    } else {
+                        activeAudioIdx = 0;
+                        showToast(`Audio: ${label}`);
+                        closeAllPopups();
                     }
-                    showToast(`Audio: ${label}`);
-                    closeAllPopups();
                 };
                 list.appendChild(btn);
             }
             openPopup('audio-popup');
         }
 
-        // Direct Fast Browser Download
+        // 💥 INSTANT DOWNLOAD (Original Popup Layout Maintained)
         function copyDownloadLink() {
             if (!FILE_URL) return;
             navigator.clipboard.writeText(RAW_FILE_URL).then(() => {
@@ -1565,6 +1580,7 @@
         }
 
         function directBrowserDownload() {
+            if (!FILE_URL) return;
             closeAllPopups();
             video.pause();
             
@@ -1573,19 +1589,20 @@
             dlView.classList.remove('hidden');
             dlView.classList.add('flex');
 
+            const dlUrl = RAW_FILE_URL + (RAW_FILE_URL.includes('?') ? '&' : '?') + 'dl=1';
             const fallbackBtn = document.getElementById('manual-dl-fallback');
-            fallbackBtn.href = RAW_FILE_URL;
+            fallbackBtn.href = dlUrl;
             fallbackBtn.setAttribute('download', FILE_NAME);
 
-            if (RAW_FILE_URL && RAW_FILE_URL.startsWith('http')) {
-                const dlLink = document.createElement('a');
-                dlLink.href = RAW_FILE_URL;
-                dlLink.setAttribute('download', FILE_NAME);
-                dlLink.target = '_blank';
-                document.body.appendChild(dlLink);
-                dlLink.click();
-                document.body.removeChild(dlLink);
-            }
+            // Auto force download popup instantly
+            const dlLink = document.createElement('a');
+            dlLink.href = dlUrl;
+            dlLink.setAttribute('download', FILE_NAME);
+            dlLink.target = '_blank';
+            document.body.appendChild(dlLink);
+            dlLink.click();
+            document.body.removeChild(dlLink);
+            
             showToast("Starting Browser Download...");
         }
 
@@ -1625,7 +1642,7 @@
             showToast("Searching for Cast devices on your Wi-Fi...");
         }
 
-        // External Player Launcher (Direct Telegram High-Speed Pipeline)
+        // External Player Launcher
         function launchApp(type) {
             if (!RAW_FILE_URL) {
                 showToast("Stream URL required");
