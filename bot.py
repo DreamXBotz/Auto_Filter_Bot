@@ -34,6 +34,13 @@ logging.getLogger("pymongo").setLevel(logging.WARNING)
 
 botStartTime = time.time()
 
+async def mongo_keepalive_heartbeat():
+    while True:
+        try:
+            await db.db.command('ping')
+        except Exception:
+            pass
+        await asyncio.sleep(45)
 def get_plugins_names(plugins_dir="plugins"):
     plugins_path = Path(plugins_dir)
     if not plugins_path.exists():
@@ -94,6 +101,7 @@ async def dreamxbotz_start():
     await web.TCPSite(app, bind_address, PORT).start()
     asyncio.create_task(keep_alive())
 
+    asyncio.create_task(mongo_keepalive_heartbeat())
     try:
         await idle()
     finally:
