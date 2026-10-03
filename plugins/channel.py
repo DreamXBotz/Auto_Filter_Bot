@@ -1570,6 +1570,7 @@ def _build_buttons(movie_doc, base_name, bot=None):
     if not uname:
         uname = "BoultFlixMovieBot"
     uname = str(uname).lstrip("@").strip()
+    temp.U_NAME = uname
 
     return InlineKeyboardMarkup([[InlineKeyboardButton(
         "ɢᴇᴛ ғɪʟᴇs", url=f"[https://t.me/](https://t.me/){uname}?start=getfile-{clean_q}", style=btn_style)]])
