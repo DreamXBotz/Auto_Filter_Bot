@@ -51,8 +51,6 @@
             content: '';
             position: fixed;
             inset: 0;
-            width: 100vw;
-            height: 100vh;
             background: radial-gradient(700px circle at var(--x) var(--y), rgba(0, 210, 255, 0.14), transparent 52%);
             pointer-events: none;
             z-index: 0;
@@ -62,8 +60,6 @@
         .ambient-layer {
             position: fixed;
             inset: 0;
-            width: 100vw;
-            height: 100vh;
             z-index: -2;
             pointer-events: none;
             overflow: hidden;
@@ -98,6 +94,10 @@
             0% { transform: translate(0, 0) scale(1); }
             50% { transform: translate(4vw, 5vh) scale(1.08); }
             100% { transform: translate(-4vw, -4vh) scale(0.95); }
+        }
+        @media (max-width: 768px) {
+            body::before, .aura-blob { display: none !important; }
+            .ambient-layer { background: radial-gradient(circle at 50% 25%, #081630 0%, #02040a 90%) !important; }
         }
 
         .glass-nav {
@@ -150,11 +150,19 @@
         }
 
         .pulse-badge {
-            animation: badgePulse 2.8s infinite alternate ease-in-out;
+            animation: badgePulse 1.6s infinite ease-in-out;
         }
         @keyframes badgePulse {
-            0% { box-shadow: 0 0 10px rgba(0, 210, 255, 0.25); border-color: rgba(0, 210, 255, 0.35); }
-            100% { box-shadow: 0 0 25px rgba(0, 210, 255, 0.65); border-color: rgba(0, 210, 255, 0.85); }
+            0% { box-shadow: 0 0 12px rgba(0, 210, 255, 0.3), 0 0 20px rgba(0, 210, 255, 0.15); border-color: rgba(0, 210, 255, 0.4); transform: scale(1); }
+            50% { box-shadow: 0 0 22px rgba(0, 210, 255, 0.6), 0 0 35px rgba(0, 210, 255, 0.3); border-color: rgba(0, 210, 255, 0.8); transform: scale(1.02); }
+            100% { box-shadow: 0 0 12px rgba(0, 210, 255, 0.3), 0 0 20px rgba(0, 210, 255, 0.15); border-color: rgba(0, 210, 255, 0.4); transform: scale(1); }
+        }
+        .dot-smooth {
+            animation: dotSmoothPulse 2.0s infinite ease-in-out;
+        }
+        @keyframes dotSmoothPulse {
+            0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px #00d2ff; }
+            50% { transform: scale(1.25); opacity: 0.9; box-shadow: 0 0 18px #00d2ff, 0 0 28px rgba(0,210,255,0.6); }
         }
 
         .btn-gradient {
@@ -188,10 +196,10 @@
     <!-- Combined Floating Glass Navbar - ONLY THIS PART CHANGED -->
     <nav class="glass-nav sticky top-0 px-4 md:px-8 py-3.5 flex items-center justify-between">
         <a href="https://t.me/BoultFlix" target="_blank" class="flex items-center gap-2.5 group cursor-pointer select-none">
-            <div class="w-2.5 h-2.5 rounded-full bg-sapphire shadow-[0_0_12px_#00d2ff] animate-pulse group-hover:scale-125 transition-transform"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-sapphire shadow-[0_0_12px_#00d2ff] dot-smooth group-hover:scale-125 transition-transform"></div>
             <span class="font-['Outfit'] font-black text-lg md:text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-100 to-gray-300 group-hover:from-sapphire group-hover:to-white transition-all">BOULTFLIX</span>
         </a>
-        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt px-4 py-1.5 rounded-full text-xs font-bold tracking-wide text-black transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95">
+        <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide text-black transition-all duration-300 flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] hover:shadow-[0_0_20px_rgba(0,210,255,0.6)] active:scale-95">
             <i class="fab fa-telegram-plane"></i> Join Channel
         </a>
     </nav>
@@ -229,7 +237,7 @@
             <div class="mb-7">
                 <a href="https://t.me/BoultflixMovieBot" target="_blank" class="btn-gradient inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-black font-extrabold text-sm md:text-base tracking-wide group w-full sm:w-auto">
                     <i class="fab fa-telegram-plane text-xl group-hover:scale-110 transition-transform"></i>
-                    <span>Launch Official Bot: <span class="underline decoration-black/60 font-black">@BoultflixMovieBot</span></span>
+                    <span class="font-bold tracking-wide">Launch Official Bot: <span class="font-black tracking-wider">@BoultflixMovieBot</span></span>
                 </a>
                 <p class="text-[11px] text-gray-400 mt-2.5">Skip the scrolling Start the cinema 🎥🍿</p>
             </div>
