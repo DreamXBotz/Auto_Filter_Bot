@@ -66,8 +66,6 @@
             content: '';
             position: fixed;
             inset: 0;
-            width: 100vw;
-            height: 100vh;
             background: radial-gradient(700px circle at var(--x) var(--y), rgba(0, 210, 255, 0.15), transparent 52%);
             pointer-events: none;
             z-index: 1;
@@ -77,8 +75,6 @@
         .ambient-layer {
             position: fixed;
             inset: 0;
-            width: 100vw;
-            height: 100vh;
             z-index: 0;
             pointer-events: none;
             overflow: hidden;
@@ -109,16 +105,37 @@
             100% { transform: translate(-4vw, -4vh) scale(0.95); }
         }
 
-        /* FIX 1: Seamless Edge-to-Edge Glass Navbar (w-full instead of 100vw hack) */
+        /* FINAL GAP FIX - nav edge-to-edge, footer stays bottom */
         .glass-nav {
-            background: rgba(6, 11, 24, 0.88);
-            backdrop-filter: blur(35px) saturate(210%);
-            -webkit-backdrop-filter: blur(35px) saturate(210%);
+            background: rgba(6, 11, 22, 0.85);
+            backdrop-filter: blur(35px) saturate(200%);
+            -webkit-backdrop-filter: blur(35px) saturate(200%);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
             z-index: 40;
             width: 100%;
         }
+        nav.glass-nav {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important;
+        }
+        footer.glass-nav {
+            position: relative !important;
+            width: 100% !important;
+            margin-top: auto !important;
+        }
+        body {
+            padding-top: 64px !important;
+        }
+        * { box-sizing: border-box; }
+        html, body { overflow-x: hidden !important; max-width: 100% !important; }
 
         .brand-text {
             background: linear-gradient(to right, #ffffff, #f3f4f6, #cbd5e1);
@@ -127,7 +144,7 @@
             transition: all 0.3s ease;
         }
         .brand-group:hover .brand-text {
-            background: linear-gradient(90deg, #00d2ff 0%, #38bdf8 50%, #0051ff 100%);
+            background: linear-gradient(90deg, #00d2ff 0%, #ffffff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 0 12px rgba(0, 210, 255, 0.6));
@@ -397,7 +414,7 @@
         .glass-popup-backdrop {
             position: fixed;
             inset: 0;
-            width: 100vw;
+            width: 100%;
             height: 100dvh;
             background: rgba(2, 5, 12, 0.75);
             backdrop-filter: blur(24px) saturate(190%);
@@ -492,7 +509,7 @@
             <span class="font-['Outfit'] font-black text-base md:text-xl tracking-wider brand-text">BOULTFLIX</span>
         </a>
         <a href="https://t.me/BoultFlix" target="_blank" class="bg-gradient-to-r from-sapphire to-cobalt hover:from-cyan-300 hover:to-blue-600 px-4 py-1.5 rounded-full text-[11px] md:text-xs font-bold tracking-wide text-black transition inline-flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(0,210,255,0.4)] active:scale-95 leading-none h-8">
-            <i class="fab fa-telegram-plane"></i><span>Join</span>
+            <i class="fab fa-telegram-plane"></i><span>Join Channel</span>
         </a>
     </nav>
 
