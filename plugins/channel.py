@@ -51,6 +51,7 @@ except ImportError:
     OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")
 
 OMDB_URL = "https://www.omdbapi.com/"
+BOT_USERNAME_FALLBACK = "BoultFlixMovieBot"
 GEMINI_COOLDOWN = 45          # seconds to skip Gemini after all models fail (429/503 storms)
 
 gemini_semaphore = asyncio.Semaphore(1)
@@ -244,6 +245,11 @@ def canon_key(title: str, season=None) -> str:
 
 def get_clean_title(name: str) -> str:   # backwards-compat helper
     return canon_key(name)
+
+
+SERIES_SUFFIX_RE = re.compile(
+    r"[\s:,\-–—]*\b(?:season|series|saison|s)\s*(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b.*$",
+    re.IGNORECASE)
 
 
 def split_trailing_year(title: str) -> Tuple[str, Optional[str]]:
@@ -492,6 +498,7 @@ async def _gemini_try_models(session, payload: dict, models: list):
                     break
                 data = _extract_json(text)
                 if data:
+                    logger.info(f"[GEMINI] Gemini ({model}) replied: {json.dumps(data, ensure_ascii=False)}")
                     return data, False
                 logger.warning(f"[GEMINI] {model} returned non-JSON text: {text[:200]!r}")
                 break
@@ -522,9 +529,11 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
     global _gemini_cooldown_until, _gemini_discovered, _gemini_models_live
     key = (GEMINI_API_KEY or "").strip()
     if not key:
+        logger.info("[GEMINI] No API key configured -> using local filename parsing only.")
         return {}
     cache_key = canon_key(local_title) + "|" + str(local_year or "")
     if local_title and cache_key in _gemini_cache:
+        logger.info(f"[GEMINI] Using cached Gemini answer for '{local_title}' (no new API call)")
         return _gemini_cache[cache_key]
     if time.monotonic() < _gemini_cooldown_until:
         logger.info("[GEMINI] In cooldown, using local parsing for this file.")
@@ -545,7 +554,9 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
         f"- Platform tags found in filename/caption: {ott_hint or 'none'}\n"
         f"- Digital-release source detected: {source_line}\n\n"
         "Rules:\n"
-        "1. title: official name ONLY. Keep sequel numbers/subtitles (e.g. Sardar 2, Dhamaal 4). "
+        "1. title: official name ONLY. Keep sequel numbers/subtitles of MOVIES (e.g. Sardar 2, Dhamaal 4). "
+        "For a WEB SERIES return ONLY the clean series name, e.g. \"Panchayat\" - NEVER \"Panchayat Season 1\", "
+        "\"Panchayat S01\" or \"Panchayat Season 1 Complete\"; season/episode numbers are handled separately by the bot. "
         "Remove resolution, source, codecs, audio/language lists, subtitle tags (ESub, MSub, ESu), uploader handles, "
         "site names, release groups. Never include season or episode numbers or the year.\n"
         "2. year: 4-digit release year (first-air year for a series).\n"
@@ -561,6 +572,10 @@ async def identify_movie_with_gemini(filename: str, caption: str = "", duration_
         "Sun NXT, Apple TV+, Hoichoi, MX Player, Lionsgate Play.\n\n"
         "Return ONLY JSON: {\"title\": \"\", \"year\": \"YYYY\", \"is_series\": false, \"ott\": []}"
     )
+    logger.info(
+        f"[GEMINI] Sending to Gemini -> filename='{filename}' | caption='{(caption or '')[:80]}' | "
+        f"local guess='{local_title}' ({local_year or 'no year'}) | platform tags='{ott_hint or 'none'}' | "
+        f"digital release source={'YES' if digital_source else 'NO'} | models={[m for m in _gemini_models_live if m not in _gemini_dead_models][:3]}")
     payload = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0, "maxOutputTokens": 1024, "responseMimeType": "application/json"},
@@ -609,7 +624,9 @@ async def resolve_identity(filename_clean, caption, duration_mins, title_local, 
 
     ai_title, ai_year = "", None
     if isinstance(ai.get("title"), str):
-        t = re.sub(r"\s+(?:Season|S)\s*\d+\b.*$", "", ai["title"], flags=re.IGNORECASE)
+        t = SERIES_SUFFIX_RE.sub("", ai["title"]).strip(" :-–—,") or ai["title"]
+        if t != ai["title"]:
+            logger.info(f"[GEMINI] Removed season text from AI title: '{ai['title']}' -> '{t}'")
         ai_title, y_in_title = split_trailing_year(t)
         ai_year = y_in_title
     m = re.search(r"(?:19|20)\d{2}", str(ai.get("year") or ""))
@@ -630,6 +647,12 @@ async def resolve_identity(filename_clean, caption, duration_mins, title_local, 
         ai_series = ai_series.strip().lower() == "true"
     ai_ott = ai.get("ott") if isinstance(ai.get("ott"), list) else ([ai["ott"]] if isinstance(ai.get("ott"), str) else [])
 
+    is_series_final = bool(local_season is not None or ai_series)
+    if ai:
+        logger.info(f"[GEMINI] Result used -> title='{title}' | year={year_local or ai_year} | "
+                    f"series={is_series_final} | OTT from Gemini={ai_ott or 'none'}")
+    else:
+        logger.info(f"[GEMINI] No usable Gemini answer -> falling back to local title '{title}' ({year_local or 'no year'})")
     return {
         "title": title,
         "year": year_local or ai_year,     # the year written on the file wins over the AI's guess
@@ -748,48 +771,85 @@ def canonicalize_ott(item) -> Optional[str]:
     return None
 
 
-async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str, ai_ott: list = None) -> str:
-    platforms = set()
+async def fetch_online_ott(imdb_details: dict, tmdb_details: dict, filename: str, caption: str,
+                           ai_ott: list = None, trace: list = None) -> str:
+    """Combine EVERY platform found by Gemini, TMDb providers, IMDb and filename tags -> 'A | B | C'."""
+    ordered = []                       # keeps priority order, no duplicates
+    trace = trace if trace is not None else []
 
-    for item in (ai_ott or []):                                   # 1) Gemini
-        if (p := canonicalize_ott(item)):
-            platforms.add(p)
+    def add(plat, source):
+        if plat and plat not in ordered:
+            ordered.append(plat)
+        if source not in trace:
+            trace.append(source)
 
+    # 1) Gemini
+    g = [p for p in (canonicalize_ott(i) for i in (ai_ott or [])) if p]
+    if g:
+        for p in g: add(p, "Gemini")
+        logger.info(f"[OTT] Step 1/4 Gemini: [SUCCESS] {' | '.join(g)}")
+    else:
+        logger.info("[OTT] Step 1/4 Gemini: [FAILED/FALLBACK] no platform returned")
+
+    # 2) TMDb watch providers (India, streaming)
     tmdb_id = tmdb_details.get("id") if isinstance(tmdb_details, dict) else None
-    if not platforms and tmdb_id and TMDB_API_KEY:                # 2) TMDb watch providers (streaming only)
+    t_found = []
+    if tmdb_id and TMDB_API_KEY:
         media_type = "tv" if (tmdb_details.get("first_air_date") or tmdb_details.get("name")) else "movie"
         try:
             url = f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/watch/providers?api_key={TMDB_API_KEY}"
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
                 async with session.get(url) as resp:
                     if resp.status == 200:
-                        results = (await resp.json()).get("results", {})
-                        reg = results.get("IN") or {}
+                        reg = (await resp.json()).get("results", {}).get("IN") or {}
                         for p in reg.get("flatrate", []):
-                            if (plat := canonicalize_ott(p.get("provider_name", ""))):
-                                platforms.add(plat)
-        except Exception:
-            pass
+                            plat = canonicalize_ott(p.get("provider_name", ""))
+                            if plat and plat not in t_found:
+                                t_found.append(plat)
+        except Exception as e:
+            logger.info(f"[OTT] TMDb provider request error: {e}")
+    if t_found:
+        for p in t_found: add(p, "TMDb")
+        logger.info(f"[OTT] Step 2/4 TMDb providers: [SUCCESS] {' | '.join(t_found)}")
+    else:
+        logger.info("[OTT] Step 2/4 TMDb providers: [FAILED/FALLBACK] none listed for India")
 
-    if not platforms and isinstance(imdb_details, dict) and imdb_details:   # 3) IMDb
-        raw_ott = f"{imdb_details.get('distributors', '')} {imdb_details.get('ott', '')}".lower()
-        for key, plat in OTT_PLATFORMS.items():
-            if re.search(rf"\b{re.escape(key)}\b", raw_ott):
-                platforms.add(plat)
+    # 3) IMDb scraper
+    i_found = []
+    if isinstance(imdb_details, dict) and imdb_details:
+        raw = imdb_details.get("distributors", "")
+        raw = " , ".join(raw) if isinstance(raw, (list, tuple)) else str(raw or "")
+        raw_ott = f"{raw} , {imdb_details.get('ott', '')}"
+        for chunk in re.split(r"[,;|/\n]", raw_ott):          # "Sun NXT", "Amazon Prime Video" ... one name per chunk
+            plat = canonicalize_ott(chunk)
+            if plat and plat not in i_found:
+                i_found.append(plat)
+    if i_found:
+        for p in i_found: add(p, "IMDb")
+        logger.info(f"[OTT] Step 3/4 IMDb: [SUCCESS] {' | '.join(i_found)}")
+    else:
+        logger.info("[OTT] Step 3/4 IMDb: [FAILED/FALLBACK] no platform data")
 
-    if not platforms:                                              # 4) tags in filename/caption
-        text = f"{filename} {caption}".lower()
-        for key, plat in OTT_PLATFORMS.items():
-            if re.search(rf"\b{re.escape(key)}\b", text):
-                platforms.add(plat)
+    # 4) filename / caption tags (AMZN, NF, DSNP, ZEE5 ...)
+    text = f"{filename} {caption}".lower()
+    f_found = []
+    for key, plat in OTT_PLATFORMS.items():
+        if re.search(rf"\b{re.escape(key)}\b", text) and plat not in f_found:
+            f_found.append(plat)
+    if f_found:
+        for p in f_found: add(p, "Filename tag")
+        logger.info(f"[OTT] Step 4/4 Filename/caption tags: [SUCCESS] {' | '.join(f_found)}")
+    else:
+        logger.info("[OTT] Step 4/4 Filename/caption tags: [FAILED/FALLBACK] no tag found")
 
-    if "Disney+ Hotstar" in platforms:
-        platforms.discard("Disney+")
-    if "JioHotstar" in platforms:
-        platforms.discard("Disney+ Hotstar"); platforms.discard("Disney+")
-    if "HBO Max" in platforms:
-        platforms.discard("Max")
-    return " | ".join(sorted(platforms)) if platforms else "N/A"
+    # same service under two names -> keep one
+    if "JioHotstar" in ordered:
+        ordered = [p for p in ordered if p not in ("Disney+ Hotstar", "Disney+")]
+    elif "Disney+ Hotstar" in ordered:
+        ordered = [p for p in ordered if p != "Disney+"]
+    if "HBO Max" in ordered:
+        ordered = [p for p in ordered if p != "Max"]
+    return " | ".join(ordered) if ordered else "N/A"
 
 
 def format_runtime(runtime_val, is_series: bool = False) -> str:
@@ -1125,105 +1185,241 @@ def _valid_rating(r) -> Optional[str]:
     return f"{v:.1f}" if 0 < v <= 10 else None
 
 
+def _to_minutes(v) -> Optional[int]:
+    if v is None:
+        return None
+    if isinstance(v, (list, tuple)):
+        nums = [n for n in (_to_minutes(x) for x in v) if n]
+        return round(sum(nums) / len(nums)) if nums else None
+    sv = str(v).strip()
+    if not sv or sv.upper() in ("N/A", "NONE", "0", "-"):
+        return None
+    c = re.match(r"^(\d{1,2}):(\d{2})", sv)
+    if c:
+        return int(c.group(1)) * 60 + int(c.group(2))
+    h, m = re.search(r"(\d+)\s*h", sv, re.I), re.search(r"(\d+)\s*m", sv, re.I)
+    if h or m:
+        return (int(h.group(1)) if h else 0) * 60 + (int(m.group(1)) if m else 0)
+    n = re.search(r"\d+", sv)
+    return int(n.group(0)) if n else None
+
+
+def _mlog(step: int, name: str, ok: bool, detail: str):
+    logger.info(f"[METADATA] Step {step}/4 {name}: {'[SUCCESS]' if ok else '[FAILED/FALLBACK]'} {detail}")
+
+
+def _plog(step: int, name: str, ok: bool, detail: str):
+    logger.info(f"[POSTER] Step {step}/5 {name}: {'[SUCCESS]' if ok else '[FAILED/FALLBACK]'} {detail}")
+
+
 async def collect_metadata(identity: dict, filename: str, caption: str, file_runtime: str) -> dict:
     """
-    Genre / Rating / IMDb URL :  HDHub4u -> TMDb -> IMDb scraper -> OMDb -> N/A
-    Poster                    :  Blogger -> TMDb -> IMDb scraper -> OMDb -> none (text-only post)
-    OTT                       :  Gemini  -> TMDb providers -> IMDb scraper -> filename regex
+    Genre / Rating / IMDb URL :  HDHub4u -> TMDb -> IMDb -> OMDb -> N/A
+    Poster   :  Blogger -> TMDb -> IMDb scraper -> OMDb -> text-only (never a logo)
+    OTT      :  Gemini + TMDb providers + IMDb + filename tags, ALL combined
+    Runtime  :  TMDb -> IMDb -> OMDb -> Telegram file
     """
     title, year, is_series = identity["title"], identity.get("year"), identity["is_series"]
+    logger.info(f"[METADATA] Looking up '{title}' ({year or 'year unknown'}) as a {'web series' if is_series else 'movie'}")
 
-    # ---------- 1) HDHub4u (first priority) ----------
-    hd_genres, hd_rating, hd_url, hd_verified = [], None, "", {}
+    # ---------- Step 1: HDHub4u ----------
+    hd_genres, hd_rating, hd_url, hd_verified, hd_why = [], None, "", {}, "page not found / nothing extracted"
     try:
         g, r, u, _ = await get_hdhub4u_data(title)
     except Exception as e:
         logger.warning(f"[HDHUB] scrape failed: {e}")
-        g, r, u = "N/A", "N/A", ""
+        g, r, u, hd_why = "N/A", "N/A", "", f"scraper error ({type(e).__name__})"
     trusted = True
     tt = re.search(r"tt\d+", u or "")
-    if tt:   # the scraped IMDb id must resolve to the SAME title/year, otherwise the page was the wrong one
+    if tt:   # scraped IMDb id must resolve to the SAME title/year, otherwise HDHub gave us the wrong page
         hd_verified = await fetch_tmdb_by_imdb_id(tt.group(0), title, is_series, year) or {}
         trusted = bool(hd_verified)
         if not trusted:
-            logger.warning(f"[HDHUB] Ignoring HDHub data for '{title}': IMDb id {tt.group(0)} did not validate")
+            hd_why = f"IMDb id {tt.group(0)} did not match '{title}' (wrong page, e.g. a talk-show) - ignored"
     if trusted:
         hd_genres, hd_rating, hd_url = clean_genres(g), _valid_rating(r), (u or "")
+    if hd_genres or hd_rating or hd_url:
+        _mlog(1, "HDHub4u", True, f"genres={', '.join(hd_genres) or 'none'} | rating={hd_rating or 'none'} | imdb_url={hd_url or 'none'}")
+    else:
+        _mlog(1, "HDHub4u", False, hd_why)
 
-    # ---------- 2) TMDb + 3) IMDb scraper (parallel) ----------
-    tmdb_details, imdb_details = await asyncio.gather(
+    # ---------- Steps 2 & 3: TMDb + IMDb scraper (parallel) ----------
+    tmdb_res, imdb_res = await asyncio.gather(
         fetch_tmdb_safely(title, is_series, year), fetch_imdb_safely(title, is_series, year), return_exceptions=True)
-    tmdb_details = tmdb_details if isinstance(tmdb_details, dict) and tmdb_details else (hd_verified or {})
-    imdb_details = imdb_details if isinstance(imdb_details, dict) else {}
+    tmdb_details = tmdb_res if isinstance(tmdb_res, dict) and tmdb_res else {}
+    tmdb_from_hd = False
+    if not tmdb_details and hd_verified:
+        tmdb_details, tmdb_from_hd = hd_verified, True
+    imdb_details = imdb_res if isinstance(imdb_res, dict) else {}
+    if tmdb_details:
+        _mlog(2, "TMDb", True, f"matched '{_result_title(tmdb_details)}' | genres={tmdb_details.get('genres') or 'none'} | rating={tmdb_details.get('rating') or 'none'}"
+                               + (" (found through HDHub's verified IMDb id)" if tmdb_from_hd else ""))
+    else:
+        _mlog(2, "TMDb", False, "no validated match (title/year/genre check failed or no result)")
+    if imdb_details:
+        _mlog(3, "IMDb", True, f"matched '{_result_title(imdb_details)}' | genres={imdb_details.get('genres') or 'none'} | rating={imdb_details.get('rating') or 'none'}")
+    else:
+        _mlog(3, "IMDb", False, "no validated match")
 
     known_id = (tt.group(0) if (tt and trusted) else None) or imdb_details.get("imdb_id") or tmdb_details.get("imdb_id")
     omdb_box = {}
 
-    async def omdb():           # lazy, at most one OMDb request per file
+    async def omdb():           # lazy: at most one OMDb request per file
         if "v" not in omdb_box:
             omdb_box["v"] = await fetch_omdb(title, year, is_series, known_id)
         return omdb_box["v"]
 
     # ---------- genres ----------
-    genres_list = hd_genres or clean_genres(tmdb_details.get("genres")) or clean_genres(imdb_details.get("genres"))
+    genres_list, genre_src = [], "N/A"
+    for src, val in (("HDHub4u", hd_genres), ("TMDb", clean_genres(tmdb_details.get("genres"))), ("IMDb", clean_genres(imdb_details.get("genres")))):
+        if val:
+            genres_list, genre_src = val, src
+            break
     if not genres_list:
-        genres_list = clean_genres((await omdb()).get("genres"))
+        og = clean_genres((await omdb()).get("genres"))
+        if og:
+            genres_list, genre_src = og, "OMDb"
 
     # ---------- rating ----------
-    rating = hd_rating or _valid_rating(tmdb_details.get("rating")) or _valid_rating(imdb_details.get("rating"))
+    rating, rating_src = None, "N/A"
+    for src, val in (("HDHub4u", hd_rating), ("TMDb", _valid_rating(tmdb_details.get("rating"))), ("IMDb", _valid_rating(imdb_details.get("rating")))):
+        if val:
+            rating, rating_src = val, src
+            break
     if not rating:
-        rating = _valid_rating((await omdb()).get("rating"))
+        ov = _valid_rating((await omdb()).get("rating"))
+        if ov:
+            rating, rating_src = ov, "OMDb"
 
     # ---------- IMDb url ----------
     def _imdb_link(i):
         return f"https://www.imdb.com/title/{i}/" if i and str(i).startswith("tt") else ""
-    imdb_url = hd_url.strip() if hd_url else ""
+    imdb_url, url_src = "", "N/A"
+    for src, val in (("HDHub4u", (hd_url or "").strip()), ("TMDb", _imdb_link(tmdb_details.get("imdb_id"))),
+                     ("TMDb page", f"https://www.themoviedb.org/{'tv' if is_series else 'movie'}/{tmdb_details['id']}" if tmdb_details.get("id") else ""),
+                     ("IMDb", _imdb_link(imdb_details.get("imdb_id")))):
+        if val:
+            imdb_url, url_src = val, src
+            break
     if not imdb_url:
-        imdb_url = _imdb_link(tmdb_details.get("imdb_id"))
-    if not imdb_url and tmdb_details.get("id"):
-        imdb_url = f"https://www.themoviedb.org/{'tv' if is_series else 'movie'}/{tmdb_details['id']}"
-    if not imdb_url:
-        imdb_url = _imdb_link(imdb_details.get("imdb_id"))
-    if not imdb_url:
-        imdb_url = _imdb_link((await omdb()).get("imdb_id"))
+        ou = _imdb_link((await omdb()).get("imdb_id"))
+        if ou:
+            imdb_url, url_src = ou, "OMDb"
 
-    # ---------- OTT (Gemini -> TMDb providers -> IMDb -> filename regex) ----------
-    ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption, identity.get("ott"))
+    # ---------- OTT (all sources combined) ----------
+    ott_trace = []
+    ott_platform = await fetch_online_ott(imdb_details, tmdb_details, filename, caption, identity.get("ott"), ott_trace)
 
-    # ---------- poster: Blogger -> TMDb -> IMDb -> OMDb -> none ----------
-    poster_url, is_backdrop = "", False
-    blogger = await get_blogger_poster_url(title, year)
+    # ---------- Poster: Blogger -> TMDb -> IMDb scraper -> OMDb -> text-only ----------
+    poster_url, is_backdrop, poster_src = "", False, "none (text-only post)"
+    try:
+        blogger = await get_blogger_poster_url(title, year)
+    except Exception as e:
+        blogger = None
+        logger.warning(f"[POSTER] Blogger error: {e}")
     if blogger:
-        poster_url, is_backdrop = blogger, True
-    if not poster_url and tmdb_details.get("backdrop_url"):
-        poster_url, is_backdrop = tmdb_details["backdrop_url"], True
-    if not poster_url:
-        forced = await search_tmdb_backdrop_force(title, year, is_series)
-        if forced:
-            poster_url, is_backdrop = forced, True
-    if not poster_url and tmdb_details.get("poster_url"):
-        poster_url, is_backdrop = tmdb_details["poster_url"], False
-    if not poster_url and imdb_details.get("poster_url"):
-        poster_url, is_backdrop = imdb_details["poster_url"], False
-    if not poster_url and imdb_details.get("backdrop_url"):
-        poster_url, is_backdrop = imdb_details["backdrop_url"], True
-    if not poster_url:
-        poster_url, is_backdrop = (await omdb()).get("poster_url") or "", False
-    if poster_url and not str(poster_url).startswith("http"):
-        poster_url = ""         # => text-only post, never a placeholder/logo
-
-    # ---------- runtime ----------
-    imdb_r = imdb_details.get("runtime")
-    tmdb_r = tmdb_details.get("episode_run_time") if is_series and tmdb_details.get("episode_run_time") else tmdb_details.get("runtime")
-    if isinstance(imdb_r, (list, tuple)) and imdb_r: imdb_r = imdb_r[0]
-    if isinstance(tmdb_r, (list, tuple)) and tmdb_r: tmdb_r = tmdb_r[0]
-    ok = lambda v: v and str(v).strip().upper() not in ("N/A", "0", "NONE")
-    if not ok(imdb_r) and not ok(tmdb_r) and omdb_box.get("v"):
-        imdb_r = omdb_box["v"].get("runtime")
-    if is_series:
-        runtime = str(tmdb_r).strip() if ok(tmdb_r) else (file_runtime if file_runtime != "N/A" else (str(imdb_r) if ok(imdb_r) else "N/A"))
+        poster_url, is_backdrop, poster_src = blogger, True, "Blogger (RPEditz)"
+        _plog(1, "Blogger (RPEditz)", True, f"custom poster found -> {blogger}")
     else:
-        runtime = str(imdb_r).strip() if ok(imdb_r) else (str(tmdb_r).strip() if ok(tmdb_r) else file_runtime)
+        _plog(1, "Blogger (RPEditz)", False, "no custom poster post found for this title")
+
+    if not poster_url:
+        if tmdb_details.get("backdrop_url"):
+            poster_url, is_backdrop, poster_src = tmdb_details["backdrop_url"], True, "TMDb backdrop"
+        else:
+            forced = await search_tmdb_backdrop_force(title, year, is_series)
+            if forced:
+                poster_url, is_backdrop, poster_src = forced, True, "TMDb backdrop (search)"
+            elif tmdb_details.get("poster_url"):
+                poster_url, is_backdrop, poster_src = tmdb_details["poster_url"], False, "TMDb poster"
+        _plog(2, "TMDb", bool(poster_url),
+              f"{poster_src} -> {poster_url}" if poster_url else ("no backdrop or poster available" if tmdb_details else "no validated TMDb match to take an image from"))
+    else:
+        logger.info("[POSTER] Step 2/5 TMDb: [SKIPPED] not needed, Blogger poster already found")
+
+    if not poster_url:
+        if imdb_details.get("poster_url"):
+            poster_url, is_backdrop, poster_src = imdb_details["poster_url"], False, "IMDb scraper poster"
+        elif imdb_details.get("backdrop_url"):
+            poster_url, is_backdrop, poster_src = imdb_details["backdrop_url"], True, "IMDb scraper backdrop"
+        _plog(3, "IMDb scraper", bool(poster_url),
+              f"{poster_src} -> {poster_url}" if poster_url else ("matched title but it has no image" if imdb_details else "no validated IMDb match"))
+    else:
+        logger.info("[POSTER] Step 3/5 IMDb scraper: [SKIPPED] not needed, poster already found")
+
+    if not poster_url:
+        op = (await omdb()).get("poster_url") or ""
+        if op:
+            poster_url, is_backdrop, poster_src = op, False, "OMDb"
+        _plog(4, "OMDb", bool(op), f"Poster field -> {op}" if op else ("OMDb has no Poster for this title" if OMDB_API_KEY else "OMDB_API_KEY is not set"))
+    else:
+        logger.info("[POSTER] Step 4/5 OMDb: [SKIPPED] not needed, poster already found")
+
+    if poster_url and not str(poster_url).startswith("http"):
+        logger.info(f"[POSTER] Discarded invalid poster value '{poster_url}' (not an http URL)")
+        poster_url, is_backdrop, poster_src = "", False, "none (text-only post)"
+    if not poster_url:
+        _plog(5, "Text-only fallback", True, "no poster in any source -> a clean text message will be sent (no logo / no banner)")
+
+    if "v" in omdb_box:
+        _mlog(4, "OMDb", bool(omdb_box["v"]),
+              f"matched '{omdb_box['v'].get('title')}' (used only to fill gaps)" if omdb_box["v"] else "no validated match, or OMDB_API_KEY missing")
+    else:
+        logger.info("[METADATA] Step 4/4 OMDb: [SKIPPED] not needed, earlier sources filled everything")
+
+    # ---------- Runtime: TMDb -> IMDb -> OMDb -> Telegram file ----------
+    def _rlog(step, name, ok, detail):
+        logger.info(f"[RUNTIME] Step {step}/4 {name}: {'[SUCCESS]' if ok else '[FAILED/FALLBACK]'} {detail}")
+
+    runtime_min, runtime_src = None, "N/A"
+    tmdb_is_ep = bool(is_series and tmdb_details.get("episode_run_time"))
+    tmdb_label = "TMDb episode runtime" if tmdb_is_ep else "TMDb"
+    mins = _to_minutes(tmdb_details.get("episode_run_time") if tmdb_is_ep else tmdb_details.get("runtime"))
+    if mins:
+        runtime_min, runtime_src = mins, tmdb_label
+        _rlog(1, tmdb_label, True, f"{mins} min")
+    else:
+        _rlog(1, "TMDb", False, "TMDb returned no runtime" if tmdb_details else "no validated TMDb match")
+
+    if not runtime_min:
+        mins = _to_minutes(imdb_details.get("runtime"))
+        if mins:
+            runtime_min, runtime_src = mins, "IMDb"
+            _rlog(2, "IMDb", True, f"{mins} min")
+        else:
+            _rlog(2, "IMDb", False, "IMDb returned no runtime" if imdb_details else "no validated IMDb match")
+    else:
+        logger.info("[RUNTIME] Step 2/4 IMDb: [SKIPPED] not needed")
+
+    if not runtime_min:
+        mins = _to_minutes((await omdb()).get("runtime")) if (OMDB_API_KEY or omdb_box.get("v")) else None
+        if mins:
+            runtime_min, runtime_src = mins, "OMDb"
+            _rlog(3, "OMDb", True, f"{mins} min")
+        else:
+            _rlog(3, "OMDb", False, "OMDb returned no runtime" if OMDB_API_KEY else "OMDB_API_KEY is not set")
+    else:
+        logger.info("[RUNTIME] Step 3/4 OMDb: [SKIPPED] not needed")
+
+    if not runtime_min:
+        mins = _to_minutes(file_runtime)
+        if mins:
+            runtime_min, runtime_src = mins, "Telegram file duration"
+            _rlog(4, "Telegram file duration", True, f"{mins} min")
+        else:
+            _rlog(4, "Telegram file duration", False, "Telegram gave no duration for this file")
+    else:
+        logger.info("[RUNTIME] Step 4/4 Telegram file duration: [SKIPPED] not needed")
+
+    runtime = str(runtime_min) if runtime_min else "N/A"
+    logger.info(f"[RUNTIME] Final duration: {runtime + ' minutes' if runtime_min else 'N/A'} (source: {runtime_src})"
+                + (" - for series, the post shows the AVERAGE of all uploaded episodes once their lengths differ" if is_series else ""))
+
+    ott_src_str = " + ".join(ott_trace) if ott_trace else "none"
+    logger.info(f"[FINAL] Title: '{title}' | Poster Source: {poster_src} | Genre Source: {genre_src} | "
+                f"Rating Source: {rating_src} | Runtime Source: {runtime_src} ({runtime} min) | OTT Source(s): {ott_src_str}")
+    logger.info(f"[FINAL] Values: genres={', '.join(genres_list) or 'N/A'} | rating={rating or 'N/A'} | "
+                f"IMDb URL source={url_src} | OTT={ott_platform}")
 
     return {
         "found": bool(imdb_details or tmdb_details or hd_genres or rating),
@@ -1423,10 +1619,13 @@ async def _process_file(bot, filename, caption, file_runtime_mins=None):
 
     ctx = {"filename": filename, "filename_clean": filename_clean, "caption": caption, "duration": file_runtime_mins,
            "title_local": title_local, "year_local": year_local, "season": season, "runtime": runtime}
-    logger.info(f"[LOCAL PARSE] '{filename}' -> title='{title_local}' year={year_local} S={season} E={episode} key='{local_key}'")
+    logger.info(f"[FILE] Received '{filename}' -> local parse: title='{title_local}', year={year_local or 'none'}, "
+                f"season={season}, episode={episode}, quality={quality}, language={language}, runtime={runtime} min")
 
     # 1) DB FIRST: if the post already exists, skip Gemini + scrapers entirely
     cached = await find_cached_doc(movies, [local_key], [local_name], year_local, local_is_series)
+    logger.info(f"[DB] Step 1 - looked up '{local_key}' in the database: "
+                + (f"FOUND existing post '{cached['_id']}' -> skipping Gemini and scrapers" if cached else "not found -> will ask Gemini for the official title"))
     if cached:
         await _append_file(bot, movies, cached, make_file_data(cached.get("tag") == "#SERIES" or local_is_series), local_key, ctx)
         return
@@ -1436,12 +1635,15 @@ async def _process_file(bot, filename, caption, file_runtime_mins=None):
     is_series = identity["is_series"]
     base_name = build_base_name(identity["title"], identity["year"], is_series, season)
     final_key = canon_key(identity["title"], season)
-    logger.info(f"[IDENTIFIED] base='{base_name}' key='{final_key}' series={is_series} ott={identity['ott']}")
+    logger.info(f"[IDENTIFIED] Official title='{identity['title']}' year={identity['year'] or 'unknown'} "
+                f"type={'series' if is_series else 'movie'} -> post name '{base_name}' (key '{final_key}')")
 
     # 3) Gemini may have corrected the title -> check DB again under the final key
     if final_key != local_key:
         cached = await find_cached_doc(movies, [final_key], [base_name], identity["year"], is_series,
                                        titles=[identity["title"]])
+        logger.info(f"[DB] Step 2 - re-checked database with Gemini's clean title '{final_key}': "
+                    + (f"FOUND '{cached['_id']}' -> merging, no new post" if cached else "still not found -> creating a new post"))
         if cached:
             await _append_file(bot, movies, cached, make_file_data(is_series), local_key, ctx)
             return
@@ -1507,6 +1709,7 @@ async def send_movie_update(bot, base_name):
                     msg = await bot.send_message(chat_id=MOVIE_UPDATE_CHANNEL, text=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
 
                 await db.movie_updates.update_one({"_id": base_name}, {"$set": {"message_id": msg.id, "is_photo": is_photo}})
+                logger.info(f"[POST] Published '{base_name}' as a {'photo' if is_photo else 'TEXT-ONLY'} post (message id {msg.id})")
                 return msg
             except FloodWait as e:
                 await asyncio.sleep(e.value + 2)
@@ -1518,12 +1721,25 @@ async def send_movie_update(bot, base_name):
         sending_updates.discard(base_name)
 
 
+def _safe_bot_username() -> str:
+    """temp.U_NAME can be None in Multi-Client mode and may contain '@' -> both produce BUTTON_URL_INVALID."""
+    uname = (getattr(temp, "U_NAME", None) or BOT_USERNAME_FALLBACK)
+    uname = str(uname).strip().lstrip("@").strip()      # strip spaces BEFORE and after removing "@"
+    if not uname or uname.lower() == "none":
+        uname = BOT_USERNAME_FALLBACK
+    return uname
+
+
 def _build_buttons(movie_doc, base_name):
     btn_style = enums.ButtonStyle.SUCCESS if movie_doc.get("tag", "#MOVIE") == "#SERIES" else enums.ButtonStyle.PRIMARY
     match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
     btn_q = f"{match.group(1).strip()}-S{int(match.group(2)):02d}" if match else base_name
-    return InlineKeyboardMarkup([[InlineKeyboardButton(
-        "ɢᴇᴛ ғɪʟᴇs", url=f"https://t.me/{temp.U_NAME}?start=getfile-{btn_q.replace(' ', '-')}", style=btn_style)]])
+    # Telegram deep-link payload: only A-Z a-z 0-9 _ - and max 64 chars ("getfile-" already uses 8)
+    clean_query = re.sub(r"[^A-Za-z0-9_\-]+", "-", btn_q.replace(" ", "-"))
+    clean_query = re.sub(r"-{2,}", "-", clean_query).strip("-")[:56].rstrip("-") or "movie"
+    uname = _safe_bot_username()
+    url = f"https://t.me/{uname}?start=getfile-{clean_query}"
+    return InlineKeyboardMarkup([[InlineKeyboardButton("ɢᴇᴛ ғɪʟᴇs", url=url, style=btn_style)]])
 
 
 async def update_movie_message(bot, base_name):
@@ -1622,6 +1838,17 @@ def generate_movie_message(movie_doc, base_name):
     clean_rating = _valid_rating(raw_rating) or "N/A"
 
     raw_runtime = movie_doc.get("runtime", "N/A")
+    if is_series:
+        per_episode = defaultdict(list)
+        for file in movie_doc.get("files", []):
+            rt = file.get("runtime")
+            if rt and str(rt).isdigit() and int(rt) > 0:
+                per_episode[(file.get("season"), file.get("episode"))].append(int(rt))
+        ep_means = [sum(v) / len(v) for v in per_episode.values()]
+        if len(ep_means) >= 2 and (max(ep_means) - min(ep_means)) >= 1:     # durations vary -> show the average
+            raw_runtime = str(round(sum(ep_means) / len(ep_means)))
+            logger.info(f"[RUNTIME] '{base_name}': episode lengths differ -> showing the calculated average of "
+                        f"{len(ep_means)} uploaded episodes = {raw_runtime} minutes")
     if not raw_runtime or str(raw_runtime).strip().upper() in ("N/A", "NONE", "0", "-"):
         if is_series and valid_file_runtimes:
             raw_runtime = f"{round(sum(valid_file_runtimes) / len(valid_file_runtimes))}"
