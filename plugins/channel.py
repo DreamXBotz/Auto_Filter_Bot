@@ -194,7 +194,7 @@ _CUT_RE = re.compile(
     r"\b(?:2160p|1440p|1080p|720p|540p|480p|360p|240p|4k|uhd|web ?dl|webrip|blu ?ray|brrip|bdrip|"
     r"hdrip|hdtv|hdcam|hd ?cam|hdtc|hd ?tc|hdts|camrip|dvdrip|dvdscr|predvd|tele ?sync|remux|"
     r"x ?26[45]|h ?26[45]|hevc|10 ?bit|ddp? ?\d|aac|ac3|eac3|atmos|hdr10|dovi|"
-    r"dual audio|multi audio|org audio|line audio|"
+    r"dual audio|multi audio|org audio|line audio|combined|"
     r"e ?su(?:bs?)?|m ?su(?:bs?)?|esb|msb|"
     r"s\d{1,2} ?e\d{1,3}|s\d{1,2}|season ?\d+|ep(?:isode)? ?\d+|e\d{2,3}|\d{1,2}x\d{1,3})\b",
     re.IGNORECASE,
@@ -203,7 +203,7 @@ SUB_TAG_REGEX = re.compile(
     r"\b(?:e ?su(?:bs?)?|m ?su(?:bs?)?|esb|msb|hc ?subs?|eng ?subs?|multi ?subs?|subbed|subs?)\b",
     re.IGNORECASE,
 )
-_HEAD_JUNK = {"mkv", "mp4", "avi", "mov", "webm", "hq", "fhd", "ott", "dubbed", "dub",
+_HEAD_JUNK = {"combined", "mkv", "mp4", "avi", "mov", "webm", "hq", "fhd", "ott", "dubbed", "dub",
               "hdrip", "proper", "repack", "uncut", "unrated", "extended"}
 _IGNORE_LOWER = {w.lower() for w in IGNORE_WORDS}
 
@@ -245,6 +245,29 @@ def canon_key(title: str, season=None) -> str:
 
 def get_clean_title(name: str) -> str:   # backwards-compat helper
     return canon_key(name)
+
+
+def _parse_ott_list(val) -> list:
+    """Gemini may answer ["Netflix","Zee5"], "Netflix, Zee5", "Netflix | Zee5" or [{"name": "Netflix"}]."""
+    out = []
+
+    def walk(v):
+        if v is None:
+            return
+        if isinstance(v, str):
+            if v.strip(" []'\"").lower() in ("", "none", "n/a", "null", "unknown", "na", "-"):
+                return
+            for part in re.split(r"\s*[|,;]\s*|\s+and\s+|\s*&\s*", v):
+                part = part.strip(" []'\"")
+                if part and part.lower() not in ("none", "n/a", "null", "unknown", "na"):
+                    out.append(part)
+        elif isinstance(v, (list, tuple, set)):
+            for x in v:
+                walk(x)
+        elif isinstance(v, dict):
+            walk(v.get("name") or v.get("platform") or v.get("provider"))
+    walk(val)
+    return list(dict.fromkeys(out))
 
 
 SERIES_SUFFIX_RE = re.compile(
@@ -645,7 +668,7 @@ async def resolve_identity(filename_clean, caption, duration_mins, title_local, 
     ai_series = ai.get("is_series")
     if isinstance(ai_series, str):
         ai_series = ai_series.strip().lower() == "true"
-    ai_ott = ai.get("ott") if isinstance(ai.get("ott"), list) else ([ai["ott"]] if isinstance(ai.get("ott"), str) else [])
+    ai_ott = _parse_ott_list(ai.get("ott"))
 
     is_series_final = bool(local_season is not None or ai_series)
     if ai:
@@ -940,20 +963,26 @@ async def fetch_tmdb_safely(title: str, is_series: bool, year: Optional[str] = N
     return {}
 
 
-async def fetch_tmdb_by_imdb_id(imdb_id: str, title: str, is_series: bool, year: Optional[str]) -> dict:
-    """Only used when title search found nothing. The result is VALIDATED, so a wrong
-    scraped IMDb id (e.g. a talk-show/interview) can never poison the post."""
-    if not TMDB_POSTER or not imdb_id:
-        return {}
+async def verify_hdhub_imdb_id(imdb_id: str, title: str, is_series: bool, year: Optional[str]) -> Tuple[str, dict]:
+    """Checks the IMDb id scraped from HDHub. Returns ('ok', details) | ('rejected', {}) | ('unknown', {}).
+    'rejected' = the id belongs to a DIFFERENT title (talk-show, interview...). 'unknown' = no service could say."""
     clean_t = re.sub(r"\s+Season\s*\d+", "", title, flags=re.IGNORECASE).strip()
-    try:
-        res = await get_movie_detailsx(imdb_id, **_kwargs_for(get_movie_detailsx, is_series))
-        if accept_result(res, clean_t, year, is_series):
-            return res
-        logger.warning(f"[META] Rejected scraped IMDb id {imdb_id}: '{_result_title(res or {})}' != '{title}'")
-    except Exception:
-        pass
-    return {}
+    if TMDB_POSTER:
+        try:
+            res = await get_movie_detailsx(imdb_id, **_kwargs_for(get_movie_detailsx, is_series))
+        except Exception:
+            res = None
+        if isinstance(res, dict) and _result_title(res):
+            if accept_result(res, clean_t, year, is_series):
+                return "ok", res
+            logger.warning(f"[META] HDHub IMDb id {imdb_id} belongs to '{_result_title(res)}', not '{title}'")
+            return "rejected", {}
+    if OMDB_API_KEY:
+        o = await fetch_omdb(title, year, is_series, imdb_id)
+        if o:
+            return "ok", {}
+    return "unknown", {}
+
 
 async def search_tmdb_backdrop_force(title: str, year: Optional[str] = None, is_series: bool = False) -> Optional[str]:
     try:
@@ -1014,6 +1043,72 @@ async def get_blogger_poster_url(base_name: str, year: Optional[str] = None) -> 
         pass
     return None
 
+# ---- HDHub4u result matching helpers (private to get_hdhub4u_data; is_good_title_match is untouched) ----
+_HDHUB_JUNK_RE = re.compile(
+    r"\b(?:download(?:ing)?|watch(?:ing)?|online|free|full\s*movie|full\s*hd|full|web\s*series|complete|all\s*episodes?|"
+    r"episodes?|ep\s*\d+|seasons?\s*\d*|s\d{1,2}(?:\s*e\d{1,3})?|e\d{1,3}|"
+    r"\d{3,4}p|4k|uhd|hevc|x\s*26[45]|h\s*26[45]|10\s*bit|\d+(?:\.\d+)?\s*(?:mb|gb)|"
+    r"web\s*dl|web\s*rip|hd\s*rip|blu\s*ray|br\s*rip|bd\s*rip|dvd\s*rip|dvdscr|hdtv|hdcam|hd\s*tc|hdts|cam\s*rip|pre\s*dvd|"
+    r"e\s*subs?|m\s*subs?|subs?|subbed|dual\s*audio|multi\s*audio|org(?:inal)?\s*audio|dubbed|dub|"
+    r"hindi|tamil|telugu|malayalam|kannada|bengali|bangla|punjabi|marathi|gujarati|english|korean|japanese|urdu|bhojpuri|"
+    r"uncut|unrated|extended|imax|remastered|proper|hq|hd|bollywood|hollywood|south|"
+    r"netflix|amzn|nf|zee5|hotstar|jiohotstar|sonyliv|prime\s*video|hdhub4u|hdhub)\b",
+    re.IGNORECASE,
+)
+
+
+def _hdhub_clean_title(text: str) -> str:
+    """'Jawan (2023) Hindi Full Movie WEB-DL 480p 720p ESubs Download' -> 'Jawan'"""
+    t = AUDIO_CHANNELS_PATTERN.sub(" ", text or "")
+    t = re.sub(r"[\[\(\{][^\]\)\}]*[\]\)\}]", " ", t)          # (2023) [Hindi + Tamil] {1080p}
+    t = _HDHUB_JUNK_RE.sub(" ", normalize(t))
+    return normalize(t)
+
+
+def _hdhub_tokens(s: str) -> list:
+    s = normalize(YEAR_PATTERN.sub(" ", s or "")).lower()
+    return [w for w in s.split() if len(w) >= 2 or w.isdigit()]
+
+
+def _hdhub_match_score(query: str, title_text: str, href: str) -> Optional[int]:
+    """None = no match, otherwise number of extra words (0 = exact). Checks the cleaned result title AND the
+    link slug. All core query words must be present and sequel digits must agree ('Sardar' != 'Sardar 2')."""
+    q = _hdhub_tokens(_hdhub_clean_title(query)) or _hdhub_tokens(query)
+    if not q:
+        return None
+    q_digits = {w for w in q if w.isdigit()}
+    slug = re.sub(r"[-_]+", " ", (href or "").split("?")[0].rstrip("/").rsplit("/", 1)[-1])
+    best = None
+    for text in (title_text, slug):
+        f = _hdhub_tokens(_hdhub_clean_title(text))
+        if not f or not all(w in f for w in q):
+            continue
+        if {w for w in f if w.isdigit()} != q_digits:
+            continue
+        extras = len(f) - len(q)
+        if extras <= 4 and (best is None or extras < best):
+            best = extras
+    return best
+
+
+def _hdhub_browser_headers(base_url: str, referer: str, same_origin: bool = True) -> dict:
+    return {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+        "Referer": referer or base_url,
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin" if same_origin else "none",
+        "Sec-Fetch-User": "?1",
+        "Sec-Ch-Ua": '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Cache-Control": "max-age=0",
+    }
+
+
 async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
     genres, rating, info_url, is_series = "N/A", "N/A", "", False
     try:
@@ -1022,41 +1117,56 @@ async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
         search_words = [w for w in clean_query.split() if len(w) >= 2][:3]
         search_url = f"{base_url.rstrip('/')}/?s={'+'.join(search_words) if search_words else clean_query}"
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Referer": base_url
-        }
-
         timeout = aiohttp.ClientTimeout(total=7)
+        # one session for both requests so Cloudflare/site cookies from the search carry over to the movie page
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(search_url, headers=headers, allow_redirects=True) as resp:
-                if resp.status != 200: return "N/A", "N/A", "", False
+            async with session.get(search_url, headers=_hdhub_browser_headers(base_url, base_url + "/"), allow_redirects=True) as resp:
+                if resp.status != 200:
+                    logger.warning(f"[HDHUB] search returned HTTP {resp.status}")
+                    return "N/A", "N/A", "", False
                 html = await resp.text()
 
-        soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["header", "nav", "footer", "aside", "script", "style", "form"]): tag.decompose()
+            if re.search(r"just a moment|cf-browser-verification|challenge-platform|cf-chl", html[:6000], re.IGNORECASE):
+                logger.warning("[HDHUB] search returned a Cloudflare challenge page (HTTP 200 but no results) - headers alone cannot pass it")
+                return "N/A", "N/A", "", False
 
-        candidate_items = []
-        for art in soup.select("article, .post-item, .recent-movies li, .entry-title, .thumb"):
-            a_tag = art.find("a", href=True)
-            if not a_tag: continue
-            href = a_tag["href"].strip()
-            if not href or href == "#" or any(x in href for x in ["/category/", "/tag/", "/author/", "/page/"]): continue
-            if not href.startswith("http"): href = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
-            candidate_items.append((a_tag.get_text().strip(), href))
+            soup = BeautifulSoup(html, "html.parser")
+            for tag in soup(["header", "nav", "footer", "aside", "script", "style", "form"]): tag.decompose()
 
-        movie_page_url = None
-        for title_text, href in candidate_items:
-            if is_good_title_match(clean_query, title_text):
-                movie_page_url = href
-                if re.search(r'\b(?:Season\s*\d+|S\d{1,2}|Series|Episodes?)\b', title_text, re.IGNORECASE): is_series = True
-                break
+            candidate_items, seen_hrefs = [], set()
+            for art in soup.select("article, .post-item, .recent-movies li, .entry-title, .thumb"):
+                a_tag = art.find("a", href=True)
+                if not a_tag: continue
+                href = a_tag["href"].strip()
+                if not href or href == "#" or any(x in href for x in ["/category/", "/tag/", "/author/", "/page/"]): continue
+                if not href.startswith("http"): href = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
+                if href in seen_hrefs: continue
+                seen_hrefs.add(href)
+                img = a_tag.find("img") or art.find("img")
+                # the first <a> often wraps only the poster image -> fall back to title attr / img alt / whole card text
+                title_text = (a_tag.get_text(" ", strip=True) or (a_tag.get("title") or "").strip()
+                              or ((img.get("alt") or "").strip() if img else "") or art.get_text(" ", strip=True))
+                candidate_items.append((title_text, href))
 
-        if not movie_page_url: return "N/A", "N/A", "", False
+            movie_page_url, best_score, best_title = None, None, ""
+            for title_text, href in candidate_items:
+                score = _hdhub_match_score(clean_query, title_text, href)
+                if score is not None and (best_score is None or score < best_score):
+                    best_score, movie_page_url, best_title = score, href, title_text
+                    if score == 0:
+                        break
+            if movie_page_url and re.search(r'\b(?:Season\s*\d+|S\d{1,2}|Series|Episodes?)\b', best_title, re.IGNORECASE): is_series = True
 
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(movie_page_url, headers=headers, allow_redirects=True) as resp:
-                if resp.status != 200: return "N/A", "N/A", "", is_series
+            if not movie_page_url:
+                preview = " | ".join(t[:50] for t, _ in candidate_items[:3]) or "none"
+                logger.info(f"[HDHUB] search page loaded ({len(candidate_items)} results) but none matched '{clean_query}'. First results: {preview}")
+                return "N/A", "N/A", "", False
+            logger.info(f"[HDHUB] matched '{best_title[:70]}' -> {movie_page_url}")
+
+            async with session.get(movie_page_url, headers=_hdhub_browser_headers(base_url, search_url), allow_redirects=True) as resp:
+                if resp.status != 200:
+                    logger.warning(f"[HDHUB] movie page returned HTTP {resp.status} ({movie_page_url})")
+                    return "N/A", "N/A", "", is_series
                 movie_html = await resp.text()
 
         movie_soup = BeautifulSoup(movie_html, "html.parser")
@@ -1081,12 +1191,16 @@ async def get_hdhub4u_data(base_name: str) -> Tuple[str, str, str, bool]:
                     parts = [re.sub(r'\b(?:info|trailer)\b', '', p, flags=re.IGNORECASE).strip().title() for p in re.split(r'[,|/•]', g_match.group(1))]
                     valid_g = [p for p in parts if len(p) >= 2 and not any(bad in p.lower() for bad in ["dropdown", "menu", "select"])]
                     if valid_g: genres = ", ".join(valid_g)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[HDHUB] scrape error: {type(e).__name__}: {e}")
     return genres, rating, info_url, is_series
 
+
+SEASON_ONLY_REGEX = re.compile(r"(?<![A-Za-z0-9])(?:S|Season|Saison)[\s._-]*0*(\d{1,2})(?![A-Za-z0-9])", re.IGNORECASE)
+
+
 def extract_season_episode(filename: str) -> Tuple[Optional[int], Optional[str]]:
-    filename = AUDIO_CHANNELS_PATTERN.sub(" ", filename)
+    filename = AUDIO_CHANNELS_PATTERN.sub(" ", filename or "")
     if m := BONUS_RANGE_REGEX.search(filename): return int(m.group(1)), f"Bonus {int(m.group(2))}-{int(m.group(3))}"
     if m := BONUS_REGEX.search(filename): return int(m.group(1)), f"Bonus {int(m.group(2))}"
     if m := RANGE_REGEX.search(filename): return int(m.group(1)), f"{int(m.group(2))}-{int(m.group(3))}"
@@ -1102,17 +1216,39 @@ def extract_season_episode(filename: str) -> Tuple[Optional[int], Optional[str]]
     if m := EP_ONLY_RANGE.search(filename): return 1, f"{int(m.group(1))}-{int(m.group(2))}"
     if m := EP_ONLY_SINGLE.search(filename):
         if int(m.group(1)) not in (264, 265): return 1, str(int(m.group(1)))
+    # season marker but NO episode (S01 COMBiNED, Season 1 Complete, S01-S03 pack): still a series -> season only
+    if m := SEASON_ONLY_REGEX.search(filename): return int(m.group(1)), None
     return None, None
+
+_update_running: set = set()      # edits currently talking to Telegram (never cancelled mid-flight)
+_update_dirty: set = set()        # new data arrived while an edit was running -> redo once afterwards
+
 
 def schedule_update(bot, base_name, delay=6):
     """Debounced edit: a burst of uploads results in ONE edit of the existing post."""
+    if base_name in _update_running:           # in flight: do NOT cancel it, just re-run when it finishes
+        _update_dirty.add(base_name)
+        return
     old = pending_updates.pop(base_name, None)
-    if old and not old.done():
+    if old and not old.done():                 # still sleeping -> safe to replace
         old.cancel()
 
     async def _run():
         await asyncio.sleep(delay)
-        await update_movie_message(bot, base_name)
+        for _ in range(90):                    # the first post may still be uploading (flood-wait) -> wait for it
+            if base_name not in sending_updates:
+                break
+            await asyncio.sleep(1)
+        while True:
+            _update_running.add(base_name)
+            _update_dirty.discard(base_name)
+            try:
+                await update_movie_message(bot, base_name)
+            finally:
+                _update_running.discard(base_name)
+            if base_name not in _update_dirty:
+                break
+            await asyncio.sleep(1)
 
     task = asyncio.get_running_loop().create_task(_run())
     pending_updates[base_name] = task
@@ -1123,7 +1259,6 @@ def schedule_update(bot, base_name, delay=6):
         if not t.cancelled() and t.exception():
             logger.error(f"Scheduled update failed for {key}: {t.exception()}")
     task.add_done_callback(_done)
-
 
 def _strip_season_episode_tokens(name: str) -> str:
     if not name: return name
@@ -1212,15 +1347,26 @@ def _plog(step: int, name: str, ok: bool, detail: str):
     logger.info(f"[POSTER] Step {step}/5 {name}: {'[SUCCESS]' if ok else '[FAILED/FALLBACK]'} {detail}")
 
 
+SERIES_EP_MAX_MINUTES = 180      # a single episode is never this long -> longer values are combined/batch files
+
+
+def is_single_episode(season, episode) -> bool:
+    """True only for one normal episode (S01E05). Packs (S01 COMBiNED), ranges (1-8) and Bonus are NOT single."""
+    return season is not None and episode is not None and str(episode).strip().isdigit()
+
+
 async def collect_metadata(identity: dict, filename: str, caption: str, file_runtime: str) -> dict:
     """
-    Genre / Rating / IMDb URL :  HDHub4u -> TMDb -> IMDb -> OMDb -> N/A
+    Genre / Rating / IMDb URL :  HDHub4u -> IMDb scraper -> OMDb -> TMDb -> N/A
     Poster   :  Blogger -> TMDb -> IMDb scraper -> OMDb -> text-only (never a logo)
     OTT      :  Gemini + TMDb providers + IMDb + filename tags, ALL combined
-    Runtime  :  TMDb -> IMDb -> OMDb -> Telegram file
+    Runtime  :  TMDb -> IMDb -> OMDb -> (movie: Telegram file | series: average of uploaded single episodes)
     """
     title, year, is_series = identity["title"], identity.get("year"), identity["is_series"]
     logger.info(f"[METADATA] Looking up '{title}' ({year or 'year unknown'}) as a {'web series' if is_series else 'movie'}")
+
+    def _imdb_link(i):
+        return f"https://www.imdb.com/title/{i}/" if i and str(i).startswith("tt") else ""
 
     # ---------- Step 1: HDHub4u ----------
     hd_genres, hd_rating, hd_url, hd_verified, hd_why = [], None, "", {}, "page not found / nothing extracted"
@@ -1229,37 +1375,42 @@ async def collect_metadata(identity: dict, filename: str, caption: str, file_run
     except Exception as e:
         logger.warning(f"[HDHUB] scrape failed: {e}")
         g, r, u, hd_why = "N/A", "N/A", "", f"scraper error ({type(e).__name__})"
-    trusted = True
     tt = re.search(r"tt\d+", u or "")
-    if tt:   # scraped IMDb id must resolve to the SAME title/year, otherwise HDHub gave us the wrong page
-        hd_verified = await fetch_tmdb_by_imdb_id(tt.group(0), title, is_series, year) or {}
-        trusted = bool(hd_verified)
+    trusted = True
+    if tt:   # the scraped IMDb id must belong to THIS title, otherwise HDHub gave us the wrong page
+        verdict, hd_verified = await verify_hdhub_imdb_id(tt.group(0), title, is_series, year)
+        trusted = verdict != "rejected"
         if not trusted:
-            hd_why = f"IMDb id {tt.group(0)} did not match '{title}' (wrong page, e.g. a talk-show) - ignored"
+            hd_why = f"IMDb id {tt.group(0)} belongs to a different title (wrong page) - ignored"
+        elif verdict == "unknown":
+            logger.info(f"[HDHUB] IMDb id {tt.group(0)} could not be cross-checked (TMDb/OMDb had no record) - trusting the title match")
     if trusted:
-        hd_genres, hd_rating, hd_url = clean_genres(g), _valid_rating(r), (u or "")
-    if hd_genres or hd_rating or hd_url:
-        _mlog(1, "HDHub4u", True, f"genres={', '.join(hd_genres) or 'none'} | rating={hd_rating or 'none'} | imdb_url={hd_url or 'none'}")
+        hd_genres, hd_rating, hd_url = clean_genres(g), _valid_rating(r), (u or "").strip()
+
+    genres_list, genre_src, rating, rating_src, imdb_url, url_src = [], "N/A", None, "N/A", "", "N/A"
+
+    def fill(src, g_, r_, u_):
+        nonlocal genres_list, genre_src, rating, rating_src, imdb_url, url_src
+        filled = []
+        if not genres_list and g_: genres_list, genre_src = list(g_), src; filled.append("genres")
+        if not rating and r_: rating, rating_src = r_, src; filled.append("rating")
+        if not imdb_url and u_: imdb_url, url_src = u_, src; filled.append("IMDb URL")
+        return filled
+
+    got = fill("HDHub4u", hd_genres, hd_rating, hd_url)
+    if got:
+        _mlog(1, "HDHub4u", True, f"filled {', '.join(got)} | genres={', '.join(hd_genres) or 'none'} | rating={hd_rating or 'none'} | imdb_url={hd_url or 'none'}")
     else:
         _mlog(1, "HDHub4u", False, hd_why)
 
-    # ---------- Steps 2 & 3: TMDb + IMDb scraper (parallel) ----------
-    tmdb_res, imdb_res = await asyncio.gather(
-        fetch_tmdb_safely(title, is_series, year), fetch_imdb_safely(title, is_series, year), return_exceptions=True)
+    # IMDb scraper + TMDb are fetched together (TMDb is also needed for poster / OTT / runtime)
+    imdb_res, tmdb_res = await asyncio.gather(
+        fetch_imdb_safely(title, is_series, year), fetch_tmdb_safely(title, is_series, year), return_exceptions=True)
+    imdb_details = imdb_res if isinstance(imdb_res, dict) else {}
     tmdb_details = tmdb_res if isinstance(tmdb_res, dict) and tmdb_res else {}
     tmdb_from_hd = False
     if not tmdb_details and hd_verified:
         tmdb_details, tmdb_from_hd = hd_verified, True
-    imdb_details = imdb_res if isinstance(imdb_res, dict) else {}
-    if tmdb_details:
-        _mlog(2, "TMDb", True, f"matched '{_result_title(tmdb_details)}' | genres={tmdb_details.get('genres') or 'none'} | rating={tmdb_details.get('rating') or 'none'}"
-                               + (" (found through HDHub's verified IMDb id)" if tmdb_from_hd else ""))
-    else:
-        _mlog(2, "TMDb", False, "no validated match (title/year/genre check failed or no result)")
-    if imdb_details:
-        _mlog(3, "IMDb", True, f"matched '{_result_title(imdb_details)}' | genres={imdb_details.get('genres') or 'none'} | rating={imdb_details.get('rating') or 'none'}")
-    else:
-        _mlog(3, "IMDb", False, "no validated match")
 
     known_id = (tt.group(0) if (tt and trusted) else None) or imdb_details.get("imdb_id") or tmdb_details.get("imdb_id")
     omdb_box = {}
@@ -1269,42 +1420,38 @@ async def collect_metadata(identity: dict, filename: str, caption: str, file_run
             omdb_box["v"] = await fetch_omdb(title, year, is_series, known_id)
         return omdb_box["v"]
 
-    # ---------- genres ----------
-    genres_list, genre_src = [], "N/A"
-    for src, val in (("HDHub4u", hd_genres), ("TMDb", clean_genres(tmdb_details.get("genres"))), ("IMDb", clean_genres(imdb_details.get("genres")))):
-        if val:
-            genres_list, genre_src = val, src
-            break
-    if not genres_list:
-        og = clean_genres((await omdb()).get("genres"))
-        if og:
-            genres_list, genre_src = og, "OMDb"
+    # ---------- Step 2: IMDb scraper ----------
+    if imdb_details:
+        got = fill("IMDb", clean_genres(imdb_details.get("genres")), _valid_rating(imdb_details.get("rating")), _imdb_link(imdb_details.get("imdb_id")))
+        _mlog(2, "IMDb", bool(got) or True, f"matched '{_result_title(imdb_details)}' | " + (f"filled {', '.join(got)}" if got else "nothing new (earlier source already had it)"))
+    else:
+        _mlog(2, "IMDb", False, "no validated IMDb match (title/year/genre check failed or no result)")
 
-    # ---------- rating ----------
-    rating, rating_src = None, "N/A"
-    for src, val in (("HDHub4u", hd_rating), ("TMDb", _valid_rating(tmdb_details.get("rating"))), ("IMDb", _valid_rating(imdb_details.get("rating")))):
-        if val:
-            rating, rating_src = val, src
-            break
-    if not rating:
-        ov = _valid_rating((await omdb()).get("rating"))
-        if ov:
-            rating, rating_src = ov, "OMDb"
+    # ---------- Step 3: OMDb ----------
+    def _missing():
+        return [n for n, v in (("genres", genres_list), ("rating", rating), ("IMDb URL", imdb_url)) if not v]
+    if _missing():
+        o = await omdb()
+        if o:
+            got = fill("OMDb", clean_genres(o.get("genres")), _valid_rating(o.get("rating")), _imdb_link(o.get("imdb_id")))
+            _mlog(3, "OMDb", bool(got), f"matched '{o.get('title')}' | " + (f"filled {', '.join(got)}" if got else "had nothing for the missing fields"))
+        else:
+            _mlog(3, "OMDb", False, "no validated match" if OMDB_API_KEY else "OMDB_API_KEY is not set")
+    else:
+        logger.info("[METADATA] Step 3/4 OMDb: [SKIPPED] not needed, genre/rating/IMDb URL already found")
 
-    # ---------- IMDb url ----------
-    def _imdb_link(i):
-        return f"https://www.imdb.com/title/{i}/" if i and str(i).startswith("tt") else ""
-    imdb_url, url_src = "", "N/A"
-    for src, val in (("HDHub4u", (hd_url or "").strip()), ("TMDb", _imdb_link(tmdb_details.get("imdb_id"))),
-                     ("TMDb page", f"https://www.themoviedb.org/{'tv' if is_series else 'movie'}/{tmdb_details['id']}" if tmdb_details.get("id") else ""),
-                     ("IMDb", _imdb_link(imdb_details.get("imdb_id")))):
-        if val:
-            imdb_url, url_src = val, src
-            break
-    if not imdb_url:
-        ou = _imdb_link((await omdb()).get("imdb_id"))
-        if ou:
-            imdb_url, url_src = ou, "OMDb"
+    # ---------- Step 4: TMDb ----------
+    if _missing():
+        if tmdb_details:
+            tmdb_url = _imdb_link(tmdb_details.get("imdb_id")) or (
+                f"https://www.themoviedb.org/{'tv' if is_series else 'movie'}/{tmdb_details['id']}" if tmdb_details.get("id") else "")
+            got = fill("TMDb", clean_genres(tmdb_details.get("genres")), _valid_rating(tmdb_details.get("rating")), tmdb_url)
+            _mlog(4, "TMDb", bool(got), f"matched '{_result_title(tmdb_details)}' | " + (f"filled {', '.join(got)}" if got else "had nothing for the missing fields")
+                  + (" (via HDHub's verified IMDb id)" if tmdb_from_hd else ""))
+        else:
+            _mlog(4, "TMDb", False, "no validated TMDb match")
+    else:
+        logger.info("[METADATA] Step 4/4 TMDb: [SKIPPED] not needed for genre/rating/IMDb URL (TMDb is still used for poster/OTT/runtime if it matched)")
 
     # ---------- OTT (all sources combined) ----------
     ott_trace = []
@@ -1358,62 +1505,68 @@ async def collect_metadata(identity: dict, filename: str, caption: str, file_run
     if poster_url and not str(poster_url).startswith("http"):
         logger.info(f"[POSTER] Discarded invalid poster value '{poster_url}' (not an http URL)")
         poster_url, is_backdrop, poster_src = "", False, "none (text-only post)"
+    is_backdrop = bool(is_backdrop and poster_url)        # a backdrop flag without an image is meaningless
     if not poster_url:
         _plog(5, "Text-only fallback", True, "no poster in any source -> a clean text message will be sent (no logo / no banner)")
 
-    if "v" in omdb_box:
-        _mlog(4, "OMDb", bool(omdb_box["v"]),
-              f"matched '{omdb_box['v'].get('title')}' (used only to fill gaps)" if omdb_box["v"] else "no validated match, or OMDB_API_KEY missing")
-    else:
-        logger.info("[METADATA] Step 4/4 OMDb: [SKIPPED] not needed, earlier sources filled everything")
-
-    # ---------- Runtime: TMDb -> IMDb -> OMDb -> Telegram file ----------
+    # ---------- Runtime ----------
     def _rlog(step, name, ok, detail):
         logger.info(f"[RUNTIME] Step {step}/4 {name}: {'[SUCCESS]' if ok else '[FAILED/FALLBACK]'} {detail}")
+
+    def _sane(mins, label):
+        if mins and is_series and mins > SERIES_EP_MAX_MINUTES:
+            logger.info(f"[RUNTIME] {label} gave {mins} min which is too long for one episode - ignored")
+            return None
+        return mins
 
     runtime_min, runtime_src = None, "N/A"
     tmdb_is_ep = bool(is_series and tmdb_details.get("episode_run_time"))
     tmdb_label = "TMDb episode runtime" if tmdb_is_ep else "TMDb"
-    mins = _to_minutes(tmdb_details.get("episode_run_time") if tmdb_is_ep else tmdb_details.get("runtime"))
+    mins = _sane(_to_minutes(tmdb_details.get("episode_run_time") if tmdb_is_ep else tmdb_details.get("runtime")), tmdb_label)
     if mins:
         runtime_min, runtime_src = mins, tmdb_label
         _rlog(1, tmdb_label, True, f"{mins} min")
     else:
-        _rlog(1, "TMDb", False, "TMDb returned no runtime" if tmdb_details else "no validated TMDb match")
+        _rlog(1, "TMDb", False, "TMDb returned no usable runtime" if tmdb_details else "no validated TMDb match")
 
     if not runtime_min:
-        mins = _to_minutes(imdb_details.get("runtime"))
+        mins = _sane(_to_minutes(imdb_details.get("runtime")), "IMDb")
         if mins:
-            runtime_min, runtime_src = mins, "IMDb"
-            _rlog(2, "IMDb", True, f"{mins} min")
+            runtime_min, runtime_src = mins, "IMDb episode runtime" if is_series else "IMDb"
+            _rlog(2, runtime_src, True, f"{mins} min")
         else:
-            _rlog(2, "IMDb", False, "IMDb returned no runtime" if imdb_details else "no validated IMDb match")
+            _rlog(2, "IMDb", False, "IMDb returned no usable runtime" if imdb_details else "no validated IMDb match")
     else:
         logger.info("[RUNTIME] Step 2/4 IMDb: [SKIPPED] not needed")
 
     if not runtime_min:
-        mins = _to_minutes((await omdb()).get("runtime")) if (OMDB_API_KEY or omdb_box.get("v")) else None
+        mins = _sane(_to_minutes((await omdb()).get("runtime")), "OMDb") if (OMDB_API_KEY or omdb_box.get("v")) else None
         if mins:
             runtime_min, runtime_src = mins, "OMDb"
             _rlog(3, "OMDb", True, f"{mins} min")
         else:
-            _rlog(3, "OMDb", False, "OMDb returned no runtime" if OMDB_API_KEY else "OMDB_API_KEY is not set")
+            _rlog(3, "OMDb", False, "OMDb returned no usable runtime" if OMDB_API_KEY else "OMDB_API_KEY is not set")
     else:
         logger.info("[RUNTIME] Step 3/4 OMDb: [SKIPPED] not needed")
 
     if not runtime_min:
-        mins = _to_minutes(file_runtime)
-        if mins:
-            runtime_min, runtime_src = mins, "Telegram file duration"
-            _rlog(4, "Telegram file duration", True, f"{mins} min")
+        if is_series:
+            # a combined/batch file can be 4-8 hours -> never used. The post shows the average of SINGLE episodes instead.
+            runtime_src = "calculated average of uploaded single episodes"
+            _rlog(4, "Average of uploaded single episodes", True,
+                  "no metadata runtime -> will be calculated from single-episode files when the post is built (combined/batch files are ignored)")
         else:
-            _rlog(4, "Telegram file duration", False, "Telegram gave no duration for this file")
+            mins = _to_minutes(file_runtime)
+            if mins:
+                runtime_min, runtime_src = mins, "Telegram file duration"
+                _rlog(4, "Telegram file duration", True, f"{mins} min")
+            else:
+                _rlog(4, "Telegram file duration", False, "Telegram gave no duration for this file")
     else:
-        logger.info("[RUNTIME] Step 4/4 Telegram file duration: [SKIPPED] not needed")
+        logger.info("[RUNTIME] Step 4/4 Telegram file / episode average: [SKIPPED] not needed")
 
     runtime = str(runtime_min) if runtime_min else "N/A"
-    logger.info(f"[RUNTIME] Final duration: {runtime + ' minutes' if runtime_min else 'N/A'} (source: {runtime_src})"
-                + (" - for series, the post shows the AVERAGE of all uploaded episodes once their lengths differ" if is_series else ""))
+    logger.info(f"[RUNTIME] Final duration: {runtime + ' minutes' if runtime_min else 'N/A (calculated later for series)' if is_series else 'N/A'} (source: {runtime_src})")
 
     ott_src_str = " + ".join(ott_trace) if ott_trace else "none"
     logger.info(f"[FINAL] Title: '{title}' | Poster Source: {poster_src} | Genre Source: {genre_src} | "
@@ -1422,10 +1575,10 @@ async def collect_metadata(identity: dict, filename: str, caption: str, file_run
                 f"IMDb URL source={url_src} | OTT={ott_platform}")
 
     return {
-        "found": bool(imdb_details or tmdb_details or hd_genres or rating),
+        "found": bool(imdb_details or tmdb_details or genres_list or rating),
         "poster_url": poster_url, "is_backdrop": is_backdrop,
         "genres": ", ".join(genres_list) if genres_list else "N/A",
-        "rating": rating, "runtime": runtime, "imdb_url": imdb_url,
+        "rating": rating, "runtime": runtime, "runtime_src": runtime_src, "imdb_url": imdb_url,
         "year": year or imdb_details.get("year") or _result_year(tmdb_details),
         "ott_platform": ott_platform,
     }
@@ -1504,14 +1657,14 @@ def is_duplicate_resolution(doc: dict, file_data: dict) -> bool:
     if not sig:
         return False
     seen = set()
-    for f in doc.get("files", []):
+    for f in (doc.get("files") or []):
         if f.get("season") == file_data.get("season") and f.get("episode") == file_data.get("episode"):
             seen |= quality_signature(f.get("quality"))
     return sig <= seen
 
 
 def _doc_has_ott(doc: dict) -> bool:
-    vals = [doc.get("ott_platform")] + [f.get("ott_platform") for f in doc.get("files", [])]
+    vals = [doc.get("ott_platform")] + [f.get("ott_platform") for f in (doc.get("files") or [])]
     return any(v and str(v).strip().upper() not in ("N/A", "NONE", "") for v in vals)
 
 
@@ -1533,7 +1686,7 @@ async def process_and_send_update(bot, filename, caption, file_runtime_mins=None
 
 async def _append_file(bot, movies, doc, file_data, alias_key, ctx):
     base_name = doc["_id"]
-    if any(f.get("filename") == ctx["filename"] for f in doc.get("files", [])):
+    if any(f.get("filename") == ctx["filename"] for f in (doc.get("files") or [])):
         return
     update, set_fields = {}, {}
 
@@ -1549,13 +1702,15 @@ async def _append_file(bot, movies, doc, file_data, alias_key, ctx):
         set_fields["ott_platform"] = new_ott
         logger.info(f"[OTT] '{base_name}' had no OTT, adding '{new_ott}' from file tag")
 
-    if (not doc.get("runtime") or str(doc.get("runtime")) == "N/A") and ctx["runtime"] != "N/A":
+    is_series_doc = doc.get("tag") == "#SERIES" or file_data.get("tag") == "#SERIES"
+    if (not is_series_doc and (not doc.get("runtime") or str(doc.get("runtime")) == "N/A")
+            and ctx["runtime"] != "N/A"):
         set_fields["runtime"] = ctx["runtime"]
     if needs_metadata_refresh(doc):
         set_fields.update(await _refresh_fields(doc, ctx))
     if set_fields:
         update["$set"] = set_fields
-    if alias_key and alias_key != doc.get("clean_title") and alias_key not in doc.get("alias_keys", []):
+    if alias_key and alias_key != doc.get("clean_title") and alias_key not in (doc.get("alias_keys") or []):
         update["$addToSet"] = {"alias_keys": alias_key}
     if not update:
         return
@@ -1579,6 +1734,8 @@ async def _refresh_fields(doc, ctx) -> dict:
         if meta["imdb_url"]: out["imdb_url"] = meta["imdb_url"]
         if meta["year"]: out["year"] = meta["year"]
     if meta["ott_platform"] != "N/A": out["ott_platform"] = meta["ott_platform"]
+    if identity["is_series"] and meta["runtime"] != "N/A":      # series: metadata episode runtime heals old/file-based values
+        out["runtime"], out["runtime_src"] = meta["runtime"], meta["runtime_src"]
     if identity["ai_ok"]:
         out["title"] = identity["title"]
         out["display_title"] = identity["title"]
@@ -1592,11 +1749,14 @@ async def _process_file(bot, filename, caption, file_runtime_mins=None):
         db.movie_updates = db.db.movie_updates
     movies = db.movie_updates
 
+    filename, caption = (filename or "Unknown"), (caption or "")
     filename_clean = clean_mentions_links(filename)
     unified = f"{clean_mentions_links(caption).lower()} {filename_clean.lower()}".strip()
 
     # --- everything below is LOCAL (regex only); episodes never touch Gemini ---
     season, episode = extract_season_episode(filename)
+    if season is None and caption:                       # generic filename ("video.mkv") but the caption has S01 / Season 1
+        season, episode = extract_season_episode(caption)
     title_local, year_local = parse_local_title(filename)
     if not title_local:
         title_local = normalize(filename_clean) or "Unknown"
@@ -1609,18 +1769,26 @@ async def _process_file(bot, filename, caption, file_runtime_mins=None):
     language = ", ".join(sorted({CAPTION_LANGUAGES[k] for k in lang_keys})) if lang_keys else "N/A"
     runtime = f"{file_runtime_mins}" if file_runtime_mins else "N/A"
 
+    ctx = {}
+
+    def ctx_season():
+        return ctx.get("season", season)
+
     def make_file_data(is_series):
         return {
             "filename": filename, "processed": normalize(filename_clean), "quality": quality,
             "language": language, "ott_platform": extract_ott_platform(unified),
             "timestamp": datetime.now(), "tag": "#SERIES" if is_series else "#MOVIE",
-            "season": season, "episode": episode, "runtime": runtime,
+            "season": ctx_season(), "episode": episode, "runtime": runtime,
         }
 
-    ctx = {"filename": filename, "filename_clean": filename_clean, "caption": caption, "duration": file_runtime_mins,
-           "title_local": title_local, "year_local": year_local, "season": season, "runtime": runtime}
+    ctx.update({"filename": filename, "filename_clean": filename_clean, "caption": caption, "duration": file_runtime_mins,
+                "title_local": title_local, "year_local": year_local, "season": season, "runtime": runtime})
     logger.info(f"[FILE] Received '{filename}' -> local parse: title='{title_local}', year={year_local or 'none'}, "
                 f"season={season}, episode={episode}, quality={quality}, language={language}, runtime={runtime} min")
+    if season is not None and not is_single_episode(season, episode):
+        logger.info(f"[SERIES] '{filename}' is a combined/batch file for Season {season} -> it joins the ONE Season {season} post; "
+                    f"its long duration is ignored for the series runtime")
 
     # 1) DB FIRST: if the post already exists, skip Gemini + scrapers entirely
     cached = await find_cached_doc(movies, [local_key], [local_name], year_local, local_is_series)
@@ -1633,8 +1801,12 @@ async def _process_file(bot, filename, caption, file_runtime_mins=None):
     # 2) New title -> ask Gemini (throttled, one at a time)
     identity = await resolve_identity(filename_clean, caption, file_runtime_mins, title_local, year_local, season)
     is_series = identity["is_series"]
-    base_name = build_base_name(identity["title"], identity["year"], is_series, season)
-    final_key = canon_key(identity["title"], season)
+    if is_series and season is None:
+        season = 1
+        ctx["season"] = 1
+        logger.info(f"[SERIES] Gemini says '{identity['title']}' is a series but the file has no season marker -> using Season 1 so all files merge into one post")
+    base_name = build_base_name(identity["title"], identity["year"], is_series, season if is_series else None)
+    final_key = canon_key(identity["title"], season if is_series else None)
     logger.info(f"[IDENTIFIED] Official title='{identity['title']}' year={identity['year'] or 'unknown'} "
                 f"type={'series' if is_series else 'movie'} -> post name '{base_name}' (key '{final_key}')")
 
@@ -1659,6 +1831,7 @@ async def _process_file(bot, filename, caption, file_runtime_mins=None):
         "files": [file_data],
         "poster_url": meta["poster_url"], "is_backdrop": meta["is_backdrop"], "is_photo": False,
         "genres": meta["genres"], "rating": meta["rating"] or "N/A", "runtime": meta["runtime"],
+        "runtime_src": meta["runtime_src"],
         "imdb_url": meta["imdb_url"], "year": meta["year"],
         "tag": "#SERIES" if is_series else "#MOVIE",
         "ott_platform": meta["ott_platform"], "message_id": None,
@@ -1690,13 +1863,17 @@ async def send_movie_update(bot, base_name):
                 text = generate_movie_message(movie_doc, base_name)
                 buttons = _build_buttons(movie_doc, base_name)
                 poster_url = movie_doc.get("poster_url")
-                is_backdrop = movie_doc.get("is_backdrop", False)
+                is_backdrop = bool(movie_doc.get("is_backdrop"))
                 is_photo, msg = False, None
 
                 if poster_url and str(poster_url).startswith("http") and not LINK_PREVIEW:   # no poster -> text-only post
                     try:
-                        size = (2560, 1440) if is_backdrop else None
-                        photo_to_send = (await fetch_image(poster_url, size)) if size else poster_url
+                        photo_to_send = poster_url          # plain posters are sent untouched
+                        if is_backdrop:                     # ONLY backdrops are resized to 16:9
+                            try:
+                                photo_to_send = (await fetch_image(poster_url, (2560, 1440))) or poster_url
+                            except Exception as img_err:
+                                logger.warning(f"Backdrop resize failed for {base_name} ({img_err}); using the original image URL")
                         msg = await bot.send_photo(chat_id=MOVIE_UPDATE_CHANNEL, photo=photo_to_send or poster_url,
                                                    caption=text, reply_markup=buttons, parse_mode=enums.ParseMode.HTML)
                         is_photo = True
@@ -1732,10 +1909,11 @@ def _safe_bot_username() -> str:
 
 def _build_buttons(movie_doc, base_name):
     btn_style = enums.ButtonStyle.SUCCESS if movie_doc.get("tag", "#MOVIE") == "#SERIES" else enums.ButtonStyle.PRIMARY
-    match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
-    btn_q = f"{match.group(1).strip()}-S{int(match.group(2)):02d}" if match else base_name
+    # Auto-Filter must search the bare title: "Musafir Cafe Season 1" -> "Musafir Cafe"
+    btn_q = SERIES_SUFFIX_RE.sub("", str(base_name or "")).strip(" :-–—,") or str(base_name or "").strip()
     # Telegram deep-link payload: only A-Z a-z 0-9 _ - and max 64 chars ("getfile-" already uses 8)
     clean_query = re.sub(r"[^A-Za-z0-9_\-]+", "-", btn_q.replace(" ", "-"))
+    clean_query = re.sub(r"(?:-+(?:Season-?\d+|S\d{1,2}))+(?=-|$)", "", clean_query, flags=re.IGNORECASE)   # stray -S01 / -S1 / -Season-1
     clean_query = re.sub(r"-{2,}", "-", clean_query).strip("-")[:56].rstrip("-") or "movie"
     uname = _safe_bot_username()
     url = f"https://t.me/{uname}?start=getfile-{clean_query}"
@@ -1780,12 +1958,37 @@ async def update_movie_message(bot, base_name):
             logger.error(f"Failed to update movie message for {base_name}: {e}")
 
 
+def _series_runtime(movie_doc, base_name) -> str:
+    """Series: 1) TMDb episode runtime 2) IMDb 3) OMDb (all stored in the doc as metadata)
+    4) average of uploaded SINGLE-episode files. Combined / batch / range / bonus files are never used."""
+    cap = SERIES_EP_MAX_MINUTES
+    per_episode = defaultdict(list)
+    for f in (movie_doc.get("files") or []):
+        rt = f.get("runtime")
+        if is_single_episode(f.get("season"), f.get("episode")) and rt and str(rt).isdigit() and 0 < int(rt) <= cap:
+            per_episode[(f.get("season"), str(f.get("episode")))].append(int(rt))
+    ep_means = [sum(v) / len(v) for v in per_episode.values()]
+
+    meta_min = _to_minutes(movie_doc.get("runtime"))
+    meta_ok = bool(meta_min and 0 < meta_min <= cap)
+    if meta_ok and movie_doc.get("runtime_src") in ("TMDb episode runtime", "TMDb", "IMDb episode runtime", "IMDb", "OMDb"):
+        return str(meta_min)
+    if ep_means:                                    # no trusted metadata -> calculated average
+        avg = round(sum(ep_means) / len(ep_means))
+        logger.info(f"[RUNTIME] '{base_name}': no metadata runtime -> calculated average of {len(ep_means)} uploaded single "
+                    f"episode(s) = {avg} minutes (combined/batch files ignored)")
+        return str(avg)
+    if meta_ok:                                     # older documents (no runtime_src) that only have a sane stored value
+        return str(meta_min)
+    return "N/A"                                    # never show a misleading multi-hour value
+
+
 def generate_movie_message(movie_doc, base_name):
     all_raw_qualities, all_languages, all_ott_platforms = [], set(), set()
     episodes_by_season = defaultdict(set)
     valid_file_runtimes = []
 
-    for file in movie_doc.get("files", []):
+    for file in (movie_doc.get("files") or []):
         if file.get("quality") and file.get("quality") != "N/A": all_raw_qualities.append(file["quality"])
         if file.get("language") and file.get("language") != "N/A":
             for lang in file["language"].split(","):
@@ -1837,23 +2040,11 @@ def generate_movie_message(movie_doc, base_name):
     raw_rating = str(movie_doc.get("rating") or "N/A").strip()
     clean_rating = _valid_rating(raw_rating) or "N/A"
 
-    raw_runtime = movie_doc.get("runtime", "N/A")
+    raw_runtime = movie_doc.get("runtime") or "N/A"
     if is_series:
-        per_episode = defaultdict(list)
-        for file in movie_doc.get("files", []):
-            rt = file.get("runtime")
-            if rt and str(rt).isdigit() and int(rt) > 0:
-                per_episode[(file.get("season"), file.get("episode"))].append(int(rt))
-        ep_means = [sum(v) / len(v) for v in per_episode.values()]
-        if len(ep_means) >= 2 and (max(ep_means) - min(ep_means)) >= 1:     # durations vary -> show the average
-            raw_runtime = str(round(sum(ep_means) / len(ep_means)))
-            logger.info(f"[RUNTIME] '{base_name}': episode lengths differ -> showing the calculated average of "
-                        f"{len(ep_means)} uploaded episodes = {raw_runtime} minutes")
-    if not raw_runtime or str(raw_runtime).strip().upper() in ("N/A", "NONE", "0", "-"):
-        if is_series and valid_file_runtimes:
-            raw_runtime = f"{round(sum(valid_file_runtimes) / len(valid_file_runtimes))}"
-        elif not is_series and valid_file_runtimes:
-            raw_runtime = f"{valid_file_runtimes[0]}"
+        raw_runtime = _series_runtime(movie_doc, base_name)
+    elif str(raw_runtime).strip().upper() in ("N/A", "NONE", "0", "-") and valid_file_runtimes:
+        raw_runtime = f"{valid_file_runtimes[0]}"
 
     runtime = format_runtime(raw_runtime, is_series=is_series)
 
