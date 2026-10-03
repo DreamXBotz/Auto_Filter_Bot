@@ -1522,7 +1522,7 @@ async def send_movie_update(bot, base_name):
                     return None
 
                 text = generate_movie_message(movie_doc, base_name)
-                buttons = _build_buttons(movie_doc, base_name)
+                buttons = _build_buttons(movie_doc, base_name, bot)
                 poster_url = movie_doc.get("poster_url")
                 is_backdrop = movie_doc.get("is_backdrop", False)
                 is_photo, msg = False, None
@@ -1554,12 +1554,25 @@ async def send_movie_update(bot, base_name):
         sending_updates.discard(base_name)
 
 
-def _build_buttons(movie_doc, base_name):
+def _build_buttons(movie_doc, base_name, bot=None):
     btn_style = enums.ButtonStyle.SUCCESS if movie_doc.get("tag", "#MOVIE") == "#SERIES" else enums.ButtonStyle.PRIMARY
     match = re.search(r'(.+?)\s+Season\s+(\d+)', base_name, re.IGNORECASE)
     btn_q = f"{match.group(1).strip()}-S{int(match.group(2)):02d}" if match else base_name
+    
+    clean_q = re.sub(r'[^a-zA-Z0-9_-]', '-', btn_q)
+    clean_q = re.sub(r'-+', '-', clean_q).strip('-')
+
+    uname = getattr(temp, "U_NAME", None)
+    if not uname and bot and hasattr(bot, "me") and bot.me:
+        uname = bot.me.username
+    if not uname and bot and hasattr(bot, "username") and bot.username:
+        uname = bot.username
+    if not uname:
+        uname = "BoultFlixMovieBot"
+    uname = str(uname).lstrip("@").strip()
+
     return InlineKeyboardMarkup([[InlineKeyboardButton(
-        "ɢᴇᴛ ғɪʟᴇs", url=f"[https://t.me/](https://t.me/){temp.U_NAME}?start=getfile-{btn_q.replace(' ', '-')}", style=btn_style)]])
+        "ɢᴇᴛ ғɪʟᴇs", url=f"[https://t.me/](https://t.me/){uname}?start=getfile-{clean_q}", style=btn_style)]])
 
 
 async def update_movie_message(bot, base_name):
@@ -1574,7 +1587,7 @@ async def update_movie_message(bot, base_name):
                 return
 
             text = generate_movie_message(movie_doc, base_name)
-            buttons = _build_buttons(movie_doc, base_name)
+            buttons = _build_buttons(movie_doc, base_name, bot)
             is_photo = movie_doc.get("is_photo", False)
 
             for attempt in range(2):
