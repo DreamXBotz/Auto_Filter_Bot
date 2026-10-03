@@ -16,7 +16,14 @@ logger = logging.getLogger(__name__)
 
 class Database:    
     def __init__(self, uri, database_name):
-        self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+        self._client = motor.motor_asyncio.AsyncIOMotorClient(
+            uri,
+            maxPoolSize=50,
+            minPoolSize=10,
+            maxIdleTimeMS=45000,
+            connectTimeoutMS=10000,
+            serverSelectionTimeoutMS=10000
+        )
         self.db = self._client[database_name]
         # Collections
         self.col = self.db.users
