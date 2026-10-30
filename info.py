@@ -23,7 +23,6 @@ def is_enabled(value, default: bool = False) -> bool:
         return False
     return default
 
-COVERX = is_enabled(environ.get('COVERX', "True"), True) # Use cover image for indexed files (default: True)
 
 # ==============================================================================
 # 1. BOT CREDENTIALS & SESSION
