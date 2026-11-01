@@ -73,7 +73,7 @@ async def send_for_index(client, message):
     except (UsernameInvalid, UsernameNotModified):
         return await message.reply('Invalid Link specified.')
     except Exception as e:
-        logger.exception(e)
+        logger.exception("Error checking chat for index: %s", e)
         return await message.reply(f'Errors - {e}')
     try:
         k = await client.get_messages(chat_id, last_msg_id)

@@ -1,5 +1,5 @@
 import logging
-from utils import LimitedDict, get_random_mix_id, get_size, is_subscribed, is_req_subscribed, group_setting_buttons, get_poster, get_posterx, temp, get_settings, save_group_settings, get_cap, imdb, is_check_admin, extract_request_content, log_error, clean_filename, generate_season_variations, clean_search_text, get_settings_text
+from utils import LimitedDict, get_random_mix_id, get_size, is_subscribed, is_req_subscribed, group_setting_buttons, get_poster, get_posterx, temp, get_settings, save_group_settings, get_cap, imdb, is_check_admin, extract_request_content, clean_filename, generate_season_variations, clean_search_text, get_settings_text
 from rapidfuzz import process
 from dreamxbotz.util.file_properties import get_name, get_hash
 from urllib.parse import quote_plus
@@ -331,7 +331,7 @@ async def next_page(client, query):
                     except (MessageNotModified, MessageIdInvalid):
                         pass
                     except Exception as e:
-                        logger.exception(e)
+                        logger.exception("Failed to edit caption: %s", e)
                 else:
                     try:
                         await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
@@ -394,6 +394,8 @@ async def qualities_cb_handler(client: Client, query: CallbackQuery):
         pass
 
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace(' ', '_')
 
     btn = []
@@ -423,6 +425,8 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
     _, qual, req, key = query.data.split("#")
     curr_time = datetime.now(TZ).time()
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace("_", " ")
     baal = qual in search
     if baal:
@@ -549,6 +553,8 @@ async def languages_cb_handler(client: Client, query: CallbackQuery):
         pass
 
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace(' ', '_')
 
     items = list(LANGUAGES.items())
@@ -577,6 +583,8 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
     _, lang, req, key = query.data.split("#")
     curr_time = datetime.now(TZ).time()
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace("_", " ")
     baal = lang in search
     if baal:
@@ -695,6 +703,8 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
             return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     except Exception:
         pass
+    if not FRESH.get(key):
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     offset = 0
     btn: list[list[InlineKeyboardButton]] = []
     for i in range(0, len(SEASONS) - 1, 2):
@@ -719,7 +729,10 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
 async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
     start_t = datetime.now(TZ)
     _, season_tag, req, key = query.data.split("#")
-    search = FRESH.get(key).replace("_", " ")
+    search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+    search = search.replace("_", " ")
     season_tag = season_tag.lower()
     if season_tag == "homepage":
         search_final = search
@@ -865,7 +878,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         except PeerIdInvalid:
             await query.answer(url=f"https://telegram.me/{temp.U_NAME}?start=sendfiles3_{key}")
         except Exception as e:
-            logger.exception(e)
+            logger.error("Error answering sendfiles callback: %s", e)
             await query.answer(url=f"https://telegram.me/{temp.U_NAME}?start=sendfiles4_{key}")
 
 
@@ -884,8 +897,16 @@ async def cb_handler(client: Client, query: CallbackQuery):
             chat = file_id.split("_")[0]
             settings = await get_settings(chat)
             fsub_channels = list(dict.fromkeys((settings.get('fsub', []) if settings else [])+ AUTH_CHANNELS)) 
-            btn += await is_subscribed(client, query.from_user.id, fsub_channels)
-            btn += await is_req_subscribed(client, query.from_user.id, AUTH_REQ_CHANNELS)
+            if fsub_channels and AUTH_REQ_CHANNELS:
+                res1, res2 = await asyncio.gather(
+                    is_subscribed(client, query.from_user.id, fsub_channels),
+                    is_req_subscribed(client, query.from_user.id, AUTH_REQ_CHANNELS)
+                )
+                btn += res1 + res2
+            elif fsub_channels:
+                btn += await is_subscribed(client, query.from_user.id, fsub_channels)
+            elif AUTH_REQ_CHANNELS:
+                btn += await is_req_subscribed(client, query.from_user.id, AUTH_REQ_CHANNELS)
             if btn:
                 btn.append([InlineKeyboardButton("♻️ ᴛʀʏ ᴀɢᴀɪɴ ♻️", callback_data=f"checksub#{kk}#{file_id}")])
                 try:
@@ -906,12 +927,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 except MessageDeleteForbidden:
                     pass
         except Exception as e:
-            await log_error(client, f"❌ Error in checksub callback:\n\n{repr(e)}")
             logger.error(f"❌ Error in checksub callback:\n\n{repr(e)}")
 
 
     elif query.data.startswith("killfilesdq"):
-        ident, keyword = query.data.split("#")
+        ident, keyword = query.data.split("#", 1)
         await query.message.edit_text(f"<b>Fetching Files for your query {keyword} on DB... Please wait...</b>")
         files, total = await get_bad_files(keyword)
         await query.message.edit_text("<b>ꜰɪʟᴇ ᴅᴇʟᴇᴛɪᴏɴ ᴘʀᴏᴄᴇꜱꜱ ᴡɪʟʟ ꜱᴛᴀʀᴛ ɪɴ 5 ꜱᴇᴄᴏɴᴅꜱ !</b>")
@@ -1478,7 +1498,7 @@ async def auto_filter(client, msg, spoll=False):
         else:
             message = msg.message.reply_to_message
             search, files, offset, total_results = spoll
-            m = await message.reply_text(f'🔎 sᴇᴀʀᴄʜɪɴɢ {search}')
+            m = await message.reply_text(script.SEARCHING_TXT.format(search))
             settings = await get_settings(message.chat.id)
             await msg.message.delete()
         key = f"{message.chat.id}-{message.id}"
@@ -1648,8 +1668,13 @@ async def auto_filter(client, msg, spoll=False):
                     if m:
                         await m.delete()
                 except Exception as e:
-                    logger.exception(e)
+                    logger.warning("Failed to send poster, falling back to text: %s", e)
                     sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+                    if m:
+                        try:
+                            await m.delete()
+                        except Exception:
+                            pass
             else:
                 sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
                 if m:
@@ -1668,7 +1693,7 @@ async def auto_filter(client, msg, spoll=False):
             asyncio.create_task(_schedule_delete(sent, message, DELETE_TIME))
         return
     except Exception as e:
-        logger.exception(e)
+        logger.exception("Error in auto_filter: %s", e)
         return
 
 async def ai_spell_check(chat_id, wrong_name):

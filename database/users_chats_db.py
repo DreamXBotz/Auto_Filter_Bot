@@ -18,6 +18,7 @@ class Database:
         self._client = motor.motor_asyncio.AsyncIOMotorClient(uri)
         self.db = self._client[database_name]
         self._prem_cache = {}
+        self._users_cache = set()
         # Collections
         self.col = self.db.users
         self.grp = self.db.groups
@@ -83,10 +84,19 @@ class Database:
     async def add_user(self, id, name):
         user = self.new_user(id, name)
         await self.col.insert_one(user)
+        self._users_cache.add(int(id))
     
     async def is_user_exist(self, id):
-        user = await self.col.find_one({'id':int(id)})
-        return bool(user)
+        uid = int(id)
+        if uid in self._users_cache:
+            return True
+        user = await self.col.find_one({'id': uid})
+        res = bool(user)
+        if res:
+            if len(self._users_cache) > 10000:
+                self._users_cache.clear()
+            self._users_cache.add(uid)
+        return res
     
     async def total_users_count(self):
         count = await self.col.count_documents({})
@@ -120,6 +130,7 @@ class Database:
         return self.col.find({})
     
     async def delete_user(self, user_id):
+        self._users_cache.discard(int(user_id))
         await self.col.delete_many({'id': int(user_id)})
         
     async def delete_chat(self, id):

@@ -1,4 +1,4 @@
-﻿from aiohttp import web
+from aiohttp import web
 import re
 import math
 import logging

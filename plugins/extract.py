@@ -228,7 +228,7 @@ async def extract_data_handler(client: Client, query: CallbackQuery):
         )
 
     except Exception as e:
-        logger.exception(e)
+        logger.exception("Error extracting media tracks: %s", e)
         await query.message.reply_text(f"Error: {e}")
 
     finally:

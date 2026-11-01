@@ -1,4 +1,5 @@
 import logging
+import time
 import re
 import os
 import random
@@ -65,20 +66,32 @@ class temp(object):
     VERIFICATIONS = LimitedDict(maxsize=300)
     TEMP_INVITE_LINKS = LimitedDict(maxsize=200)
     REQ_LINKS = LimitedDict(maxsize=200)
+    FSUB_CACHE = LimitedDict(maxsize=2000)
 
 
 async def is_req_subscribed(client, user_id, rqfsub_channels):
     btn = []
 
     async def check_req_channel(ch_id):
+        try:
+            cid = int(ch_id)
+        except Exception:
+            cid = ch_id
+        cache_key = (int(user_id), cid)
+        cached_time = temp.FSUB_CACHE.get(cache_key)
+        if cached_time and (time.time() - cached_time) < 300:
+            return None
         if await db.has_joined_channel(user_id, ch_id):
+            temp.FSUB_CACHE[cache_key] = time.time()
             return None
         try:
             member = await client.get_chat_member(ch_id, user_id)
             if member.status != enums.ChatMemberStatus.BANNED:
                 await db.add_join_req(user_id, ch_id)
+                temp.FSUB_CACHE[cache_key] = time.time()
                 return None
         except UserNotParticipant:
+            temp.FSUB_CACHE.pop(cache_key, None)
             pass
         except Exception as e:
             logger.error(f"Error checking membership in {ch_id}: {e}")
@@ -116,9 +129,19 @@ async def is_subscribed(client, user_id, fsub_channels):
     
     async def check_channel(channel_id):
         try:
+            cid = int(channel_id)
+        except Exception:
+            cid = channel_id
+        cache_key = (int(user_id), cid)
+        cached_time = temp.FSUB_CACHE.get(cache_key)
+        if cached_time and (time.time() - cached_time) < 300:
+            return None
+        try:
             # No need to get chat object separately
             await client.get_chat_member(channel_id, user_id)
+            temp.FSUB_CACHE[cache_key] = time.time()
         except UserNotParticipant:
+            temp.FSUB_CACHE.pop(cache_key, None)
             try:
                 chat = await client.get_chat(int(channel_id))
                 invite_link = await client.create_chat_invite_link(channel_id)
@@ -415,7 +438,10 @@ async def get_shortlink(link, grp_id, is_second_shortener=False, is_third_shorte
     return link
 
 async def get_settings(group_id):
-    group_id = int(group_id)
+    try:
+        group_id = int(group_id)
+    except (ValueError, TypeError):
+        group_id = 0
     settings = temp.SETTINGS.get(group_id)
     if not settings:
         settings = await db.get_settings(group_id)
@@ -602,16 +628,6 @@ def extract_user(message: Message) -> Union[int, str]:
         user_id = message.from_user.id
         user_first_name = message.from_user.first_name
     return (user_id, user_first_name)
-
-
-async def log_error(client, error_message):
-    try:
-        await client.send_message(
-            chat_id=LOG_CHANNEL, 
-            text=f"<b>⚠️ Error Log:</b>\n<code>{error_message}</code>"
-        )
-    except Exception as e:
-        logger.error("Failed to log error: %s", e)
 
 
 def get_time(seconds):
