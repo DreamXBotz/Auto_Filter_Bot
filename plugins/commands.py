@@ -111,7 +111,7 @@ async def start(client, message):
                         InlineKeyboardButton(' ᴀʙᴏᴜᴛ 📖', callback_data='about')
                     ],[
                         InlineKeyboardButton('ᴛᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
-                        InlineKeyboardButton('ᴜᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
+                        InlineKeyboardButton('💜 ᴅᴏɴᴀᴛᴇ', callback_data="premium_info"),
                     ]]
             reply_markup = InlineKeyboardMarkup(buttons)
             current_time = datetime.now(TZ)
@@ -232,21 +232,23 @@ async def start(client, message):
             return
 
         if len(message.command) == 2 and message.command[1] in ["premium"]:
-            buttons = [[
-                        InlineKeyboardButton('📲 ꜱᴇɴᴅ ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ', url=OWNER_LNK)
-                      ],[
-                        InlineKeyboardButton('UPI ID Copy Karein ??', copy_text=CopyTextButton(text=OWNER_UPI_ID), style=enums.ButtonStyle.PRIMARY)
-                      ],[
-                        InlineKeyboardButton('❌ ᴄʟᴏꜱᴇ ❌', callback_data='close_data', style=enums.ButtonStyle.DANGER)
-                      ]]
-            reply_markup = InlineKeyboardMarkup(buttons)
-            await message.reply_photo(
-                photo=(SUBSCRIPTION),
-                caption=script.PREPLANS_TXT.format(message.from_user.mention, OWNER_UPI_ID, QR_CODE),
-                reply_markup=reply_markup,
-                parse_mode=enums.ParseMode.HTML
+            buttons = [
+                [InlineKeyboardButton("USDT · TRC20", copy_text=CopyTextButton(text="TGHgWpLCKgK19ca7BNgLMuYQfeyGTbTNvJ"))],
+                [InlineKeyboardButton("USDT · ERC20", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("USDT · BEP20", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("USDT · Solana", copy_text=CopyTextButton(text="A9dv5eegFPA1xxxH9xC1mcQxGtDPfFDQQhAp1k8qMfJT"))],
+                [InlineKeyboardButton("Ethereum · ETH", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("BNB", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("Bitcoin · BTC", copy_text=CopyTextButton(text="bc1qekmdcfkvy3u2jhk6v92ha2xjkskfs732n4000e"))],
+                [InlineKeyboardButton("❌ ᴄʟᴏꜱᴇ ❌", callback_data="close_data", style=enums.ButtonStyle.DANGER)]
+            ]
+            await message.reply_text(
+                text=script.CRYPTO_DONATION_TXT,
+                reply_markup=InlineKeyboardMarkup(buttons),
+                parse_mode=enums.ParseMode.HTML,
+                link_preview_options=LinkPreviewOptions(is_disabled=True)
             )
-            return  
+            return
 
         if len(message.command) == 2 and message.command[1].startswith('getfile'):
             movies = message.command[1].split("-", 1)[1] 
