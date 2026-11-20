@@ -8,7 +8,7 @@ from database.ia_filterdb import Media, Media2, get_search_results, get_bad_file
 from database.config_db import mdb
 from pyrogram.errors import MessageIdInvalid, UserIsBlocked, MessageNotModified, PeerIdInvalid, MessageDeleteForbidden
 from pyrogram import Client, filters, enums
-from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
+from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, CopyTextButton
 from info import (
     ADMINS, AUTH_CHANNELS, AUTH_REQ_CHANNELS, BIN_CHANNEL, DELETE_TIME,
     EMOJI_MODE, GRP_LNK, LANDSCAPE_POSTER, LANGUAGES, LOG_CHANNEL, MAX_B_TN, MSG_ALRT,
@@ -1180,7 +1180,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     InlineKeyboardButton(' ᴀʙᴏᴜᴛ 📖', callback_data='about')
                 ],[
                     InlineKeyboardButton('ᴛᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
-                     InlineKeyboardButton('ᴜᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
+                     InlineKeyboardButton('💜 ᴅᴏɴᴀᴛᴇ', callback_data="premium_info"),
                 ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         current_time = datetime.now(TZ)
@@ -1325,61 +1325,35 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 parse_mode=enums.ParseMode.HTML
             )
 
-    elif query.data == "premium_info":
+    elif query.data in ("premium_info", "buy_info", "upi_info"):
         try:
-            btn = [[
-                InlineKeyboardButton('• ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ •', callback_data='buy_info'),
-            ],[
-                InlineKeyboardButton('• ʀᴇꜰᴇʀ ꜰʀɪᴇɴᴅꜱ', callback_data='reffff'),
-                InlineKeyboardButton('ꜰʀᴇᴇ ᴛʀɪᴀʟ •', callback_data='give_trial')
-            ],[
-                InlineKeyboardButton('⇋ ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ ⇋', callback_data='start')
-            ]]
-            reply_markup = InlineKeyboardMarkup(btn)
-            await client.edit_message_media(
-                chat_id=query.message.chat.id,
-                message_id=query.message.id,
-                media=InputMediaPhoto(media=SUBSCRIPTION, caption=script.BPREMIUM_TXT, parse_mode=enums.ParseMode.HTML),
-                reply_markup=reply_markup
-            )
+            buttons = [
+                [InlineKeyboardButton("USDT · TRC20", copy_text=CopyTextButton(text="TGHgWpLCKgK19ca7BNgLMuYQfeyGTbTNvJ"))],
+                [InlineKeyboardButton("USDT · ERC20", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("USDT · BEP20", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("USDT · Solana", copy_text=CopyTextButton(text="A9dv5eegFPA1xxxH9xC1mcQxGtDPfFDQQhAp1k8qMfJT"))],
+                [InlineKeyboardButton("Ethereum · ETH", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("BNB", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
+                [InlineKeyboardButton("Bitcoin · BTC", copy_text=CopyTextButton(text="bc1qekmdcfkvy3u2jhk6v92ha2xjkskfs732n4000e"))],
+                [InlineKeyboardButton("⇋ ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ ⇋", callback_data="start")]
+            ]
+            reply_markup = InlineKeyboardMarkup(buttons)
+            try:
+                await query.message.edit_caption(
+                    caption=script.CRYPTO_DONATION_TXT,
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML
+                )
+            except Exception:
+                await query.message.edit_text(
+                    text=script.CRYPTO_DONATION_TXT,
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML,
+                    link_preview_options=LinkPreviewOptions(is_disabled=True)
+                )
         except Exception:
-            logger.exception("Exception in 'premium_info' callback")
-
-
-    elif query.data == "buy_info":
-        try:
-            btn = [[
-                InlineKeyboardButton('ꜱᴛᴀʀ', callback_data='star_info'),
-                InlineKeyboardButton('ᴜᴘɪ', callback_data='upi_info')
-            ],[
-                InlineKeyboardButton('⇋ ʙᴀᴄᴋ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ⇋', callback_data='premium_info')
-            ]]
-            reply_markup = InlineKeyboardMarkup(btn)
-            await client.edit_message_media(
-                chat_id=query.message.chat.id,
-                message_id=query.message.id,
-                media=InputMediaPhoto(media=SUBSCRIPTION, caption=script.PREMIUM_TEXT, parse_mode=enums.ParseMode.HTML),
-                reply_markup=reply_markup
-            )
-        except Exception:
-            logger.exception("Exception in 'buy_info' callback")
-
-    elif query.data == "upi_info":
-        try:
-            btn = [[
-                InlineKeyboardButton('• ꜱᴇɴᴅ  ᴘᴀʏᴍᴇɴᴛ ꜱᴄʀᴇᴇɴꜱʜᴏᴛ •', url=OWNER_LNK),
-            ],[
-                InlineKeyboardButton('⇋ ʙᴀᴄᴋ ⇋', callback_data='buy_info')
-            ]]
-            reply_markup = InlineKeyboardMarkup(btn)
-            await client.edit_message_media(
-                chat_id=query.message.chat.id,
-                message_id=query.message.id,
-                media=InputMediaPhoto(media=SUBSCRIPTION, caption=script.PREMIUM_UPI_TEXT.format(OWNER_UPI_ID), parse_mode=enums.ParseMode.HTML),
-                reply_markup=reply_markup
-            )
-        except Exception:
-            logger.exception("Exception in 'upi_info' callback")
+            logger.exception("Exception in crypto donation screen")
+            await query.answer("Could not open the donation screen. Please try again.", show_alert=True)
 
     elif query.data == "star_info":
         try:
