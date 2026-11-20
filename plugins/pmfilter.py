@@ -1166,7 +1166,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             photo="https://i.ibb.co/whf8xF7j/photo-2025-07-26-10-42-46-7531339305176793100.jpg",
             caption=script.PRE_STREAM,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🚀 Buy Premium 🚀", callback_data="premium_info")]
+                [InlineKeyboardButton("💜 Donate", callback_data="premium_info")]
             ])
         )
         await asyncio.sleep(DELETE_TIME)
@@ -1289,7 +1289,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     ),
                     parse_mode=enums.ParseMode.HTML,
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🚀 Buy Premium 🚀", callback_data="premium_info")
+                        InlineKeyboardButton("💜 Donate", callback_data="premium_info")
                     ]])
                 )
                 await asyncio.sleep(DELETE_TIME)
@@ -1325,7 +1325,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 parse_mode=enums.ParseMode.HTML
             )
 
-    elif query.data in ("premium_info", "buy_info", "upi_info"):
+    elif query.data in ("premium_info", "buy_info", "upi_info", "donation"):
         try:
             buttons = [
                 [InlineKeyboardButton("USDT · TRC20", copy_text=CopyTextButton(text="TGHgWpLCKgK19ca7BNgLMuYQfeyGTbTNvJ"))],
