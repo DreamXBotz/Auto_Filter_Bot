@@ -2,6 +2,7 @@ import plugins.listener  # noqa: F401
 import logging
 import logging.config
 from pyrogram import idle, __version__
+from pyrogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
 from pyrogram.raw.all import layer
 import time
 from pyrogram.errors import FloodWait
@@ -11,7 +12,7 @@ from pathlib import Path
 from aiohttp import web
 from database.ia_filterdb import Media, Media2
 from database.users_chats_db import db
-from info import MULTIPLE_DB, ON_HEROKU, LOG_STR, LOG_CHANNEL, PORT, TIMEZONE, TZ
+from info import MULTIPLE_DB, ON_HEROKU, LOG_STR, LOG_CHANNEL, PORT, TIMEZONE, TZ, ADMINS
 from utils import temp
 from Script import script
 from plugins import web_server, check_expired_premium, keep_alive
@@ -40,6 +41,93 @@ except ImportError:
 
 botStartTime = time.time()
 
+from pyrogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
+
+# Commands visible to every regular user.
+USER_COMMANDS = [
+    BotCommand("start", "Start the bot"),
+    BotCommand("id", "Show your Telegram ID"),
+    BotCommand("info", "Show Telegram account information"),
+    BotCommand("movies", "Browse the latest movie uploads"),
+    BotCommand("series", "Browse the latest series uploads"),
+    BotCommand("request", "Request a movie or series"),
+    BotCommand("top_search", "Show popular searches"),
+    BotCommand("trendlist", "Show today's trending searches"),
+    BotCommand("plan", "View premium plans and free trial"),
+    BotCommand("myplan", "Check your premium subscription"),
+]
+
+# Extra commands visible only to users listed in ADMINS.
+OWNER_COMMANDS = USER_COMMANDS + [
+    BotCommand("logs", "Send the bot log file"),
+    BotCommand("save", "Save a file to the database"),
+    BotCommand("delete", "Delete a file from the database"),
+    BotCommand("deleteall", "Delete all indexed files"),
+    BotCommand("settings", "Open group settings"),
+    BotCommand("reload", "Connect or reload a group"),
+    BotCommand("set_template", "Set the group file caption template"),
+    BotCommand("send", "Send a stored file to a user"),
+    BotCommand("deletefiles", "Delete indexed files"),
+    BotCommand("pm_search", "Enable or disable private search"),
+    BotCommand("movie_update", "Toggle movie update notifications"),
+    BotCommand("restart", "Restart the bot"),
+    BotCommand("del_msg", "Delete bot messages"),
+    BotCommand("set_caption", "Set the group's file caption"),
+    BotCommand("set_tutorial", "Set the first verification tutorial"),
+    BotCommand("set_tutorial_2", "Set the second verification tutorial"),
+    BotCommand("set_tutorial_3", "Set the third verification tutorial"),
+    BotCommand("set_shortner", "Set the first URL shortener"),
+    BotCommand("set_shortner_2", "Set the second URL shortener"),
+    BotCommand("set_shortner_3", "Set the third URL shortener"),
+    BotCommand("set_log_channel", "Set the group's log channel"),
+    BotCommand("set_time", "Set the first verification timer"),
+    BotCommand("set_time_2", "Set the second verification timer"),
+    BotCommand("details", "Show group or bot details"),
+    BotCommand("verify", "Manage user verification"),
+    BotCommand("set_fsub", "Set the force-subscription channel"),
+    BotCommand("resetallgroup", "Reset all connected groups"),
+    BotCommand("trial_reset", "Reset a user's free trial"),
+    BotCommand("remove_fsub", "Remove force subscription"),
+    BotCommand("clean_groups", "Clean inactive connected groups"),
+    BotCommand("broadcast", "Broadcast a message to users"),
+    BotCommand("grp_broadcast", "Broadcast a message to groups"),
+    BotCommand("clear_junk", "Clear junk user records"),
+    BotCommand("junk_group", "Show or clear junk groups"),
+    BotCommand("clear_junk_group", "Clear junk group records"),
+    BotCommand("remove_premium", "Remove a user's premium access"),
+    BotCommand("get_premium", "Check a user's premium status"),
+    BotCommand("add_premium", "Give premium access to a user"),
+    BotCommand("premium_users", "List premium users"),
+    BotCommand("maintenance", "Open the maintenance controls"),
+    BotCommand("banned", "Manage banned users and chats"),
+    BotCommand("setskip", "Set the indexing skip number"),
+    BotCommand("delreq", "Delete stored join requests"),
+]
+
+async def setup_command_menus(client):
+    """Publish separate Telegram command menus for regular users and owners."""
+    await client.set_bot_commands(
+        USER_COMMANDS,
+        scope=BotCommandScopeDefault()
+    )
+
+    for admin in ADMINS:
+        try:
+            try:
+                admin_id = int(admin)
+            except (TypeError, ValueError):
+                admin_user = await client.get_users(admin)
+                admin_id = admin_user.id
+
+            await client.set_bot_commands(
+                OWNER_COMMANDS,
+                scope=BotCommandScopeChat(chat_id=admin_id)
+            )
+            logger.info("Owner command menu configured for %s", admin_id)
+        except Exception as e:
+            logger.warning("Could not configure owner command menu for %s: %s", admin, e)
+
+
 def get_plugins_names(plugins_dir="plugins"):
     plugins_path = Path(plugins_dir)
     if not plugins_path.exists():
@@ -57,6 +145,7 @@ async def dreamxbotz_start():
     dreamxbotz.loop = asyncio.get_running_loop()
     await dreamxbotz.start()
     bot_info = await dreamxbotz.get_me()
+    await setup_command_menus(dreamxbotz)
     dreamxbotz.username = bot_info.username
     await initialize_clients()
     plugins_names = get_plugins_names()
