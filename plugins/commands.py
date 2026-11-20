@@ -519,25 +519,19 @@ async def start(client, message):
         pass
 
 async def stream_buttons(user_id: int, file_id: str):
-    if STREAM_MODE and not PREMIUM_STREAM_MODE:
+    # Keep file delivery controls, but never add the update-channel button.
+    if STREAM_MODE:
+        if PREMIUM_STREAM_MODE and not await db.has_premium_access(user_id):
+            return [
+                [InlineKeyboardButton('🚀 ꜰᴀsᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data='prestream')],
+                [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙs ɪɴꜰᴏ ℹ️', callback_data='prestream')]
+            ]
         return [
-            [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-            [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')]
+            [InlineKeyboardButton('🚀 ꜰᴀsᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
+            [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & sᴜʙs ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')]
         ]
-    elif STREAM_MODE and PREMIUM_STREAM_MODE:
-        if not await db.has_premium_access(user_id):
-            return [
-                [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data='prestream')],
-                [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data='prestream')]
-            ]
-        else:
-            return [
-                [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-            [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')]
-            ]
-    else:
-        return []  # No update-channel button when streaming is disabled.
-    
+    return []
+
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
 async def log_file(client, message):
     """Send log file"""
