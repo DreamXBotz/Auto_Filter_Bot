@@ -8,11 +8,10 @@ from pyrogram.errors import FloodWait
 import asyncio
 from datetime import date, datetime
 from pathlib import Path
-import pytz
 from aiohttp import web
 from database.ia_filterdb import Media, Media2
 from database.users_chats_db import db
-from info import MULTIPLE_DB, ON_HEROKU, LOG_STR, LOG_CHANNEL, PORT
+from info import MULTIPLE_DB, ON_HEROKU, LOG_STR, LOG_CHANNEL, PORT, TIMEZONE, TZ
 from utils import temp
 from Script import script
 from plugins import web_server, check_expired_premium, keep_alive
@@ -31,6 +30,13 @@ logging.getLogger("imdbpy").setLevel(logging.ERROR)
 logging.getLogger("aiohttp").setLevel(logging.ERROR)
 logging.getLogger("aiohttp.web").setLevel(logging.ERROR)
 logging.getLogger("pymongo").setLevel(logging.WARNING)
+
+try:
+    import uvloop
+    uvloop.install()
+    logger.info("uvloop installed as event-loop policy.")
+except ImportError:
+    pass
 
 botStartTime = time.time()
 
@@ -62,16 +68,15 @@ async def dreamxbotz_start():
     await initialize_clients()
     plugins_names = get_plugins_names()
     if plugins_names:
-        plugins_list = "\n".join(f"  {i}. {name}" for i, name in enumerate(plugins_names, 1))
-        logger.info("Plugins Found (%d):\n%s", len(plugins_names), plugins_list)
+        logger.info("Plugins Loaded: %d plugins found.", len(plugins_names))
     else:
         logger.warning("No plugins found.")
 
     if ON_HEROKU:
         asyncio.create_task(ping_server())
     b_users, b_chats = await db.get_banned()
-    temp.BANNED_USERS = b_users
-    temp.BANNED_CHATS = b_chats
+    temp.BANNED_USERS = set(b_users)
+    temp.BANNED_CHATS = set(b_chats)
     await Media.ensure_indexes()
     if MULTIPLE_DB:
         await Media2.ensure_indexes()
@@ -90,11 +95,10 @@ async def dreamxbotz_start():
     logger.info(f"{me.first_name} with Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
     logger.info(LOG_STR)
     logger.info(script.LOGO)
-    tz = pytz.timezone('Asia/Kolkata')
     today = date.today()
-    now = datetime.now(tz)
+    now = datetime.now(TZ)
     current_time = now.strftime("%I:%M:%S %p")
-    await dreamxbotz.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(temp.B_LINK, today, current_time))
+    await dreamxbotz.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(temp.B_LINK, today, current_time, TIMEZONE))
     app = web.AppRunner(await web_server())
     await app.setup()
     bind_address = "0.0.0.0"

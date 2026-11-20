@@ -10,7 +10,7 @@ media_filter = filters.document | filters.video | filters.audio
 
 
 @Client.on_message(filters.chat(DELETE_CHANNELS) & media_filter)
-async def deletemultiplemedia(bot, message):
+async def deletemultiplemedia(client, message):
     """Delete Multiple files from database"""
 
     for file_type in ("document", "video", "audio"):

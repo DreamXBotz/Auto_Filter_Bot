@@ -1,5 +1,5 @@
 import logging
-from utils import get_random_mix_id, get_size, is_subscribed, is_req_subscribed, group_setting_buttons, get_poster, get_posterx, temp, get_settings, save_group_settings, get_cap, imdb, is_check_admin, extract_request_content, log_error, clean_filename, generate_season_variations, clean_search_text, get_settings_text
+from utils import LimitedDict, get_random_mix_id, get_size, is_subscribed, is_req_subscribed, group_setting_buttons, get_poster, get_posterx, temp, get_settings, save_group_settings, get_cap, imdb, is_check_admin, extract_request_content, clean_filename, generate_season_variations, clean_search_text, get_settings_text
 from rapidfuzz import process
 from dreamxbotz.util.file_properties import get_name, get_hash
 from urllib.parse import quote_plus
@@ -14,7 +14,8 @@ from info import (
     EMOJI_MODE, GRP_LNK, LANDSCAPE_POSTER, LANGUAGES, LOG_CHANNEL, MAX_B_TN, MSG_ALRT,
     MULTIPLE_DB, NO_RESULTS_MSG, OWNER_LNK, OWNER_UPI_ID, PICS, PICS_URL, QR_CODE, QUALITIES,
     REACTIONS, REQST_CHANNEL, SEASONS, STAR_PREMIUM_PLANS, SUBSCRIPTION, SUPPORT_CHAT_ID,
-    TMDB_ON_SEARCH, TMDB_POSTER, ULTRA_FAST_MODE, UPDATE_CHNL_LNK, URL
+    TMDB_ON_SEARCH, TMDB_POSTER, ULTRA_FAST_MODE, UPDATE_CHNL_LNK, URL,
+    TZ
 )
 from Script import script
 from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
@@ -24,20 +25,20 @@ import asyncio
 import re
 import math
 import random
-import pytz
 from datetime import datetime, timedelta
 lock = asyncio.Lock()
 
 logger = logging.getLogger(__name__)
 
-TIMEZONE = "Asia/Kolkata"
-BUTTON = {}
-BUTTONS = {}
-FRESH = {}
-BUTTONS0 = {}
-BUTTONS1 = {}
-BUTTONS2 = {}
-SPELL_CHECK = {}
+BUTTONS = LimitedDict(maxsize=200)
+FRESH = LimitedDict(maxsize=200)
+
+REMOVES_WORDS = {"in", "upload", "series", "full", "horror", "thriller", "mystery", "print", "file"}
+SEARCH_CLEAN_REGEX = re.compile(
+    r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|bro|bruh|broh|helo|that|find|dubbed|link|venum|iruka|pannunga|pannungga|anuppunga|anupunga|anuppungga|anupungga|film|undo|kitti|kitty|tharu|kittumo|kittum|movie|any(one)|with\ssubtitle(s)?)\b",
+    re.IGNORECASE
+)
+PREFIX_COMMAND_REGEX = re.compile(r"^[\/,!.\U0001F600-\U000E007F]")
 
 @Client.on_message(filters.group & filters.text & filters.incoming & ~filters.regex(r"^/") )
 async def give_filter(client, message):
@@ -45,11 +46,11 @@ async def give_filter(client, message):
         return
     if EMOJI_MODE:
         try:
-            await message.react(emoji=random.choice(REACTIONS), big=True)
+            asyncio.create_task(message.react(emoji=random.choice(REACTIONS), big=True))
         except Exception:
-            await message.react(emoji="⚡")
+            asyncio.create_task(message.react(emoji="⚡️"))
             pass
-    await mdb.update_top_messages(message.from_user.id, message.text)
+    asyncio.create_task(mdb.update_top_messages(message.from_user.id, message.text))
     if message.chat.id != SUPPORT_CHAT_ID:
         settings = await get_settings(message.chat.id)
         try:
@@ -79,30 +80,30 @@ async def give_filter(client, message):
         )
 
 @Client.on_message(filters.private & filters.text & filters.incoming & ~filters.regex(r"^/") & ~filters.regex(r"(https?://)?(t\.me|telegram\.me|telegram\.dog)/"))
-async def pm_text(bot, message):
+async def pm_text(client, message):
     bot_id = temp.ME
     content = message.text
     user = message.from_user.first_name
     user_id = message.from_user.id
     if EMOJI_MODE:
         try:
-            await message.react(emoji=random.choice(REACTIONS), big=True)
+            asyncio.create_task(message.react(emoji=random.choice(REACTIONS), big=True))
         except Exception:
-            await message.react(emoji="⚡")
+            asyncio.create_task(message.react(emoji="⚡️"))
             pass
     if content.startswith(("#")):
         return
     try:
-        await mdb.update_top_messages(user_id, content)
+        asyncio.create_task(mdb.update_top_messages(user_id, content))
         pm_search = await db.pm_search_status(bot_id)
         if pm_search:
-            await auto_filter(bot, message)
+            await auto_filter(client, message)
         else:
             await message.reply_text(
                 text=script.PM_SEARCH_DISABLED_TXT.format(user),
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📝 ʀᴇǫᴜᴇsᴛ ʜᴇʀᴇ ", url=GRP_LNK)]])
             )
-            await bot.send_message(
+            await client.send_message(
                 chat_id=LOG_CHANNEL,
                 text=script.PM_LOG_TXT.format(user, user_id, content)
             )
@@ -110,17 +111,17 @@ async def pm_text(bot, message):
         pass
 
 @Client.on_callback_query(filters.regex(r"^reffff"))
-async def refercall(bot, query):
+async def refercall(client, query):
     btn = [[
         InlineKeyboardButton(
-            'invite link', url=f'https://telegram.me/share/url?url=https://t.me/{bot.me.username}?start=reff_{query.from_user.id}&text=Hello%21%20Experience%20a%20bot%20that%20offers%20a%20vast%20library%20of%20unlimited%20movies%20and%20series.%20%F0%9F%98%83'),
+            'invite link', url=f'https://telegram.me/share/url?url=https://t.me/{client.me.username}?start=reff_{query.from_user.id}&text=Hello%21%20Experience%20a%20bot%20that%20offers%20a%20vast%20library%20of%20unlimited%20movies%20and%20series.%20%F0%9F%98%83'),
         InlineKeyboardButton(
             f'⏳ {referdb.get_refer_points(query.from_user.id)}', callback_data='ref_point'),
         InlineKeyboardButton('Back', callback_data='premium_info')
     ]]
     reply_markup = InlineKeyboardMarkup(btn)
     try:
-        await bot.edit_message_media(
+        await client.edit_message_media(
             query.message.chat.id,
             query.message.id,
             InputMediaPhoto("https://graph.org/file/1a2e64aee3d4d10edd930.jpg")
@@ -128,22 +129,25 @@ async def refercall(bot, query):
     except Exception:    
         pass
     await query.message.edit_text(
-        text=script.REFER_TXT.format(bot.me.username, query.from_user.id),
+        text=script.REFER_TXT.format(client.me.username, query.from_user.id),
         reply_markup=reply_markup,
         parse_mode=enums.ParseMode.HTML
     )
     await query.answer()
 
 @Client.on_callback_query(filters.regex(r"^next"))
-async def next_page(bot, query):
+async def next_page(client, query):
     try:
         await query.answer()
     except Exception:
         pass
     ident, req, key, offset = query.data.split("_")
-    curr_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
-    if int(req) not in [query.from_user.id, 0]:
-        return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+    curr_time = datetime.now(TZ).time()
+    try:
+        if int(req) not in [query.from_user.id, 0]:
+            return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+    except Exception:
+        pass
     try:
         offset = int(offset)
     except Exception:
@@ -164,7 +168,6 @@ async def next_page(bot, query):
     if not files:
         return
     temp.GETALL[key] = files
-    temp.SHORT[query.from_user.id] = query.message.chat.id
     settings = await get_settings(query.message.chat.id)
     if settings.get('button'):
         btn = [
@@ -308,7 +311,7 @@ async def next_page(bot, query):
                     ],
                 )
     if not settings["button"]:
-        cur_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+        cur_time = datetime.now(TZ).time()
         time_difference = timedelta(hours=cur_time.hour, minutes=cur_time.minute, seconds=(cur_time.second+(cur_time.microsecond/1000000))) - \
             timedelta(hours=curr_time.hour, minutes=curr_time.minute, seconds=(
                 curr_time.second+(curr_time.microsecond/1000000)))
@@ -324,7 +327,7 @@ async def next_page(bot, query):
                     except (MessageNotModified, MessageIdInvalid):
                         pass
                     except Exception as e:
-                        logger.exception(e)
+                        logger.exception("Failed to edit caption: %s", e)
                 else:
                     try:
                         await query.message.edit_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
@@ -345,10 +348,13 @@ async def next_page(bot, query):
     await query.answer()
 
 @Client.on_callback_query(filters.regex(r"^spol"))
-async def advantage_spoll_choker(bot, query):
+async def advantage_spoll_choker(client, query):
     _, id, user = query.data.split('#')
-    if int(user) != 0 and query.from_user.id != int(user):
-        return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+    try:
+        if int(user) not in [query.from_user.id, 0]:
+            return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+    except Exception:
+        pass
     movies = await get_posterx(id, id=True) if TMDB_ON_SEARCH else await get_poster(id, id=True)
     movie = movies.get('title')
     movie = re.sub(r"[:-]", " ", movie)
@@ -357,13 +363,13 @@ async def advantage_spoll_choker(bot, query):
     files, offset, total_results = await get_search_results(query.message.chat.id, movie, offset=0, filter=True)
     if files:
         k = (movie, files, offset, total_results)
-        await auto_filter(bot, query, k)
+        await auto_filter(client, query, k)
     else:
         reqstr1 = query.from_user.id if query.from_user else 0
-        reqstr = await bot.get_users(reqstr1)
+        reqstr = await client.get_users(reqstr1)
         if NO_RESULTS_MSG:
             try:
-                await bot.send_message(chat_id=BIN_CHANNEL, text=script.NORSLTS.format(reqstr.id, reqstr.mention, movie))
+                await client.send_message(chat_id=BIN_CHANNEL, text=script.NORSLTS.format(reqstr.id, reqstr.mention, movie))
             except Exception as e:
                 logger.error("Error In Spol: %s — Make Sure Bot Admin BIN CHANNEL", e)
         btn = InlineKeyboardMarkup(
@@ -379,7 +385,7 @@ async def qualities_cb_handler(client: Client, query: CallbackQuery):
     try:
         if int(req) not in [query.from_user.id, 0]:
             return await query.answer(
-                f"⚠ Hʟʟᴏ {query.from_user.first_name},\n"
+                f"⚠ Hᴇʟʟᴏ {query.from_user.first_name},\n"
                 f"Tʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nYᴏᴜ ᴍᴀʏ ʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀꜱ...",
                 show_alert=True,
             )
@@ -387,6 +393,8 @@ async def qualities_cb_handler(client: Client, query: CallbackQuery):
         pass
 
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace(' ', '_')
 
     btn = []
@@ -413,8 +421,10 @@ async def qualities_cb_handler(client: Client, query: CallbackQuery):
 @Client.on_callback_query(filters.regex(r"^fq#"))
 async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
     _, qual, req, key = query.data.split("#")
-    curr_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+    curr_time = datetime.now(TZ).time()
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace("_", " ")
     baal = qual in search
     if baal:
@@ -508,7 +518,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
                 text="↭ Nᴏ ᴍᴏʀᴇ ᴘᴀɢᴇꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ↭", callback_data="pages")]
         )
     if not settings["button"]:
-        cur_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+        cur_time = datetime.now(TZ).time()
         time_difference = timedelta(hours=cur_time.hour, minutes=cur_time.minute, seconds=(cur_time.second+(cur_time.microsecond/1000000))) - \
             timedelta(hours=curr_time.hour, minutes=curr_time.minute, seconds=(
                 curr_time.second+(curr_time.microsecond/1000000)))
@@ -541,6 +551,8 @@ async def languages_cb_handler(client: Client, query: CallbackQuery):
         pass
 
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace(' ', '_')
 
     items = list(LANGUAGES.items())
@@ -566,8 +578,10 @@ async def languages_cb_handler(client: Client, query: CallbackQuery):
 @Client.on_callback_query(filters.regex(r"^fl#"))
 async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
     _, lang, req, key = query.data.split("#")
-    curr_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+    curr_time = datetime.now(TZ).time()
     search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     search = search.replace("_", " ")
     baal = lang in search
     if baal:
@@ -578,7 +592,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
     message = query.message
     try:
         if int(req) not in [query.from_user.id, 0]:
-            return await query.answer(f"⚠ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...", show_alert=True,)
+            return await query.answer(f"⚠ Hᴇʟʟᴏ {query.from_user.first_name},\nTʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...", show_alert=True,)
     except Exception:
         pass
     if lang != "homepage":
@@ -657,7 +671,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
         btn.append([InlineKeyboardButton(
             text="↭ Nᴏ ᴍᴏʀᴇ ᴘᴀɢᴇꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ↭", callback_data="pages")])
     if not settings["button"]:
-        cur_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+        cur_time = datetime.now(TZ).time()
         time_difference = timedelta(hours=cur_time.hour, minutes=cur_time.minute, seconds=(cur_time.second+(cur_time.microsecond/1000000))) - \
             timedelta(hours=cur_time.hour, minutes=cur_time.minute, seconds=(
                 curr_time.second+(curr_time.microsecond/1000000)))
@@ -681,11 +695,13 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
     try:
         if int(req) not in [query.from_user.id, 0]:
             return await query.answer(
-                f"⚠ ʜᴇʟʟᴏ {query.from_user.first_name},\nᴛʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
+                f"⚠ Hᴇʟʟᴏ {query.from_user.first_name},\nTʜɪꜱ ɪꜱ ɴᴏᴛ ʏᴏᴜʀ ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ,\nʀᴇǫᴜᴇꜱᴛ ʏᴏᴜʀ'ꜱ...",
                 show_alert=True,
             )
     except Exception:
         pass
+    if not FRESH.get(key):
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
     offset = 0
     btn: list[list[InlineKeyboardButton]] = []
     for i in range(0, len(SEASONS) - 1, 2):
@@ -707,9 +723,12 @@ async def seasons_cb_handler(client: Client, query: CallbackQuery):
 
 @Client.on_callback_query(filters.regex(r"^fs#"))
 async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
-    start_t = datetime.now(pytz.timezone("Asia/Kolkata"))
+    start_t = datetime.now(TZ)
     _, season_tag, req, key = query.data.split("#")
-    search = FRESH.get(key).replace("_", " ")
+    search = FRESH.get(key)
+    if not search:
+        return await query.answer(script.OLD_ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+    search = search.replace("_", " ")
     season_tag = season_tag.lower()
     if season_tag == "homepage":
         search_final = search
@@ -789,7 +808,7 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
                 "↭  Nᴏ ᴍᴏʀᴇ ᴘᴀɢᴇꜱ ᴀᴠᴀɪʟᴀʙʟᴇ ↭", callback_data="pages")]
         )
     if not settings.get("button"):
-        time_difference = datetime.now(pytz.timezone("Asia/Kolkata")) - start_t
+        time_difference = datetime.now(TZ) - start_t
         remaining_seconds = f"{time_difference.total_seconds():.2f}"
         dreamx_title = clean_search_text(search_final)
         cap = await get_cap(settings, remaining_seconds, files, query, total_results, dreamx_title, offset=1)
@@ -831,8 +850,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
     if query.data.startswith("file"):
         ident, file_id = query.data.split("#")
         user = query.message.reply_to_message.from_user.id if query.message.reply_to_message else query.from_user.id
-        if int(user) != 0 and query.from_user.id != int(user):
-            return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+        try:
+            if int(user) not in [query.from_user.id, 0]:
+                return await query.answer(script.ALRT_TXT.format(query.from_user.first_name), show_alert=True)
+        except Exception:
+            pass
         await query.answer(url=f"https://t.me/{temp.U_NAME}?start=file_{query.message.chat.id}_{file_id}")
 
     elif query.data.startswith("sendfiles"):
@@ -846,7 +868,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         except PeerIdInvalid:
             await query.answer(url=f"https://telegram.me/{temp.U_NAME}?start=sendfiles3_{key}")
         except Exception as e:
-            logger.exception(e)
+            logger.error("Error answering sendfiles callback: %s", e)
             await query.answer(url=f"https://telegram.me/{temp.U_NAME}?start=sendfiles4_{key}")
 
     elif query.data.startswith("autofilter_delete"):
@@ -863,8 +885,16 @@ async def cb_handler(client: Client, query: CallbackQuery):
             chat = file_id.split("_")[0]
             settings = await get_settings(chat)
             fsub_channels = list(dict.fromkeys((settings.get('fsub', []) if settings else [])+ AUTH_CHANNELS)) 
-            btn += await is_subscribed(client, query.from_user.id, fsub_channels)
-            btn += await is_req_subscribed(client, query.from_user.id, AUTH_REQ_CHANNELS)
+            if fsub_channels and AUTH_REQ_CHANNELS:
+                res1, res2 = await asyncio.gather(
+                    is_subscribed(client, query.from_user.id, fsub_channels),
+                    is_req_subscribed(client, query.from_user.id, AUTH_REQ_CHANNELS)
+                )
+                btn += res1 + res2
+            elif fsub_channels:
+                btn += await is_subscribed(client, query.from_user.id, fsub_channels)
+            elif AUTH_REQ_CHANNELS:
+                btn += await is_req_subscribed(client, query.from_user.id, AUTH_REQ_CHANNELS)
             if btn:
                 btn.append([InlineKeyboardButton("♻ ᴛʀʏ ᴀɢᴀɪɴ ♻", callback_data=f"checksub#{kk}#{file_id}")])
                 try:
@@ -885,11 +915,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 except MessageDeleteForbidden:
                     pass
         except Exception as e:
-            await log_error(client, f"❌ Error in checksub callback:\n\n{repr(e)}")
             logger.error(f"❌ Error in checksub callback:\n\n{repr(e)}")
 
     elif query.data.startswith("killfilesdq"):
-        ident, keyword = query.data.split("#")
+        ident, keyword = query.data.split("#", 1)
         await query.message.edit_text(f"<b>Fetching Files for your query {keyword} on DB... Please wait...</b>")
         files, total = await get_bad_files(keyword)
         await query.message.edit_text("<b>ꜰɪʟᴇ ᴅᴇʟᴇᴛɪᴏɴ ᴘʀᴏᴄᴇꜱꜱ ᴡɪʟʟ ꜱᴛᴀʀᴛ ɪɴ 5 ꜱᴇᴄᴏɴᴅꜱ !</b>")
@@ -1081,7 +1110,57 @@ async def cb_handler(client: Client, query: CallbackQuery):
             msg_text = alerts[ident].format(name=user.first_name)
             await query.answer(msg_text, show_alert=True)
         else:
-            await query.answer("Yᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴ ᴛᴏ sᴇᴇ ᴛʜɪs ❌", show_alert=True)
+            await query.answer("Yᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪssɪᴏɴ ᴛᴏ sᴇᴇ ᴛʜɪꜱ ❌", show_alert=True)
+
+    elif DreamxData.startswith("generate_stream_link"):
+        _, file_id = DreamxData.split(":")
+        try:
+            user_id = query.from_user.id
+            username = query.from_user.mention
+            log_msg = await client.send_cached_media(chat_id=BIN_CHANNEL, file_id=file_id,)
+            fileName = quote_plus(get_name(log_msg))
+            dreamx_stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
+            dreamx_download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
+            await query.answer(MSG_ALRT)
+            await asyncio.sleep(1)
+            await log_msg.reply_text(
+                text=f"•• ʟɪɴᴋ ɢᴇɴᴇʀᴀᴛᴇᴅ ꜰᴏʀ ɪᴅ #{user_id} \n•• ᴜꜱᴇʀɴᴀᴍᴇ : {username} \n\n•• ᖴᎥᒪᗴ Nᗩᗰᗴ : {fileName}",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),  # we download Link
+                                                    InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)]])  # web stream Link
+            )
+            dreamcinezone = await query.edit_message_reply_markup(
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ 🚀", url=dreamx_download),
+                        InlineKeyboardButton('🖥️ ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', url=dreamx_stream)
+                    ],
+                    [
+                        InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)
+                    ]
+                ])
+            )
+            await asyncio.sleep(DELETE_TIME)
+            await dreamcinezone.delete()
+            return
+        except Exception as e:
+            logger.error("Callback error: %s", e)
+            await query.answer(f"⚠️ SOMETHING WENT WRONG STREAM LINK  \n\n{e}", show_alert=True)
+            return
+
+
+    elif query.data == "prestream":
+        await query.answer(text=script.PRE_STREAM_ALERT, show_alert=True)
+        dreamcinezone = await client.send_photo(
+            chat_id=query.message.chat.id,
+            photo="https://i.ibb.co/whf8xF7j/photo-2025-07-26-10-42-46-7531339305176793100.jpg",
+            caption=script.PRE_STREAM,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🚀 Buy Premium 🚀", callback_data="premium_info")]
+            ])
+        )
+        await asyncio.sleep(DELETE_TIME)
+        await dreamcinezone.delete()
 
     elif query.data == "start":
         buttons = [[
@@ -1094,7 +1173,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                      InlineKeyboardButton('Uᴘɢʀᴀᴅᴇ 🎟', callback_data="premium_info"),
                 ]]
         reply_markup = InlineKeyboardMarkup(buttons)
-        current_time = datetime.now(pytz.timezone(TIMEZONE))
+        current_time = datetime.now(TZ)
         curr_time = current_time.hour
         if curr_time < 12:
             gtxt = "Gᴏᴏᴅ ᴍᴏʀɴɪɴɢ 🌞"
@@ -1369,7 +1448,7 @@ async def auto_filter(client, msg, spoll=False):
     """
     Core auto_filter logic with timing/debug logging removed.
     """
-    curr_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+    curr_time = datetime.now(TZ).time()
 
     async def _schedule_delete(sent_obj, orig_msg, delay):
         try:
@@ -1390,22 +1469,14 @@ async def auto_filter(client, msg, spoll=False):
             message = msg
             if message.text.startswith("/"):
                 return
-            if re.findall(r"((^\/|^,|^!|^\.|^[\U0001F600-\U000E007F]).*)", message.text):
+            if PREFIX_COMMAND_REGEX.match(message.text):
                 return
             if len(message.text) < 100:
                 message_text = message.text or ""
                 search = message_text.lower()
                 m = await message.reply_text(script.SEARCHING_TXT.format(search))
-                find = search.split(" ")
-                search = ""
-                removes = ["in", "upload", "series", "full",
-                           "horror", "thriller", "mystery", "print", "file"]
-                for x in find:
-                    if x in removes:
-                        continue
-                    else:
-                        search = search + x + " "
-                search = re.sub(r"\b(pl(i|e)*?(s|z+|ease|se|ese|(e+)s(e)?)|((send|snd|giv(e)?|gib)(\sme)?)|movie(s)?|new|latest|bro|bruh|broh|helo|that|find|dubbed|link|venum|iruka|pannunga|pannungga|anuppunga|anupunga|anuppungga|anupungga|film|undo|kitti|kitty|tharu|kittumo|kittum|movie|any(one)|with\ssubtitle(s)?)\b", "", search, flags=re.IGNORECASE)
+                search = " ".join([x for x in search.split() if x not in REMOVES_WORDS])
+                search = SEARCH_CLEAN_REGEX.sub("", search)
                 search = search.replace("-", " ")
                 search = re.sub(r"[:']", "", search)
                 search = re.sub(r"\s+", " ", search).strip()
@@ -1425,27 +1496,26 @@ async def auto_filter(client, msg, spoll=False):
                         return result
                     else:
                         try:
-                            if m:
-                                await m.delete()
+                            await m.edit(script.MVE_NT_FND)
+                            if settings.get('auto_delete'):
+                                asyncio.create_task(_schedule_delete(m, message, DELETE_TIME))
                         except Exception:
                             pass
-                        result = await advantage_spell_chok(client, message)
-                        return result
+                        return
             else:
                 return
         else:
             message = msg.message.reply_to_message
             search, files, offset, total_results = spoll
-            m = await message.reply_text(f'🔎 sᴇᴀʀᴄʜɪɴɢ {search}')
+            m = await message.reply_text(script.SEARCHING_TXT.format(search))
             settings = await get_settings(message.chat.id)
             await msg.message.delete()
         key = f"{message.chat.id}-{message.id}"
         FRESH[key] = search
         temp.GETALL[key] = files
         req = message.from_user.id if message.from_user else 0
-        temp.SHORT[message.from_user.id] = message.chat.id
         try:
-            await client.send_reaction(chat_id=message.chat.id, message_id=message.id, emoji="🍿")
+            asyncio.create_task(client.send_reaction(chat_id=message.chat.id, message_id=message.id, emoji="🍿"))
         except Exception:
             pass
         if settings.get('button'):
@@ -1525,13 +1595,12 @@ async def auto_filter(client, msg, spoll=False):
             imdb = await get_posterx(search, file=(files[0]).file_name) if TMDB_POSTER else await get_poster(search, file=(files[0]).file_name)
         else:
             imdb = None
-        cur_time = datetime.now(pytz.timezone('Asia/Kolkata')).time()
+        cur_time = datetime.now(TZ).time()
         time_difference = timedelta(hours=cur_time.hour, minutes=cur_time.minute, seconds=(cur_time.second+(cur_time.microsecond/1000000))) - \
             timedelta(hours=curr_time.hour, minutes=curr_time.minute,
                       seconds=(curr_time.second+(curr_time.microsecond/1000000)))
         remaining_seconds = "{:.2f}".format(time_difference.total_seconds())
         TEMPLATE = script.IMDB_TEMPLATE_TXT
-        settings = await get_settings(message.chat.id)
         if settings.get('template'):
             TEMPLATE = settings['template']
         if imdb:
@@ -1606,8 +1675,13 @@ async def auto_filter(client, msg, spoll=False):
                     if m:
                         await m.delete()
                 except Exception as e:
-                    logger.exception(e)
+                    logger.warning("Failed to send poster, falling back to text: %s", e)
                     sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
+                    if m:
+                        try:
+                            await m.delete()
+                        except Exception:
+                            pass
             else:
                 sent = await message.reply_text(text=cap, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode=enums.ParseMode.HTML)
                 if m:
@@ -1626,7 +1700,7 @@ async def auto_filter(client, msg, spoll=False):
             asyncio.create_task(_schedule_delete(sent, message, DELETE_TIME))
         return
     except Exception as e:
-        logger.exception(e)
+        logger.exception("Error in auto_filter: %s", e)
         return
 
 async def ai_spell_check(chat_id, wrong_name):

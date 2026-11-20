@@ -35,7 +35,7 @@ async def check_expired_premium(client):
                 else:
                     logger.warning("Premium expire notification error for user %s: %s", user_id, e)
             await sleep(0.5)
-        await sleep(1)
+        await sleep(60)
 
 async def keep_alive():
     """Keep bot alive by sending periodic pings."""

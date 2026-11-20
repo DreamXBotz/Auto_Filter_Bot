@@ -8,7 +8,7 @@ from collections import defaultdict
 from pymongo.errors import DuplicateKeyError
 from umongo import Instance, Document, fields
 from motor.motor_asyncio import AsyncIOMotorClient
-from utils import get_settings, save_group_settings
+from utils import get_settings, save_group_settings, LimitedDict
 from info import (
     COLLECTION_NAME, COVERX, DATABASE_NAME, DATABASE_URI, DATABASE_URI2,
     INDEX_CAPTION, MAX_B_TN, MULTIPLE_DB, ULTRA_FAST_MODE, USE_CAPTION_FILTER,
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # Global cache for DB size
 _db_stats_cache = {"timestamp": None, "primary_size": 0.0}
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=512)
 def compile_regex(pattern):
     return re.compile(pattern, re.IGNORECASE)
 
@@ -89,11 +89,7 @@ class Media2(Document):
 async def check_db_size(db):
     try:
         now = datetime.utcnow()
-        cache_stale_by_time = _db_stats_cache["timestamp"] is None or (
-            now - _db_stats_cache["timestamp"] > timedelta(minutes=10)
-        )
-        refresh_if_size_threshold = _db_stats_cache["primary_size"] >= 10.0
-        if not cache_stale_by_time and not refresh_if_size_threshold:
+        if _db_stats_cache["timestamp"] and (now - _db_stats_cache["timestamp"] < timedelta(minutes=10)):
             return _db_stats_cache["primary_size"]
         stats = await db.command("dbstats")
         db_logical_size = stats["dataSize"]
@@ -249,8 +245,10 @@ async def get_search_results(chat_id, query, file_type=None, max_results=None, o
             files = find_results[1] + find_results[0]
             files = files[offset:offset + max_results]
         else:
-            total_results = await Media.count_documents(filter_mongo)
-            files = await Media.find(filter_mongo).sort("$natural", -1).skip(offset).limit(max_results).to_list(length=max_results)
+            total_results, files = await asyncio.gather(
+                Media.count_documents(filter_mongo),
+                Media.find(filter_mongo).sort("$natural", -1).skip(offset).limit(max_results).to_list(length=max_results)
+            )
         next_offset = offset + len(files)
         if next_offset >= total_results:
             next_offset = ""
@@ -301,7 +299,13 @@ async def get_bad_files(query, file_type=None):
     files = files[:300]
     return files, len(files)
 
+_FILE_DETAILS_CACHE = LimitedDict(maxsize=300)
+
 async def get_file_details(query):
+    if not query:
+        return []
+    if query in _FILE_DETAILS_CACHE:
+        return _FILE_DETAILS_CACHE[query]
     filter = {"file_id": query}
     tasks = [Media.find(filter).to_list(length=1)]
     if MULTIPLE_DB:
@@ -309,6 +313,7 @@ async def get_file_details(query):
     results = await asyncio.gather(*tasks)
     for filedetails in results:
         if filedetails:
+            _FILE_DETAILS_CACHE[query] = filedetails
             return filedetails       
     return []
 

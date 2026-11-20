@@ -1,6 +1,5 @@
 import datetime
 import logging
-import pytz  
 import motor.motor_asyncio
 from info import (
     DATABASE_NAME,DATABASE_URI,DATABASE_URI2, MULTIPLE_DB, MAINTENANCE, PM_SEARCH,
@@ -8,7 +7,7 @@ from info import (
     AUTO_DELETE, AUTO_FFILTER, MAX_BTN, IMDB_TEMPLATE, LOG_VR_CHANNEL, TUTORIAL, TUTORIAL_2,
     TUTORIAL_3, SHORTENER_API, SHORTENER_API2, SHORTENER_API3, SHORTENER_WEBSITE, SHORTENER_WEBSITE2,
     SHORTENER_WEBSITE3, IS_VERIFY, TWO_VERIFY_GAP, THREE_VERIFY_GAP, CUSTOM_FILE_CAPTION, AUTH_CHANNELS,
-    MOVIE_UPDATE_NOTIFICATION
+    MOVIE_UPDATE_NOTIFICATION, TZ
 )
 
 
@@ -25,6 +24,8 @@ class Database:
             serverSelectionTimeoutMS=10000
         )
         self.db = self._client[database_name]
+        self._prem_cache = {}
+        self._users_cache = set()
         # Collections
         self.col = self.db.users
         self.grp = self.db.groups
@@ -90,10 +91,19 @@ class Database:
     async def add_user(self, id, name):
         user = self.new_user(id, name)
         await self.col.insert_one(user)
+        self._users_cache.add(int(id))
     
     async def is_user_exist(self, id):
-        user = await self.col.find_one({'id':int(id)})
-        return bool(user)
+        uid = int(id)
+        if uid in self._users_cache:
+            return True
+        user = await self.col.find_one({'id': uid})
+        res = bool(user)
+        if res:
+            if len(self._users_cache) > 10000:
+                self._users_cache.clear()
+            self._users_cache.add(uid)
+        return res
     
     async def total_users_count(self):
         count = await self.col.count_documents({})
@@ -127,6 +137,7 @@ class Database:
         return self.col.find({})
     
     async def delete_user(self, user_id):
+        self._users_cache.discard(int(user_id))
         await self.col.delete_many({'id': int(user_id)})
         
     async def delete_chat(self, id):
@@ -228,24 +239,21 @@ class Database:
     async def get_all_chats(self):
         return self.grp.find({})
 
-    async def get_db_size(self):
-        return (await self.db.command("dbstats"))['dataSize']
-
     async def get_user(self, user_id):
         user_data = await self.users.find_one({"id": user_id})
         return user_data
     async def update_user(self, user_data):
+        self._prem_cache.pop(user_data.get("id"), None)
         await self.users.update_one({"id": user_data["id"]}, {"$set": user_data}, upsert=True)
   
     async def get_notcopy_user(self, user_id):
         user_id = int(user_id)
         user = await self.misc.find_one({"user_id": user_id})
-        ist_timezone = pytz.timezone('Asia/Kolkata')
         if not user:
             res = {
                 "user_id": user_id,
-                "last_verified": datetime.datetime(2020, 5, 17, 0, 0, 0, tzinfo=ist_timezone),
-                "second_time_verified": datetime.datetime(2019, 5, 17, 0, 0, 0, tzinfo=ist_timezone),
+                "last_verified": datetime.datetime(2020, 5, 17, 0, 0, 0, tzinfo=TZ),
+                "second_time_verified": datetime.datetime(2019, 5, 17, 0, 0, 0, tzinfo=TZ),
             }
             await self.misc.insert_one(res)
             return res
@@ -264,10 +272,9 @@ class Database:
         except Exception:
             user = await self.get_notcopy_user(user_id)
             pastDate = user["last_verified"]
-        ist_timezone = pytz.timezone('Asia/Kolkata')
-        pastDate = pastDate.astimezone(ist_timezone)
-        current_time = datetime.datetime.now(tz=ist_timezone)
-        seconds_since_midnight = (current_time - datetime.datetime(current_time.year, current_time.month, current_time.day, 0, 0, 0, tzinfo=ist_timezone)).total_seconds()
+        pastDate = pastDate.astimezone(TZ)
+        current_time = datetime.datetime.now(tz=TZ)
+        seconds_since_midnight = (current_time - datetime.datetime(current_time.year, current_time.month, current_time.day, 0, 0, 0, tzinfo=TZ)).total_seconds()
         time_diff = current_time - pastDate
         total_seconds = time_diff.total_seconds()
         return total_seconds <= seconds_since_midnight
@@ -279,10 +286,9 @@ class Database:
         except Exception:
             user = await self.get_notcopy_user(user_id)
             pastDate = user["second_time_verified"]
-        ist_timezone = pytz.timezone('Asia/Kolkata')
-        pastDate = pastDate.astimezone(ist_timezone)
-        current_time = datetime.datetime.now(tz=ist_timezone)
-        seconds_since_midnight = (current_time - datetime.datetime(current_time.year, current_time.month, current_time.day, 0, 0, 0, tzinfo=ist_timezone)).total_seconds()
+        pastDate = pastDate.astimezone(TZ)
+        current_time = datetime.datetime.now(tz=TZ)
+        seconds_since_midnight = (current_time - datetime.datetime(current_time.year, current_time.month, current_time.day, 0, 0, 0, tzinfo=TZ)).total_seconds()
         time_diff = current_time - pastDate
         total_seconds = time_diff.total_seconds()
         return total_seconds <= seconds_since_midnight
@@ -290,8 +296,7 @@ class Database:
     async def use_second_shortener(self, user_id, time):
         user = await self.get_notcopy_user(user_id)
         if not user.get("second_time_verified"):
-            ist_timezone = pytz.timezone('Asia/Kolkata')
-            await self.update_notcopy_user(user_id, {"second_time_verified":datetime.datetime(2019, 5, 17, 0, 0, 0, tzinfo=ist_timezone)})
+            await self.update_notcopy_user(user_id, {"second_time_verified":datetime.datetime(2019, 5, 17, 0, 0, 0, tzinfo=TZ)})
             user = await self.get_notcopy_user(user_id)
         if await self.is_user_verified(user_id):
             try:
@@ -299,21 +304,19 @@ class Database:
             except Exception:
                 user = await self.get_notcopy_user(user_id)
                 pastDate = user["last_verified"]
-            ist_timezone = pytz.timezone('Asia/Kolkata')
-            pastDate = pastDate.astimezone(ist_timezone)
-            current_time = datetime.datetime.now(tz=ist_timezone)
+            pastDate = pastDate.astimezone(TZ)
+            current_time = datetime.datetime.now(tz=TZ)
             time_difference = current_time - pastDate
             if time_difference > datetime.timedelta(seconds=time):
-                pastDate = user["last_verified"].astimezone(ist_timezone)
-                second_time = user["second_time_verified"].astimezone(ist_timezone)
+                pastDate = user["last_verified"].astimezone(TZ)
+                second_time = user["second_time_verified"].astimezone(TZ)
                 return second_time < pastDate
         return False
 
     async def use_third_shortener(self, user_id, time):
         user = await self.get_notcopy_user(user_id)
         if not user.get("third_time_verified"):
-            ist_timezone = pytz.timezone('Asia/Kolkata')
-            await self.update_notcopy_user(user_id, {"third_time_verified":datetime.datetime(2018, 5, 17, 0, 0, 0, tzinfo=ist_timezone)})
+            await self.update_notcopy_user(user_id, {"third_time_verified":datetime.datetime(2018, 5, 17, 0, 0, 0, tzinfo=TZ)})
             user = await self.get_notcopy_user(user_id)
         if await self.user_verified(user_id):
             try:
@@ -321,13 +324,12 @@ class Database:
             except Exception:
                 user = await self.get_notcopy_user(user_id)
                 pastDate = user["second_time_verified"]
-            ist_timezone = pytz.timezone('Asia/Kolkata')
-            pastDate = pastDate.astimezone(ist_timezone)
-            current_time = datetime.datetime.now(tz=ist_timezone)
+            pastDate = pastDate.astimezone(TZ)
+            current_time = datetime.datetime.now(tz=TZ)
             time_difference = current_time - pastDate
             if time_difference > datetime.timedelta(seconds=time):
-                pastDate = user["second_time_verified"].astimezone(ist_timezone)
-                second_time = user["third_time_verified"].astimezone(ist_timezone)
+                pastDate = user["second_time_verified"].astimezone(TZ)
+                second_time = user["third_time_verified"].astimezone(TZ)
                 return second_time < pastDate
         return False
    
@@ -344,20 +346,28 @@ class Database:
         return await self.verify_id.update_one(myquery, newvalues)
         
     async def has_premium_access(self, user_id):
+        now_ts = datetime.datetime.now().timestamp()
+        cached = self._prem_cache.get(user_id)
+        if cached and (now_ts - cached[1]) < 60:
+            return cached[0]
+
         user_data = await self.get_user(user_id)
+        has_access = False
         if user_data:
             expiry_time = user_data.get("expiry_time")
-            if expiry_time is None:
-                return False
-            elif isinstance(expiry_time, datetime.datetime):
+            if isinstance(expiry_time, datetime.datetime):
                 now = datetime.datetime.now(expiry_time.tzinfo) if expiry_time.tzinfo else datetime.datetime.now()
                 if now <= expiry_time:
-                    return True
+                    has_access = True
                 else:
                     await self.users.update_one({"id": user_id}, {"$set": {"expiry_time": None}})
-            else:
+            elif expiry_time is not None:
                 await self.users.update_one({"id": user_id}, {"$set": {"expiry_time": None}})
-        return False
+
+        if len(self._prem_cache) > 300:
+            self._prem_cache.clear()
+        self._prem_cache[user_id] = (has_access, now_ts)
+        return has_access
         
     
 

@@ -39,13 +39,13 @@ async def disabled_chat(_, client, message: Message):
 disabled_group=filters.create(disabled_chat)
 
 @Client.on_message(filters.private & banned_user & filters.incoming , group=-1)
-async def ban_reply(bot, message):
+async def ban_reply(client, message):
     ban = await db.get_ban_status(message.from_user.id)
     await message.reply(f'Sorry Dude, You are Banned from using Me. \nBan Reason : {ban["ban_reason"]}')
     raise StopPropagation
 
 @Client.on_message(filters.group & disabled_group & filters.incoming , group=-1)
-async def grp_bd(bot, message):
+async def grp_bd(client, message):
     buttons = [[
         InlineKeyboardButton('Support', url=SUPPORT_CHAT)
     ]]
@@ -58,5 +58,5 @@ async def grp_bd(bot, message):
         await k.pin()
     except Exception:
         pass
-    await bot.leave_chat(message.chat.id)
+    await client.leave_chat(message.chat.id)
     raise StopPropagation

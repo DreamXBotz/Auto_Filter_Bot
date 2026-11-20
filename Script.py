@@ -48,8 +48,8 @@ class script(object):
 
 📅 Dᴀᴛᴇ : <code>{}</code>
 ⏰ Tɪᴍᴇ : <code>{}</code>
-🌐 Tɪᴍᴇᴢᴏɴᴇ : <code>Asia/Kolkata</code>
-🛠️ Bᴜɪʟᴅ Sᴛᴀᴛᴜs: <code> v1.4 [ Sᴛᴀʙʟᴇ ]</code>
+🌐 Tɪᴍᴇᴢᴏɴᴇ : <code>{}</code>
+🛠️ Bᴜɪʟᴅ Sᴛᴀᴛᴜs: <code> v1.5 [ ꜱᴛᴀʙʟᴇ ]</code>
 </b>"""
 
     MULTI_STATUS_TXT = """<b>🗃ᴜsᴇʀs ᴅᴀᴛᴀʙᴀsᴇ 🗃

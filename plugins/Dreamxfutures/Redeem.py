@@ -6,7 +6,7 @@ import random
 from pyrogram import Client, filters
 from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeyboardButton
 from database.users_chats_db import db
-from info import ADMINS, PREMIUM_LOGS
+from info import ADMINS, PREMIUM_LOGS, TZ
 from utils import get_seconds, temp
 
 REDEEM_CODE = {}
@@ -77,7 +77,7 @@ async def redeem_code(client, message):
                     if current_expiry:
                         current_expiry = current_expiry.replace(tzinfo=pytz.utc)
                     if current_expiry and current_expiry > now_aware:
-                        expiry_str_in_ist = current_expiry.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%d-%m-%Y\n⏱️ Expiry Time: %I:%M:%S %p")
+                        expiry_str_in_ist = current_expiry.astimezone(TZ).strftime("%d-%m-%Y\n⏱️ Expiry Time: %I:%M:%S %p")
                         await message.reply_text(
                             f"🚫 <b>Yᴏᴜ ᴀʟʀᴇᴀᴅʏ ʜᴀᴠᴇ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss!</b>\n\n"
                             f"⏳ <b>Cᴜʀʀᴇɴᴛ Pʀᴇᴍɪᴜᴍ Exᴘɪʀʏ:</b> {expiry_str_in_ist}\n\n"
@@ -91,7 +91,7 @@ async def redeem_code(client, message):
                     user_data = {"id": user_id, "expiry_time": expiry_time}
                     await db.update_user(user_data)
 
-                    expiry_str_in_ist = expiry_time.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%d-%m-%Y\n⏱️ Expiry Time: %I:%M:%S %p")
+                    expiry_str_in_ist = expiry_time.astimezone(TZ).strftime("%d-%m-%Y\n⏱️ Expiry Time: %I:%M:%S %p")
                     await message.reply_text(
                         f"🎉 <b>Premium activated successfully! 🚀</b>\n\n"
                         f"👤 <b>User:</b> {user.mention}\n"

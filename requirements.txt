@@ -11,7 +11,7 @@ pytz
 aiohttp
 telegraph
 pymediainfo-pyrofork
-
+uvloop; sys_platform != 'win32'
 # Other tools
 Pillow
 psutil

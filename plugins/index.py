@@ -4,6 +4,7 @@ import re
 import asyncio
 from pyrogram import Client, filters, enums
 from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, ChatAdminRequired, UsernameInvalid, UsernameNotModified, ChannelPrivate
+from pyrogram.errors import FloodWait, MessageNotModified
 from info import ADMINS, INDEX_REQ_CHANNEL as LOG_CHANNEL
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -15,14 +16,14 @@ logger = logging.getLogger(__name__)
 lock = asyncio.Lock()
 
 @Client.on_callback_query(filters.regex(r'^index'))
-async def index_files(bot, query):
+async def index_files(client, query):
     if query.data.startswith('index_cancel'):
         temp.CANCEL = True
         return await query.answer("Cancelling Indexing")
     _, dream, chat, lst_msg_id, from_user = query.data.split("#")
     if dream == 'reject':
         await query.message.delete()
-        await bot.send_message(int(from_user),
+        await client.send_message(int(from_user),
                                f'Your Submission for indexing {chat} has been declined by our moderators.',
                                reply_to_message_id=int(lst_msg_id))
         return
@@ -33,7 +34,7 @@ async def index_files(bot, query):
 
     await query.answer('Processing...⏳', show_alert=True)
     if int(from_user) not in ADMINS:
-        await bot.send_message(int(from_user),
+        await client.send_message(int(from_user),
                                f'Your Submission for indexing {chat} has been accepted by our moderators and will be added soon.',
                                reply_to_message_id=int(lst_msg_id))
     await msg.edit(
@@ -46,11 +47,11 @@ async def index_files(bot, query):
         chat = int(chat)
     except Exception:
         chat = chat
-    await index_files_to_db(int(lst_msg_id), chat, msg, bot)
+    await index_files_to_db(int(lst_msg_id), chat, msg, client)
 
 
 @Client.on_message((filters.forwarded | (filters.regex(r"(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")) & filters.text ) & filters.private & filters.incoming)
-async def send_for_index(bot, message):
+async def send_for_index(client, message):
     if message.text:
         regex = re.compile(r"(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")
         match = regex.match(message.text)
@@ -66,16 +67,16 @@ async def send_for_index(bot, message):
     else:
         return
     try:
-        await bot.get_chat(chat_id)
+        await client.get_chat(chat_id)
     except (ChannelInvalid, ChannelPrivate):
         return await message.reply('This may be a private channel / group. Make me an admin over there to index the files.')
     except (UsernameInvalid, UsernameNotModified):
         return await message.reply('Invalid Link specified.')
     except Exception as e:
-        logger.exception(e)
+        logger.exception("Error checking chat for index: %s", e)
         return await message.reply(f'Errors - {e}')
     try:
-        k = await bot.get_messages(chat_id, last_msg_id)
+        k = await client.get_messages(chat_id, last_msg_id)
     except Exception:
         return await message.reply('Make sure that I am an admin in the channel, if channel is private.')
     if k.empty:
@@ -93,7 +94,7 @@ async def send_for_index(bot, message):
 
     if type(chat_id) is int:
         try:
-            link = (await bot.create_chat_invite_link(chat_id)).invite_link
+            link = (await client.create_chat_invite_link(chat_id)).invite_link
         except ChatAdminRequired:
             return await message.reply('Make sure I am an admin in the chat and have permission to invite users.')
     else:
@@ -103,14 +104,14 @@ async def send_for_index(bot, message):
         [InlineKeyboardButton('Reject Index', callback_data=f'index#reject#{chat_id}#{message.id}#{message.from_user.id}')]
     ]
     reply_markup = InlineKeyboardMarkup(buttons)
-    await bot.send_message(LOG_CHANNEL,
+    await client.send_message(LOG_CHANNEL,
                            f'#IndexRequest\n\nBy : {message.from_user.mention} (<code>{message.from_user.id}</code>)\nChat ID/ Username - <code> {chat_id}</code>\nLast Message ID - <code>{last_msg_id}</code>\nInviteLink - {link}',
                            reply_markup=reply_markup)
     await message.reply('Thank you for the contribution, wait for our moderators to verify the files.')
 
 
 @Client.on_message(filters.command('setskip') & filters.user(ADMINS))
-async def set_skip_number(bot, message):
+async def set_skip_number(client, message):
     if len(message.command) > 1:
         try:
             skip = int(message.command[1])
@@ -127,7 +128,7 @@ def get_progress_bar(percent, length=10):
     unfilled = length - filled
     return '🟩' * filled + '⬜️' * unfilled
 
-async def index_files_to_db(lst_msg_id, chat, msg, bot):
+async def index_files_to_db(lst_msg_id, chat, msg, client):
     total_files = 0
     duplicate = 0
     errors = 0
@@ -166,7 +167,7 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                 end_id = min(current + BATCH_SIZE, lst_msg_id)
                 message_ids = range(start_id, end_id + 1)
                 try:
-                    messages = await bot.get_messages(chat, list(message_ids))
+                    messages = await client.get_messages(chat, list(message_ids))
                     if not isinstance(messages, list):
                         messages = [messages]
                 except Exception:
@@ -217,21 +218,26 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                 avg_batch_time = sum(batch_times) / len(batch_times) if batch_times else 1
                 eta = (total_fetch - progress) / BATCH_SIZE * avg_batch_time
                 progress_bar = get_progress_bar(int(percentage))
-                await msg.edit(
-                    f"📊 Indexing Progress 📦 Batch {batch + 1}/{batches}\n"
-                    f"{progress_bar} <code>{percentage:.1f}%</code>\n\n"
-                    f"Total Messages: <code>{total_messages}</code>\n"
-                    f"Total Fetched: <code>{total_fetch}</code>\n"
-                    f"Fetched: <code>{current}</code>\n"
-                    f"Saved: <code>{total_files}</code>\n"
-                    f"Duplicates: <code>{duplicate}</code>\n"
-                    f"Deleted: <code>{deleted}</code>\n"
-                    f"Non-Media: <code>{no_media + unsupported}</code> (Unsupported: <code>{unsupported}</code>)\n"
-                    f"Errors: <code>{errors}</code>\n"
-                    f"⏱️ Elapsed: <code>{get_readable_time(elapsed)}</code>\n"
-                    f"⏰ ETA: <code>{get_readable_time(eta)}</code>",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data='index_cancel')]])
-                )
+                try:
+                    await msg.edit(
+                        f"📊 Indexing Progress 📦 Batch {batch + 1}/{batches}\n"
+                        f"{progress_bar} <code>{percentage:.1f}%</code>\n\n"
+                        f"Total Messages: <code>{total_messages}</code>\n"
+                        f"Total Fetched: <code>{total_fetch}</code>\n"
+                        f"Fetched: <code>{current}</code>\n"
+                        f"Saved: <code>{total_files}</code>\n"
+                        f"Duplicates: <code>{duplicate}</code>\n"
+                        f"Deleted: <code>{deleted}</code>\n"
+                        f"Non-Media: <code>{no_media + unsupported}</code> (Unsupported: <code>{unsupported}</code>)\n"
+                        f"Errors: <code>{errors}</code>\n"
+                        f"⏱️ Elapsed: <code>{get_readable_time(elapsed)}</code>\n"
+                        f"⏰ ETA: <code>{get_readable_time(eta)}</code>",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data='index_cancel')]])
+                    )
+                except FloodWait as e:
+                    await asyncio.sleep(e.value)
+                except (MessageNotModified, Exception):
+                    pass
             elapsed = time.time() - start_time
             status_title = "🛑 Indexing Cancelled!" if temp.CANCEL else "✅ Indexing Completed!"
             await msg.edit(

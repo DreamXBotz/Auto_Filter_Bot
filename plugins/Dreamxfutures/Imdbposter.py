@@ -70,11 +70,6 @@ async def close_session():
     if _session and not _session.closed:
         await _session.close()
 
-def list_to_str(lst):
-    if lst:
-        return ", ".join(map(str, lst))
-    return ""
-
 
 def _list_to_str_tmdb(data_list, limit=10, key=None):
     """Helper for formatting TMDB response lists to comma-separated strings."""
