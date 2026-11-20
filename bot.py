@@ -202,6 +202,14 @@ def get_plugins_names(plugins_dir="plugins"):
     ]
 
 async def dreamxbotz_start():
+    # Bind the HTTP port immediately so Render detects the web service
+    # while Telegram clients and database indexes are still initializing.
+    app = web.AppRunner(await web_server())
+    await app.setup()
+    bind_address = "0.0.0.0"
+    await web.TCPSite(app, bind_address, PORT).start()
+    logger.info("HTTP server listening on %s:%s", bind_address, PORT)
+
     logger.info('\n\nInitializing DreamxBotz')
     dreamxbotz.loop = asyncio.get_running_loop()
     await dreamxbotz.start()
@@ -242,10 +250,6 @@ async def dreamxbotz_start():
     now = datetime.now(TZ)
     current_time = now.strftime("%I:%M:%S %p")
     await dreamxbotz.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(temp.B_LINK, today, current_time, TIMEZONE))
-    app = web.AppRunner(await web_server())
-    await app.setup()
-    bind_address = "0.0.0.0"
-    await web.TCPSite(app, bind_address, PORT).start()
     asyncio.create_task(keep_alive())
 
     try:
