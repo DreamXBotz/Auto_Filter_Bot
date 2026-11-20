@@ -392,7 +392,7 @@ async def start(client, message):
                             caption=f_caption,
                             video_cover=cover,
                             protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                            reply_markup=InlineKeyboardMarkup(btn)
+                            reply_markup=InlineKeyboardMarkup(btn) if btn else None
                         )
                     else:
                         msg = await client.send_cached_media(
@@ -400,7 +400,7 @@ async def start(client, message):
                             file_id=file_id,
                             caption=f_caption,
                             protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                            reply_markup=InlineKeyboardMarkup(btn)
+                            reply_markup=InlineKeyboardMarkup(btn) if btn else None
                         )
                     send_allfiles.append(msg)
                 k = await client.send_message(chat_id=message.from_user.id, text=script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
@@ -435,14 +435,14 @@ async def start(client, message):
                         video=file_id,
                         video_cover=cover,
                         protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                        reply_markup=InlineKeyboardMarkup(btn)
+                        reply_markup=InlineKeyboardMarkup(btn) if btn else None
                     )
                 else:
                     msg = await client.send_cached_media(
                         chat_id=message.from_user.id,
                         file_id=file_id,
                         protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                        reply_markup=InlineKeyboardMarkup(btn)
+                        reply_markup=InlineKeyboardMarkup(btn) if btn else None
                     )
 
                 filetype = msg.media
@@ -458,7 +458,7 @@ async def start(client, message):
                     except Exception as e:
                         logger.warning("Failed to format caption: %s", e)
                         f_caption = f"<code>{title}</code>"
-                await msg.edit_caption(f_caption, reply_markup=InlineKeyboardMarkup(btn))
+                await msg.edit_caption(f_caption, reply_markup=InlineKeyboardMarkup(btn) if btn else None)
                 k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
                 await asyncio.sleep(DELETE_TIME)
                 await msg.delete()
@@ -494,7 +494,7 @@ async def start(client, message):
                 caption=f_caption,
                 video_cover=cover,
                 protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                reply_markup=InlineKeyboardMarkup(btn)
+                reply_markup=InlineKeyboardMarkup(btn) if btn else None
             )
         else:
             msg = await client.send_cached_media(
@@ -502,7 +502,7 @@ async def start(client, message):
                 file_id=file_id,
                 caption=f_caption,
                 protect_content=settings.get('file_secure', PROTECT_CONTENT),
-                reply_markup=InlineKeyboardMarkup(btn)
+                reply_markup=InlineKeyboardMarkup(btn) if btn else None
             )
         
         k = await msg.reply(script.DEL_MSG.format(get_time(DELETE_TIME)), parse_mode=enums.ParseMode.HTML)
@@ -522,24 +522,21 @@ async def stream_buttons(user_id: int, file_id: str):
     if STREAM_MODE and not PREMIUM_STREAM_MODE:
         return [
             [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-            [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')],
-            [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
+            [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')]
         ]
     elif STREAM_MODE and PREMIUM_STREAM_MODE:
         if not await db.has_premium_access(user_id):
             return [
                 [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data='prestream')],
-                [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data='prestream')],
-                [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
+                [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data='prestream')]
             ]
         else:
             return [
                 [InlineKeyboardButton('🚀 ꜰᴀꜱᴛ ᴅᴏᴡɴʟᴏᴀᴅ / ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ 🖥️', callback_data=f'generate_stream_link:{file_id}')],
-                [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')],
-                [InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]
+            [InlineKeyboardButton('ℹ️ ᴠɪᴇᴡ ᴀᴜᴅɪᴏ & ꜱᴜʙꜱ ɪɴꜰᴏ ℹ️', callback_data=f'extract_data:{file_id}')]
             ]
     else:
-        return [[InlineKeyboardButton('📌 ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ 📌', url=UPDATE_CHNL_LNK)]]
+        return []  # No update-channel button when streaming is disabled.
     
 @Client.on_message(filters.command('logs') & filters.user(ADMINS))
 async def log_file(client, message):
@@ -689,7 +686,7 @@ async def settings(client, message):
               ]]
         await message.reply_text(
                 text="<b>ᴡʜᴇʀᴇ ᴅᴏ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴏᴘᴇɴ ꜱᴇᴛᴛɪɴɢꜱ ᴍᴇɴᴜ ? ⚙️</b>",
-                reply_markup=InlineKeyboardMarkup(btn),
+                reply_markup=InlineKeyboardMarkup(btn) if btn else None,
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
                 parse_mode=enums.ParseMode.HTML
         )
@@ -791,15 +788,15 @@ async def requests(client, message):
         warning_text = "<b>⚠️ ʀᴇǫᴜᴇꜱᴛ ᴄʜᴀɴɴᴇʟ ɪꜱ ɴᴏᴛ ꜱᴇᴛ.</b>"
         if REQST_CHANNEL is not None:
             try:
-                reported_post = await client.send_message(chat_id=REQST_CHANNEL, text=req_text, reply_markup=InlineKeyboardMarkup(btn))
+                reported_post = await client.send_message(chat_id=REQST_CHANNEL, text=req_text, reply_markup=InlineKeyboardMarkup(btn) if btn else None)
             except Exception:
                 for admin in ADMINS:
                     await client.send_message(chat_id=admin, text=warning_text)
-                    reported_post = await client.send_message(chat_id=admin, text=req_text, reply_markup=InlineKeyboardMarkup(btn))
+                    reported_post = await client.send_message(chat_id=admin, text=req_text, reply_markup=InlineKeyboardMarkup(btn) if btn else None)
         else:
             for admin in ADMINS:
                 await client.send_message(chat_id=admin, text=warning_text)
-                reported_post = await client.send_message(chat_id=admin, text=req_text, reply_markup=InlineKeyboardMarkup(btn))
+                reported_post = await client.send_message(chat_id=admin, text=req_text, reply_markup=InlineKeyboardMarkup(btn) if btn else None)
     except Exception:
         logger.exception("Request failed")
         return await message.reply_text( "<b>⚠️ ꜱᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ. ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.</b>")
@@ -819,7 +816,7 @@ async def requests(client, message):
                 btn = [[InlineKeyboardButton('ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ', url=invite_link)]]
                 if getattr(reported_post, "link", None):
                     btn[0].append(InlineKeyboardButton('ᴠɪᴇᴡ ʀᴇǫᴜᴇꜱᴛ', url=reported_post.link))
-                await message.reply_text("<b>ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛ ʜᴀꜱ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ! ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ ꜰᴏʀ ꜱᴏᴍᴇ ᴛɪᴍᴇ.\n\nᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ ꜰɪʀꜱᴛ & ᴠɪᴇᴡ ʀᴇǫᴜᴇꜱᴛ.</b>", reply_markup=InlineKeyboardMarkup(btn))
+                await message.reply_text("<b>ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛ ʜᴀꜱ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ! ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ ꜰᴏʀ ꜱᴏᴍᴇ ᴛɪᴍᴇ.\n\nᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ ꜰɪʀꜱᴛ & ᴠɪᴇᴡ ʀᴇǫᴜᴇꜱᴛ.</b>", reply_markup=InlineKeyboardMarkup(btn) if btn else None)
             else:
                 await message.reply_text("<b>ʏᴏᴜʀ ʀᴇǫᴜᴇꜱᴛ ʜᴀꜱ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ! ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ ꜰᴏʀ ꜱᴏᴍᴇ ᴛɪᴍᴇ.</b>")
         except Exception:
@@ -880,7 +877,7 @@ async def deletemultiplefiles(client, message):
     ]]
     await message.reply_text(
         text=f"<b>Found {total} files for your query {keyword} !\n\nDo you want to delete?</b>",
-        reply_markup=InlineKeyboardMarkup(btn),
+        reply_markup=InlineKeyboardMarkup(btn) if btn else None,
         parse_mode=enums.ParseMode.HTML
     )
 
@@ -1271,7 +1268,7 @@ async def all_settings(client, message):
         [InlineKeyboardButton("♻️ ʀᴇꜱᴇᴛ ꜱᴇᴛᴛɪɴɢꜱ", callback_data=f"reset_group_{grp_id}")],
         [InlineKeyboardButton("🚫 ᴄʟᴏꜱᴇ", callback_data="close_data", style=enums.ButtonStyle.DANGER)]
     ]
-    dlt = await message.reply_text(text, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True))
+    dlt = await message.reply_text(text, reply_markup=InlineKeyboardMarkup(btn) if btn else None, link_preview_options=LinkPreviewOptions(is_disabled=True))
     await asyncio.sleep(300)
     await dlt.delete()
 
