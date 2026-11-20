@@ -362,19 +362,28 @@ sʜᴏᴡɴ ɪɴ : {remaining_seconds} <i>sᴇᴄ</i>⚡️
 
 ᴍᴏᴠɪᴇꜰʟɪx ɪꜱ ꜰʀᴇᴇ ᴛᴏ ᴜꜱᴇ ᴀɴᴅ ᴅᴏᴇꜱ ɴᴏᴛ ᴏꜰꜰᴇʀ ᴘᴀɪᴅ ᴘʀᴇᴍɪᴜᴍ ꜰᴇᴀᴛᴜʀᴇꜱ. ɪꜰ ʏᴏᴜ ᴡɪꜱʜ ᴛᴏ ꜱᴜᴘᴘᴏʀᴛ ᴛʜᴇ ʙᴏᴛ, ʏᴏᴜ ᴄᴀɴ ᴅᴏɴᴀᴛᴇ ᴀɴʏ ᴀᴍᴏᴜɴᴛ ᴛʜʀᴏᴜɢʜ ᴄʀʏᴘᴛᴏ.
 
-<blockquote>₮ ᴜꜱᴅᴛ — ᴛʀᴏɴ (ᴛʀᴄ20)
+<blockquote>ᴜꜱᴅᴛ — ᴛʀᴏɴ (ᴛʀᴄ20)
 <code>TGHgWpLCKgK19ca7BNgLMuYQfeyGTbTNvJ</code>
 
-₮ ᴜꜱᴅᴛ — ᴇᴛʜᴇʀᴇᴜᴍ (ᴇʀᴄ20)
+ᴜꜱᴅᴛ — ᴇᴛʜᴇʀᴇᴜᴍ (ᴇʀᴄ20)
 <code>0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6</code>
 
-₮ ᴜꜱᴅᴛ — ʙɴʙ ꜱᴍᴀʀᴛ ᴄʜᴀɪɴ (ʙᴇᴘ20)
+ᴜꜱᴅᴛ — ʙɴʙ ꜱᴍᴀʀᴛ ᴄʜᴀɪɴ (ʙᴇᴘ20)
 <code>0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6</code>
 
-₮ ᴜꜱᴅᴛ — ꜱᴏʟᴀɴᴀ
-<code>A9dv5eegFPA1xxxH9xC1mcQxGtDPfFDQQhAp1k8qMfJT</code></blockquote>
+ᴜꜱᴅᴛ — ꜱᴏʟᴀɴᴀ (ꜱᴘʟ)
+<code>A9dv5eegFPA1xxxH9xC1mcQxGtDPfFDQQhAp1k8qMfJT</code>
 
-‼️ ᴘʟᴇᴀꜱᴇ ᴄʜᴏᴏꜱᴇ ᴛʜᴇ ᴄᴏʀʀᴇᴄᴛ ɴᴇᴛᴡᴏʀᴋ ʙᴇꜰᴏʀᴇ ꜱᴇɴᴅɪɴɢ. ᴅᴏɴᴀᴛɪᴏɴꜱ ᴀʀᴇ ᴠᴏʟᴜɴᴛᴀʀʏ ᴀɴᴅ ᴅᴏ ɴᴏᴛ ᴜɴʟᴏᴄᴋ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ.</b>"""
+ᴇᴛʜᴇʀᴇᴜᴍ (ᴇᴛʜ)
+<code>0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6</code>
+
+ʙɴʙ
+<code>0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6</code>
+
+ʙɪᴛᴄᴏɪɴ (ʙᴛᴄ)
+<code>bc1qekmdcfkvy3u2jhk6v92ha2xjkskfs732n4000e</code></blockquote>
+
+‼️ ᴄʜᴏᴏꜱᴇ ᴛʜᴇ ᴄᴏʀʀᴇᴄᴛ ᴄᴏɪɴ ᴀɴᴅ ɴᴇᴛᴡᴏʀᴋ ʙᴇꜰᴏʀᴇ ꜱᴇɴᴅɪɴɢ. ᴅᴏɴᴀᴛɪᴏɴꜱ ᴀʀᴇ ᴠᴏʟᴜɴᴛᴀʀʏ ᴀɴᴅ ᴅᴏ ɴᴏᴛ ᴜɴʟᴏᴄᴋ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ.</b>"""
 
     BPREMIUM_TXT = """<blockquote>🎬 <b>ᴍᴏᴠɪᴇꜰʟɪx ɪꜱ ꜰʀᴇᴇ</b></blockquote>
 
