@@ -1166,7 +1166,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             photo="https://i.ibb.co/whf8xF7j/photo-2025-07-26-10-42-46-7531339305176793100.jpg",
             caption=script.PRE_STREAM,
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💜 Donate", callback_data="premium_info")]
+                [InlineKeyboardButton("💜 Buy Premium", callback_data="premium_info")]
             ])
         )
         await asyncio.sleep(DELETE_TIME)
@@ -1180,7 +1180,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     InlineKeyboardButton(' ᴀʙᴏᴜᴛ 📖', callback_data='about')
                 ],[
                     InlineKeyboardButton('ᴛᴏᴘ sᴇᴀʀᴄʜɪɴɢ ⭐', callback_data="topsearch"),
-                     InlineKeyboardButton('💜 ᴅᴏɴᴀᴛᴇ', callback_data="premium_info"),
+                     InlineKeyboardButton('💜 ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ', callback_data="premium_info"),
                 ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         current_time = datetime.now(TZ)
@@ -1267,7 +1267,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                     ),
                     parse_mode=enums.ParseMode.HTML,
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💜 Donate", callback_data="premium_info")
+                        InlineKeyboardButton("💜 Buy Premium", callback_data="premium_info")
                     ]])
                 )
                 await asyncio.sleep(DELETE_TIME)
