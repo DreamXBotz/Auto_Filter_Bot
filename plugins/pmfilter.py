@@ -1331,7 +1331,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 )
         except Exception:
             logger.exception("Exception in crypto donation screen")
-            await query.answer("Could not open the donation screen. Please try again.", show_alert=True)
 
     elif query.data.startswith("grp_pm"):
         _, grp_id = query.data.split("#")
