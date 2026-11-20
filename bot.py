@@ -2,7 +2,7 @@ import plugins.listener  # noqa: F401
 import logging
 import logging.config
 from pyrogram import idle, __version__
-from pyrogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
+from pyrogram.types import (BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats, BotCommandScopeChat, BotCommandScopeChatMember)
 from pyrogram.raw.all import layer
 import time
 from pyrogram.errors import FloodWait
@@ -44,12 +44,24 @@ botStartTime = time.time()
 from pyrogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
 
 # Commands visible to every regular user.
-USER_COMMANDS = [
+# Commands available in private chats (normal users).
+USER_PRIVATE_COMMANDS = [
     BotCommand("start", "Start the bot"),
     BotCommand("id", "Show your Telegram ID"),
     BotCommand("info", "Show Telegram account information"),
     BotCommand("movies", "Browse the latest movie uploads"),
     BotCommand("series", "Browse the latest series uploads"),
+    BotCommand("top_search", "Show popular searches"),
+    BotCommand("trendlist", "Show today's trending searches"),
+    BotCommand("plan", "View premium plans and free trial"),
+    BotCommand("myplan", "Check your premium subscription"),
+]
+
+# Commands available in groups (normal users).
+USER_GROUP_COMMANDS = [
+    BotCommand("start", "Start the bot"),
+    BotCommand("id", "Show your Telegram ID"),
+    BotCommand("info", "Show Telegram account information"),
     BotCommand("request", "Request a movie or series"),
     BotCommand("top_search", "Show popular searches"),
     BotCommand("trendlist", "Show today's trending searches"),
@@ -58,7 +70,7 @@ USER_COMMANDS = [
 ]
 
 # Extra commands visible only to users listed in ADMINS.
-OWNER_COMMANDS = USER_COMMANDS + [
+OWNER_COMMANDS = USER_PRIVATE_COMMANDS + [
     BotCommand("logs", "Send the bot log file"),
     BotCommand("save", "Save a file to the database"),
     BotCommand("delete", "Delete a file from the database"),
@@ -104,11 +116,31 @@ OWNER_COMMANDS = USER_COMMANDS + [
     BotCommand("delreq", "Delete stored join requests"),
 ]
 
+# These commands require a group context and are kept out of the private menu.
+GROUP_ONLY_COMMANDS = {
+    "set_template", "set_caption",
+    "set_tutorial", "set_tutorial_2", "set_tutorial_3",
+    "set_shortner", "set_shortner_2", "set_shortner_3",
+    "set_log_channel", "set_time", "set_time_2",
+    "details", "verify", "set_fsub", "remove_fsub",
+}
+
+# Commands that are specifically private-chat controls and should not appear
+# in the group command menu.
+PRIVATE_ONLY_COMMANDS = {
+    "deletefiles", "pm_search", "movie_update", "resetallgroup",
+    "broadcast", "grp_broadcast",
+}
+
 async def setup_command_menus(client):
-    """Publish separate Telegram command menus for regular users and owners."""
+    """Set separate Telegram command menus for private chats, groups and owners."""
     await client.set_bot_commands(
-        USER_COMMANDS,
-        scope=BotCommandScopeDefault()
+        USER_PRIVATE_COMMANDS,
+        scope=BotCommandScopeAllPrivateChats()
+    )
+    await client.set_bot_commands(
+        USER_GROUP_COMMANDS,
+        scope=BotCommandScopeAllGroupChats()
     )
 
     for admin in ADMINS:
@@ -119,13 +151,42 @@ async def setup_command_menus(client):
                 admin_user = await client.get_users(admin)
                 admin_id = admin_user.id
 
+            # Owners see all non-group-only commands in their private chat.
+            owner_private = [
+                command for command in OWNER_COMMANDS
+                if command.command not in GROUP_ONLY_COMMANDS
+            ]
             await client.set_bot_commands(
-                OWNER_COMMANDS,
+                owner_private,
                 scope=BotCommandScopeChat(chat_id=admin_id)
             )
-            logger.info("Owner command menu configured for %s", admin_id)
+
+            # Owner-only group commands are scoped to each connected group
+            # and that owner, so ordinary group members cannot see them.
+            owner_group = [
+                command for command in OWNER_COMMANDS
+                if command.command not in PRIVATE_ONLY_COMMANDS
+            ]
+            async for group in db.get_all_chats():
+                group_id = group.get("id")
+                if not group_id:
+                    continue
+                try:
+                    await client.set_bot_commands(
+                        owner_group,
+                        scope=BotCommandScopeChatMember(
+                            chat_id=int(group_id),
+                            user_id=admin_id
+                        )
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Could not configure group command menu for owner %s in %s: %s",
+                        admin_id, group_id, e
+                    )
+            logger.info("Private and group command menus configured for owner %s", admin_id)
         except Exception as e:
-            logger.warning("Could not configure owner command menu for %s: %s", admin, e)
+            logger.warning("Could not configure owner command menus for %s: %s", admin, e)
 
 
 def get_plugins_names(plugins_dir="plugins"):
