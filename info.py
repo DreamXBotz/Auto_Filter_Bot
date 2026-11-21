@@ -37,6 +37,8 @@ BOT_TOKEN = environ.get('BOT_TOKEN', '')
 # Pyrogram session name
 SESSION = environ.get('SESSION', 'dreamxbotz_search')
 SESSION_NAME = str(environ.get('SESSION_NAME', 'dreamXBotz'))
+# Optional user account session used only for reading old BIN channel history.
+USER_SESSION_STRING = environ.get('USER_SESSION_STRING', '').strip()
 name = str(environ.get('name', 'DREAMXBOTZ'))
 
 
