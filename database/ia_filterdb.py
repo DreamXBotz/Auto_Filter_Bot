@@ -95,7 +95,7 @@ async def check_db_size(db):
         return 0.0
 
 
-async def save_file(media):
+async def _save_file_unlocked(media):
     """Save media metadata to MongoDB first, then Turso after the size limit."""
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_unique_id = getattr(media, "file_unique_id", None)
@@ -164,6 +164,15 @@ async def save_file(media):
     except Exception:
         logger.exception("Failed to save '%s' to %s database.", file_name, target_db)
         return False, 3
+
+
+_MEDIA_SAVE_LOCK = asyncio.Lock()
+
+
+async def save_file(media):
+    """Serialize size-check and insert so concurrent indexing doesn't overfill MongoDB."""
+    async with _MEDIA_SAVE_LOCK:
+        return await _save_file_unlocked(media)
 
 
 async def get_search_results(chat_id, query, file_type=None, max_results=None, offset=0, filter=False):
