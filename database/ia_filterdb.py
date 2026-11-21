@@ -280,7 +280,7 @@ async def get_bad_files(query, file_type=None):
         files.extend(results[1])
     files.extend(results[0])
     files = files[:300]
-    return files, len(files)    return files, len(files)
+    return files, len(files)
 
 _FILE_DETAILS_CACHE = LimitedDict(maxsize=300)
 
@@ -306,7 +306,7 @@ async def get_file_details(query):
         if filedetails:
             _FILE_DETAILS_CACHE[query] = filedetails
             return filedetails
-    return []    return []
+    return []
 
 def encode_file_id(s: bytes) -> str:
     r = b""
