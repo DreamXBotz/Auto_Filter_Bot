@@ -246,20 +246,38 @@ def extract_media_info(filename: str, caption: str):
 
 @Client.on_message(filters.chat(INDEX_CHANNELS) & MEDIA_FILTER)
 async def media_handler(client, message):
+    logger.info(
+        "Auto-index handler received media: chat_id=%s message_id=%s",
+        message.chat.id, message.id
+    )
     media = next(
         (getattr(message, ft) for ft in ("document", "video", "audio")
          if getattr(message, ft, None)),
         None
     )
     if not media:
+        logger.warning("Auto-index update had no supported media: chat_id=%s message_id=%s", message.chat.id, message.id)
         return
 
     media.file_type = next(ft for ft in ("document", "video", "audio") if getattr(message, ft, None))
     media.caption = message.caption or ""
-    success, info = await save_file(media)
-    if not success:
+    try:
+        success, info = await save_file(media)
+    except Exception:
+        logger.exception("Auto-index database save raised an exception")
         return
 
+    if not success:
+        logger.warning(
+            "Auto-index did not save media: chat_id=%s message_id=%s result=%s (duplicate or database issue)",
+            message.chat.id, message.id, info
+        )
+        return
+
+    logger.info(
+        "Auto-index saved media: chat_id=%s message_id=%s file_name=%s",
+        message.chat.id, message.id, media.file_name
+    )
     try:
         if await db.movie_update_status(temp.ME):
             await process_and_send_update(client, media.file_name, media.caption)
