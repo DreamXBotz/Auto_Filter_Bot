@@ -100,7 +100,7 @@ async def _save_file_unlocked(media):
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_unique_id = getattr(media, "file_unique_id", None)
     file_name = re.sub(
-        r"[_\-\.#+$%^&*()!~`,;:\\"'?/<>\[\]{}=|\\\\]", " ", str(media.file_name)
+        r"""[_\-\.#+$%^&*()!~\x60,;:"'?/<>\[\]{}=|\\]""", " ", str(media.file_name)
     )
     file_name = re.sub(r"\s+", " ", file_name).strip()
     duplicate_filter = {"$or": [{"file_id": file_id}]}
