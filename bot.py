@@ -72,8 +72,6 @@ USER_GROUP_COMMANDS = [
 # Extra commands visible only to users listed in ADMINS.
 OWNER_COMMANDS = USER_PRIVATE_COMMANDS + [
     BotCommand("logs", "Send the bot log file"),
-    BotCommand("reindex_bin", "Index missing files from BIN channel"),
-    BotCommand("backfill_bin", "Backfill missing files from BIN channel"),
     BotCommand("save", "Save a file to the database"),
     BotCommand("delete", "Delete a file from the database"),
     BotCommand("deleteall", "Delete all indexed files"),
