@@ -1,35 +1,14 @@
 import asyncio
 import logging
-from info import API_ID, API_HASH, SLEEP_THRESHOLD, USER_SESSION_STRING, BIN_CHANNEL
+from info import API_ID, API_HASH, SLEEP_THRESHOLD
 from pyrogram import Client
 from dreamxbotz.util.config_parser import TokenParser
 from . import multi_clients, work_loads, dreamxbotz
 
 logger = logging.getLogger(__name__)
 
-# Optional user session: Telegram bot accounts cannot call messages.GetHistory.
-bin_history_client = None
-
 async def initialize_clients():
-    global bin_history_client
     multi_clients[0] = dreamxbotz
-    if USER_SESSION_STRING:
-        try:
-            bin_history_client = await Client(
-                name="bin_history_user",
-                api_id=API_ID,
-                api_hash=API_HASH,
-                session_string=USER_SESSION_STRING,
-                in_memory=True,
-                no_updates=True,
-                sleep_threshold=SLEEP_THRESHOLD
-            ).start()
-            logger.info("BIN history user session started; it must be a member of BIN_CHANNEL=%s", BIN_CHANNEL)
-        except Exception:
-            bin_history_client = None
-            logger.exception("Could not start BIN history user session. Check USER_SESSION_STRING/API credentials.")
-    else:
-        logger.warning("USER_SESSION_STRING is not configured; historical BIN scans are disabled.")
     work_loads[0] = 0
     all_tokens = TokenParser().parse_from_env()
     if not all_tokens:
