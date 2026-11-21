@@ -97,12 +97,12 @@ async def search_media(pattern, file_type=None, use_caption=True):
     def operation(conn):
         if file_type:
             cursor = conn.execute(
-                f"SELECT {', '.join(_COLUMNS)} FROM media_files WHERE file_type = ? ORDER BY created_at DESC",
+                f"SELECT {', '.join(_COLUMNS)} FROM media_files WHERE file_type = ? ORDER BY rowid DESC",
                 (file_type,),
             )
         else:
             cursor = conn.execute(
-                f"SELECT {', '.join(_COLUMNS)} FROM media_files ORDER BY created_at DESC"
+                f"SELECT {', '.join(_COLUMNS)} FROM media_files ORDER BY rowid DESC"
             )
         rows = cursor.fetchall()
         matches = []
@@ -130,7 +130,7 @@ async def get_media_by_id(file_id):
 async def recent_media(limit):
     def operation(conn):
         cursor = conn.execute(
-            f"SELECT {', '.join(_COLUMNS)} FROM media_files ORDER BY created_at DESC LIMIT ?",
+            f"SELECT {', '.join(_COLUMNS)} FROM media_files ORDER BY rowid DESC LIMIT ?",
             (int(limit),),
         )
         return [_row_to_media(row) for row in cursor.fetchall()]
