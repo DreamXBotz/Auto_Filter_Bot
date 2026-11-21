@@ -14,7 +14,7 @@ from database.config_db import mdb
 from pyrogram.types import LinkPreviewOptions, InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardMarkup, CopyTextButton
 from pyrogram import Client, filters, enums, StopPropagation
 from pyrogram.errors import FloodWait, MediaEmpty, UserNotParticipant, ChannelInvalid, PeerIdInvalid, UserIsBlocked, InputUserDeactivated
-from database.ia_filterdb import Media, Media2, get_file_details, unpack_new_file_id, get_bad_files, save_file
+from database.ia_filterdb import Media, Media2, get_file_details, unpack_new_file_id, get_bad_files, save_file, delete_media_by_id, delete_media_matching
 from database.users_chats_db import db
 from info import (
     LOG_CHANNEL, IMDB_TEMPLATE, IS_VERIFY, TUTORIAL, TUTORIAL_2, TUTORIAL_3, EMOJI_MODE, REACTIONS,
@@ -559,68 +559,30 @@ async def save_file_handler(client, message):
 
 @Client.on_message(filters.command('delete') & filters.user(ADMINS))
 async def delete(client, message):
-    """Delete file from database"""
+    """Delete a media record from MongoDB or Turso."""
     reply = message.reply_to_message
-    if reply and reply.media:
-        msg = await message.reply("Pʀᴏᴄᴇssɪɴɢ...⏳")
-    else:
-        await message.reply('Rᴇᴘʟʏ ᴛᴏ ғɪʟᴇ ᴡɪᴛʜ /delete ᴡʜɪᴄʜ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴅᴇʟᴇᴛᴇ')
-        return
-
-    for file_type in ("document", "video", "audio"):
-        media = getattr(reply, file_type, None)
-        if media is not None:
-            break
-    else:
-        await msg.edit('Tʜɪs ɪs ɴᴏᴛ sᴜᴘᴘᴏʀᴛᴇᴅ ғɪʟᴇ ғᴏʀᴍᴀᴛ')
-        return
-    
-    file_id, file_ref = unpack_new_file_id(media.file_id)
-    if await Media.count_documents({'file_id': file_id}):
-        result = await Media.collection.delete_one({
-            '_id': file_id,
-        })
-    else:
-        result = await Media2.collection.delete_one({
-            '_id': file_id,
-        })
-    if result.deleted_count:
-        await msg.edit('Fɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ғʀᴏᴍ ᴅᴀᴛᴀʙᴀsᴇ ✅')
-    else:
-        file_name = re.sub(r"(_|\-|\.|\+)", " ", str(media.file_name))
-        result = await Media.collection.delete_many({
-            'file_name': file_name,
-            'file_size': media.file_size,
-            'mime_type': media.mime_type
-            })
-        if result.deleted_count:
+    if not reply or not reply.media:
+        return await message.reply('Rᴇᴘʟʏ ᴛᴏ ғɪʟᴇ ᴡɪᴛʜ /delete ᴡʜɪᴄʜ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴅᴇʟᴇᴛᴇ')
+    msg = await message.reply("Pʀᴏᴄᴇssɪɴɢ...⏳")
+    try:
+        media = next((getattr(reply, kind, None) for kind in ("document", "video", "audio")
+                      if getattr(reply, kind, None) is not None), None)
+        if media is None:
+            return await msg.edit('Tʜɪs ɪs ɴᴏᴛ sᴜᴘᴘᴏʀᴛᴇᴅ ғɪʟᴇ ғᴏʀᴍᴀᴛ')
+        file_id, _ = unpack_new_file_id(media.file_id)
+        deleted = await delete_media_by_id(file_id)
+        if not deleted:
+            file_name = re.sub(r"(_|\\-|\\.|\\+)", " ", str(media.file_name))
+            deleted = await delete_media_matching(file_name, media.file_size, media.mime_type)
+            if not deleted:
+                deleted = await delete_media_matching(media.file_name, media.file_size, media.mime_type)
+        if deleted:
             await msg.edit('Fɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ғʀᴏᴍ ᴅᴀᴛᴀʙᴀsᴇ ✅')
         else:
-            result = await Media2.collection.delete_many({
-                'file_name': file_name,
-                'file_size': media.file_size,
-                'mime_type': media.mime_type
-            })
-            if result.deleted_count:
-                await msg.edit('Fɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ғʀᴏᴍ ᴅᴀᴛᴀʙᴀsᴇ')
-            else:
-                result = await Media.collection.delete_many({
-                    'file_name': media.file_name,
-                    'file_size': media.file_size,
-                    'mime_type': media.mime_type
-                })
-                if result.deleted_count:
-                    await msg.edit('Fɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ғʀᴏᴍ ᴅᴀᴛᴀʙᴀsᴇ ✅')
-                else:
-                    result = await Media2.collection.delete_many({
-                        'file_name': media.file_name,
-                        'file_size': media.file_size,
-                        'mime_type': media.mime_type
-                    })
-                    if result.deleted_count:
-                        await msg.edit('Fɪʟᴇ ɪs sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ғʀᴏᴍ ᴅᴀᴛᴀʙᴀsᴇ ✅')
-                    else:
-                        await msg.edit('Fɪʟᴇ ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ ❌')
+            await msg.edit('Fɪʟᴇ ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴅᴀᴛᴀʙᴀsᴇ ❌')
+    except Exception:
+        logger.exception("Error deleting indexed media")
+        await msg.edit('Eʀʀᴏʀ: Fᴀɪʟᴇᴅ ᴛᴏ ᴅᴇʟᴇᴛᴇ ғɪʟᴇ ❌')
 
 
 @Client.on_message(filters.command('deleteall') & filters.user(ADMINS))
