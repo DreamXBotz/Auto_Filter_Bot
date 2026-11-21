@@ -40,55 +40,7 @@ async def remove_premium(client, message):
 
 @Client.on_message(filters.command("myplan"))
 async def myplan(client, message):
-    try:
-        user = message.from_user.mention
-        user_id = message.from_user.id
-        data = await db.get_user(user_id)
-
-        if data and data.get("expiry_time"):
-            expiry = data.get("expiry_time")
-            expiry_ist = expiry.astimezone(TZ)
-            expiry_str_in_ist = expiry_ist.strftime("%d-%m-%Y\n⏱️ ᴇxᴘɪʀʏ ᴛɪᴍᴇ : %I:%M:%S %p")
-
-            current_time = datetime.datetime.now(TZ)
-            time_left = expiry_ist - current_time
-            days = time_left.days
-            if days < 0:
-                time_left_str = "Expired"
-            else:
-                hours, remainder = divmod(time_left.seconds, 3600)
-                minutes, seconds = divmod(remainder, 60)
-                time_left_str = f"{days} ᴅᴀʏꜱ, {hours} ʜᴏᴜʀꜱ, {minutes} ᴍɪɴᴜᴛᴇꜱ"
-
-            caption = (
-                f"⚜️ <b>ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ ᴅᴀᴛᴀ :</b>\n\n"
-                f"👤 <b>ᴜꜱᴇʀ :</b> {user}\n"
-                f"⚡ <b>ᴜꜱᴇʀ ɪᴅ :</b> <code>{user_id}</code>\n"
-                f"⏰ <b>ᴛɪᴍᴇ ʟᴇꜰᴛ :</b> {time_left_str}\n"
-                f"⌛️ <b>ᴇxᴘɪʀʏ ᴅᴀᴛᴇ :</b> {expiry_str_in_ist}"
-            )
-
-            await message.reply_photo(
-                photo=SUBSCRIPTION, 
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🔥 ᴇxᴛᴇɴᴅ ᴘʟᴀɴ", callback_data="premium_info")]]
-                )
-            )
-        else:
-            await message.reply_photo(
-                photo="https://i.ibb.co/gMrpRQWP/photo-2025-07-09-05-21-32-7524948058832896004.jpg", 
-                caption=(
-                    f"<b>ʜᴇʏ {user},\n\n"
-                    f"ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴀɴ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ.\n"
-                    f"ʙᴜʏ ᴏᴜʀ ꜱᴜʙꜱᴄʀɪᴘᴛɪᴏɴ ᴛᴏ ᴇɴᴊᴏʏ ᴘʀᴇᴍɪᴜᴍ ʙᴇɴᴇꜰɪᴛꜱ.</b>"
-                ),
-                reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("💎 ᴄʜᴇᴄᴋᴏᴜᴛ ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴꜱ", callback_data='premium_info')]]
-                )
-            )
-    except Exception as e:
-        logger.error("myplan error: %s", e)
+    await message.reply_text("MovieFlix is free. We do not offer paid subscriptions.")
 
 @Client.on_message(filters.command("get_premium") & filters.user(ADMINS))
 async def get_premium(client, message):
@@ -190,28 +142,7 @@ async def premium_user(client, message):
 
 @Client.on_message(filters.command("plan"))
 async def plan(client, message):
-    user_id = message.from_user.id
-    users = message.from_user.mention
-    log_message = (
-        f"<b><u>🚫 ᴛʜɪs ᴜsᴇʀs ᴛʀʏ ᴛᴏ ᴄʜᴇᴄᴋ /plan</u> {temp.B_LINK}\n\n"
-        f"- ɪᴅ - `{user_id}`\n- ɴᴀᴍᴇ - {users}</b>")
-    btn = [[
-            InlineKeyboardButton('• ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ •', callback_data='buy_info'),
-        ],[
-            InlineKeyboardButton('• ʀᴇꜰᴇʀ ꜰʀɪᴇɴᴅꜱ', callback_data='reffff'),
-            InlineKeyboardButton('ꜰʀᴇᴇ ᴛʀɪᴀʟ •', callback_data='free')
-        ],[
-            InlineKeyboardButton('🚫 ᴄʟᴏꜱᴇ 🚫', callback_data='close_data', style=enums.ButtonStyle.DANGER)
-        ]]
-    msg = await message.reply_photo(
-        photo="https://graph.org/file/86da2027469565b5873d6.jpg",
-        caption=script.BPREMIUM_TXT,
-        reply_markup=InlineKeyboardMarkup(btn)
-    )
-    await client.send_message(PREMIUM_LOGS, log_message)
-    await asyncio.sleep(300)
-    await msg.delete()
-    await message.delete()
+    await message.reply_text("MovieFlix is free. We do not offer paid subscriptions.")
 
 
 # Telegram Star Payment Method 👇
