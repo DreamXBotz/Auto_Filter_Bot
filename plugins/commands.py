@@ -609,21 +609,21 @@ async def reindex_bin_handler(client, message):
                 if seen % 50 == 0:
                     try:
                         await status.edit_text(
-                            f"Scanning BIN history...\\nMessages checked: {seen}\\n"
-                            f"Sent to indexing queue: {relayed}\\nFailed to relay: {failed}"
+                            f"Scanning BIN history...\nMessages checked: {seen}\n"
+                            f"Sent to indexing queue: {relayed}\nFailed to relay: {failed}"
                         )
                     except Exception:
                         pass
                 await asyncio.sleep(0.15)
             await status.edit_text(
-                f"BIN history scan finished.\\nMessages checked: {seen}\\n"
-                f"Sent to indexing queue: {relayed}\\nFailed to relay: {failed}\\n"
+                f"BIN history scan finished.\nMessages checked: {seen}\n"
+                f"Sent to indexing queue: {relayed}\nFailed to relay: {failed}\n"
                 "The bot will skip duplicates when it processes the staging channel posts."
             )
         except Exception as e:
             logger.exception("BIN channel history scan stopped")
             await status.edit_text(
-                f"BIN scan stopped: {type(e).__name__}: {e}\\n"
+                f"BIN scan stopped: {type(e).__name__}: {e}\n"
                 f"Messages checked: {seen} | Relayed: {relayed} | Failed: {failed}"
             )
 
