@@ -90,7 +90,7 @@ docker run --env-file .env -p 8080:8080 auto-filter-bot
 | `API_ID` | Yes | Telegram API ID from [my.telegram.org](https://my.telegram.org) |
 | `API_HASH` | Yes | Telegram API Hash from [my.telegram.org](https://my.telegram.org) |
 | `ADMINS` | Yes | Telegram User IDs of administrators (space-separated) |
-| `DATABASE_URI` | Yes | MongoDB connection string |
+| `DATABASE_URI` | Yes | MongoDB connection string |\n| `TURSO_DATABASE_URL` | No | Turso database URL (`libsql://...`); enables overflow storage |\n| `TURSO_AUTH_TOKEN` | No | Secret Turso database auth token |\n| `MONGO_MAX_SIZE_MB` | No | MongoDB size threshold before new media records go to Turso (default: `512`) |
 | `LOG_CHANNEL` | Yes | Channel ID for activity logs (e.g. `-100...`) |
 | `CHANNELS` | No | Channels to auto-index files from (Bot must be admin) |
 | `STREAM_MODE` | No | Enable or disable media streaming mode |
