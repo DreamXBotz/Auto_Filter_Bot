@@ -6,7 +6,7 @@ from collections import defaultdict
 from plugins.Dreamxfutures.Imdbposter import get_movie_detailsx, fetch_image, get_movie_details
 from database.users_chats_db import db
 from pyrogram import Client, filters, enums
-from info import CHANNELS, BIN_CHANNEL, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, ABOVE_PREVIEW, BAD_WORDS, LANDSCAPE_POSTER, TMDB_POSTER
+from info import CHANNELS, BIN_CHANNEL, ADMINS, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, ABOVE_PREVIEW, BAD_WORDS, LANDSCAPE_POSTER, TMDB_POSTER
 from Script import script
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, LinkPreviewOptions
@@ -97,6 +97,7 @@ INDEX_CHANNELS = list(dict.fromkeys(CHANNELS + [BIN_CHANNEL]))
 locks = defaultdict(asyncio.Lock)
 pending_updates = {}
 error_tmdb = False
+backfill_lock = asyncio.Lock()
 
 def clean_mentions_links(text: str) -> str:
     return CLEAN_PATTERN.sub("", text or "").strip()
@@ -283,6 +284,105 @@ async def media_handler(client, message):
             await process_and_send_update(client, media.file_name, media.caption)
     except Exception:
         logger.exception("Error processing media")
+
+
+@Client.on_message(filters.command("backfill_bin") & filters.user(ADMINS))
+async def backfill_bin_handler(client, message):
+    """Scan existing BIN_CHANNEL history and fill missing file/movie records."""
+    if backfill_lock.locked():
+        return await message.reply_text("A BIN channel backfill is already running.")
+
+    status = await message.reply_text(
+        "Starting BIN channel backfill... I will scan older posts and skip files already indexed."
+    )
+    scanned = saved = duplicates = failed = unsupported = 0
+
+    async with backfill_lock:
+        try:
+            async for old_message in client.get_chat_history(BIN_CHANNEL):
+                scanned += 1
+                media_type = next(
+                    (ft for ft in ("document", "video", "audio")
+                     if getattr(old_message, ft, None)),
+                    None
+                )
+                if not media_type:
+                    unsupported += 1
+                    continue
+
+                media = getattr(old_message, media_type)
+                media.file_type = media_type
+                media.caption = old_message.caption or ""
+
+                try:
+                    success, result = await save_file(media)
+                    if success:
+                        saved += 1
+                    elif result == 0:
+                        duplicates += 1
+                    else:
+                        failed += 1
+                        logger.warning(
+                            "BIN backfill failed to save chat_id=%s message_id=%s result=%s",
+                            old_message.chat.id, old_message.id, result
+                        )
+                        continue
+
+                    # A duplicate in the file database may still be missing from
+                    # movie_updates, so let the existing idempotent updater inspect it.
+                    try:
+                        if await db.movie_update_status(temp.ME):
+                            filename = media.file_name or old_message.caption or f"Telegram file {old_message.id}"
+                            await process_and_send_update(client, filename, media.caption)
+                    except Exception:
+                        logger.exception(
+                            "BIN backfill movie metadata processing failed for message_id=%s",
+                            old_message.id
+                        )
+                        failed += 1
+
+                except FloodWait as e:
+                    await asyncio.sleep(e.value + 2)
+                    try:
+                        success, result = await save_file(media)
+                        if success:
+                            saved += 1
+                        elif result == 0:
+                            duplicates += 1
+                        else:
+                            failed += 1
+                    except Exception:
+                        failed += 1
+                        logger.exception("BIN backfill retry failed for message_id=%s", old_message.id)
+                except Exception:
+                    failed += 1
+                    logger.exception("BIN backfill failed for message_id=%s", old_message.id)
+
+                if scanned % 100 == 0:
+                    try:
+                        await status.edit_text(
+                            f"BIN backfill running...\\n"
+                            f"Scanned: {scanned}\\nSaved: {saved}\\n"
+                            f"Already indexed: {duplicates}\\nFailed: {failed}"
+                        )
+                    except Exception:
+                        pass
+                await asyncio.sleep(0.03)
+
+            await status.edit_text(
+                "BIN channel backfill finished.\\n"
+                f"Scanned messages: {scanned}\\n"
+                f"New files indexed: {saved}\\n"
+                f"Already indexed: {duplicates}\\n"
+                f"Failed: {failed}\\n"
+                f"Non-media messages skipped: {unsupported}"
+            )
+        except Exception as e:
+            logger.exception("BIN channel history scan failed")
+            await status.edit_text(
+                f"Could not finish BIN channel scan: {type(e).__name__}: {e}\\n"
+                f"Scanned: {scanned} | Saved: {saved} | Duplicates: {duplicates} | Failed: {failed}"
+            )
 
 async def process_and_send_update(client, filename, caption):
     try:
