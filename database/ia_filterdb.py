@@ -343,6 +343,39 @@ def unpack_new_file_id(new_file_id):
     return file_id, file_ref
 
 
+async def delete_media_by_id(file_id):
+    deleted = await Media.collection.delete_one({"_id": file_id})
+    total = deleted.deleted_count
+    if MULTIPLE_DB:
+        result = await Media2.collection.delete_one({"_id": file_id})
+        total += result.deleted_count
+    if TURSO_ENABLED:
+        total += await turso_store.delete_by_id(file_id)
+    if total:
+        _FILE_DETAILS_CACHE.pop(file_id, None)
+    return total
+
+
+async def delete_media_matching(file_name, file_size, mime_type):
+    query = {"file_name": file_name, "file_size": file_size, "mime_type": mime_type}
+    result = await Media.collection.delete_many(query)
+    total = result.deleted_count
+    if MULTIPLE_DB:
+        result = await Media2.collection.delete_many(query)
+        total += result.deleted_count
+    if TURSO_ENABLED:
+        total += await turso_store.delete_matching(file_name, file_size, mime_type)
+    return total
+
+
+async def delete_all_media():
+    await Media.collection.drop()
+    if MULTIPLE_DB:
+        await Media2.collection.drop()
+    if TURSO_ENABLED:
+        await turso_store.delete_all()
+
+
 async def dreamxbotz_fetch_media(limit: int) -> List[dict]:
     try:
         files = []
