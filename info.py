@@ -54,6 +54,7 @@ CHANNELS = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('CHAN
 # Logging & Storage Channels
 LOG_CHANNEL = int(environ.get('LOG_CHANNEL', '-100'))            # General activity & error logs
 BIN_CHANNEL = int(environ.get('BIN_CHANNEL', '-100'))            # File storage / binary cache channel
+INDEX_STAGING_CHANNEL = int(environ.get('INDEX_STAGING_CHANNEL', '-100'))  # Private channel used for historical reindex relay
 PREMIUM_LOGS = int(environ.get('PREMIUM_LOGS', '-100'))          # Premium subscription logs
 DELETE_CHANNELS = [int(dch) if id_pattern.search(dch) else dch for dch in environ.get('DELETE_CHANNELS', '-100').split()]
 
