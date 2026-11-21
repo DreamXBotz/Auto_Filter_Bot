@@ -6,7 +6,6 @@ import random
 import asyncio
 import string
 import sys
-import dreamxbotz.Bot.clients as bot_clients
 from .pmfilter import auto_filter 
 from Script import script
 from datetime import datetime, timedelta
@@ -22,7 +21,7 @@ from info import (
     VERIFY_IMG, TWO_VERIFY_GAP, UPDATE_CHNL_LNK, PICS, PICS_URL, ADMINS, SUBSCRIPTION, OWNER_LNK , 
     OWNER_UPI_ID, QR_CODE, AUTH_CHANNELS, AUTH_REQ_CHANNELS, FSUB_PICS, THREE_VERIFY_GAP, CUSTOM_FILE_CAPTION,
     COVERX, PROTECT_CONTENT, DELETE_TIME, PREMIUM_STREAM_MODE, STREAM_MODE, SUPPORT_CHAT_ID, REQST_CHANNEL,
-    LOG_CHANNEL, INDEX_STAGING_CHANNEL, SHORTENER_API, SHORTENER_API2, SHORTENER_API3, SHORTENER_WEBSITE, SHORTENER_WEBSITE2, SHORTENER_WEBSITE3,
+    LOG_CHANNEL, SHORTENER_API, SHORTENER_API2, SHORTENER_API3, SHORTENER_WEBSITE, SHORTENER_WEBSITE2, SHORTENER_WEBSITE3,
     TZ, BIN_CHANNEL
 )
 from utils import get_settings, save_group_settings, is_subscribed, is_req_subscribed, get_size, get_shortlink, is_check_admin, temp, get_readable_time, get_time, generate_settings_text, clean_filename, get_random_mix_id
@@ -557,75 +556,6 @@ async def save_file_handler(client, message):
         logger.exception("Error saving file: %s", e)
         await msg.edit(f'Aɴ ᴜɴᴇxᴘᴇᴄᴛᴇᴅ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ: {e} ❌')
 
-
-_BIN_REINDEX_LOCK = asyncio.Lock()
-
-@Client.on_message(filters.private & filters.command(["reindex_bin", "backfill_bin"]) & filters.user(ADMINS))
-async def reindex_bin_handler(client, message):
-    """Relay old BIN messages through a staging channel so the bot indexes bot-owned file IDs."""
-    if BIN_CHANNEL == -100:
-        return await message.reply("Set BIN_CHANNEL to your actual source channel ID first.")
-    if INDEX_STAGING_CHANNEL == -100:
-        return await message.reply("Set INDEX_STAGING_CHANNEL to a separate private staging channel ID first.")
-    scanner = bot_clients.bin_history_client
-    if scanner is None:
-        return await message.reply("Add USER_SESSION_STRING in Render and restart. The user account must be a member of both BIN and staging channels.")
-    if _BIN_REINDEX_LOCK.locked():
-        return await message.reply("A BIN channel scan is already running.")
-    status = await message.reply("Starting BIN history scan. Missing files will be relayed to the staging channel for normal bot indexing...")
-    seen = relayed = skipped = failed = 0
-    async with _BIN_REINDEX_LOCK:
-        try:
-            await scanner.get_chat(BIN_CHANNEL)
-            await scanner.get_chat(INDEX_STAGING_CHANNEL)
-            async for item in scanner.get_chat_history(BIN_CHANNEL):
-                seen += 1
-                if not any(getattr(item, kind, None) for kind in ("document", "video", "audio")):
-                    continue
-                try:
-                    # Copy as the logged-in user; the bot receives a new channel post
-                    # and indexes a file_id that belongs to its own bot account.
-                    await scanner.copy_message(
-                        chat_id=INDEX_STAGING_CHANNEL,
-                        from_chat_id=BIN_CHANNEL,
-                        message_id=item.id
-                    )
-                    relayed += 1
-                except FloodWait as e:
-                    await asyncio.sleep(e.value + 2)
-                    try:
-                        await scanner.copy_message(
-                            chat_id=INDEX_STAGING_CHANNEL,
-                            from_chat_id=BIN_CHANNEL,
-                            message_id=item.id
-                        )
-                        relayed += 1
-                    except Exception:
-                        failed += 1
-                        logger.exception("BIN relay retry failed for message %s", item.id)
-                except Exception:
-                    failed += 1
-                    logger.exception("BIN relay failed for message %s", item.id)
-                if seen % 50 == 0:
-                    try:
-                        await status.edit_text(
-                            f"Scanning BIN history...\nMessages checked: {seen}\n"
-                            f"Sent to indexing queue: {relayed}\nFailed to relay: {failed}"
-                        )
-                    except Exception:
-                        pass
-                await asyncio.sleep(0.15)
-            await status.edit_text(
-                f"BIN history scan finished.\nMessages checked: {seen}\n"
-                f"Sent to indexing queue: {relayed}\nFailed to relay: {failed}\n"
-                "The bot will skip duplicates when it processes the staging channel posts."
-            )
-        except Exception as e:
-            logger.exception("BIN channel history scan stopped")
-            await status.edit_text(
-                f"BIN scan stopped: {type(e).__name__}: {e}\n"
-                f"Messages checked: {seen} | Relayed: {relayed} | Failed: {failed}"
-            )
 
 @Client.on_message(filters.command('delete') & filters.user(ADMINS))
 async def delete(client, message):
