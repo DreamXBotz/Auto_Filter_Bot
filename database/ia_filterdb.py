@@ -376,7 +376,8 @@ async def delete_media_by_id(file_id):
         try:
             total += await turso_store.delete_by_id(file_id)
         except Exception:
-            logger.exception("Could not delete matching Turso record; MongoDB deletion still completed.")
+            logger.exception("Turso deletion failed after MongoDB deletion.")
+            raise
     if total:
         _FILE_DETAILS_CACHE.pop(file_id, None)
     return total
@@ -393,7 +394,8 @@ async def delete_media_matching(file_name, file_size, mime_type):
         try:
             total += await turso_store.delete_matching(file_name, file_size, mime_type)
         except Exception:
-            logger.exception("Could not delete matching Turso records; MongoDB deletion still completed.")
+            logger.exception("Turso matching-delete failed after MongoDB deletion.")
+            raise
     return total
 
 
@@ -405,7 +407,8 @@ async def delete_all_media():
         try:
             await turso_store.delete_all()
         except Exception:
-            logger.exception("Could not clear Turso media records.")
+            logger.exception("Turso delete-all failed after MongoDB collections were cleared.")
+            raise
 
 
 async def dreamxbotz_fetch_media(limit: int) -> List[dict]:
