@@ -96,7 +96,12 @@ async def check_db_size(db):
 
 
 async def _save_file_unlocked(media):
-    """Save media metadata to MongoDB first, then Turso after the size limit."""
+    """Save to MongoDB while it has room; use Turso for overflow records.
+
+    A Turso outage must not stop normal MongoDB indexing before the configured
+    MongoDB threshold is reached. Once MongoDB is full, fail closed rather than
+    lose an index record.
+    """
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_unique_id = getattr(media, "file_unique_id", None)
     file_name = re.sub(
@@ -107,15 +112,14 @@ async def _save_file_unlocked(media):
     if file_unique_id:
         duplicate_filter["$or"].append({"file_unique_id": file_unique_id})
 
+    # MongoDB duplicate checks are always required.
     try:
         if await Media.find_one(duplicate_filter):
             return False, 0
         if MULTIPLE_DB and await Media2.find_one(duplicate_filter):
             return False, 0
-        if TURSO_ENABLED and await turso_store.find_duplicate(file_id, file_unique_id):
-            return False, 0
     except Exception:
-        logger.exception("Duplicate check failed; refusing save to avoid duplicate records.")
+        logger.exception("MongoDB duplicate check failed; refusing save.")
         return False, 3
 
     cover_media = getattr(media, "video_cover", None) or getattr(media, "cover", None)
@@ -131,13 +135,30 @@ async def _save_file_unlocked(media):
         "cover": getattr(cover_media, "file_id", None) if COVERX else None,
     }
 
+    use_turso = False
     if TURSO_ENABLED:
         try:
             primary_size = await check_db_size(db)
         except Exception:
-            logger.error("MongoDB size could not be verified; not writing to MongoDB.", exc_info=True)
+            logger.exception("MongoDB size could not be verified; refusing save.")
             return False, 3
-        if primary_size >= MONGO_MAX_SIZE_MB:
+        use_turso = primary_size >= MONGO_MAX_SIZE_MB
+
+        # Check Turso for cross-database duplicates. If it is temporarily
+        # unavailable while MongoDB still has room, keep indexing in MongoDB.
+        try:
+            if await turso_store.find_duplicate(file_id, file_unique_id):
+                return False, 0
+        except Exception:
+            if use_turso:
+                logger.exception("Turso duplicate check failed and MongoDB is at its limit.")
+                return False, 3
+            logger.warning(
+                "Turso duplicate check unavailable; continuing in MongoDB because it has room.",
+                exc_info=True,
+            )
+
+        if use_turso:
             try:
                 saved = await turso_store.insert_media(data)
                 return (True, 1) if saved else (False, 0)
@@ -167,13 +188,6 @@ async def _save_file_unlocked(media):
 
 
 _MEDIA_SAVE_LOCK = asyncio.Lock()
-
-
-async def save_file(media):
-    """Serialize size-check and insert so concurrent indexing doesn't overfill MongoDB."""
-    async with _MEDIA_SAVE_LOCK:
-        return await _save_file_unlocked(media)
-
 
 async def get_search_results(chat_id, query, file_type=None, max_results=None, offset=0, filter=False):
     if max_results is None:
@@ -359,7 +373,10 @@ async def delete_media_by_id(file_id):
         result = await Media2.collection.delete_one({"_id": file_id})
         total += result.deleted_count
     if TURSO_ENABLED:
-        total += await turso_store.delete_by_id(file_id)
+        try:
+            total += await turso_store.delete_by_id(file_id)
+        except Exception:
+            logger.exception("Could not delete matching Turso record; MongoDB deletion still completed.")
     if total:
         _FILE_DETAILS_CACHE.pop(file_id, None)
     return total
@@ -373,7 +390,10 @@ async def delete_media_matching(file_name, file_size, mime_type):
         result = await Media2.collection.delete_many(query)
         total += result.deleted_count
     if TURSO_ENABLED:
-        total += await turso_store.delete_matching(file_name, file_size, mime_type)
+        try:
+            total += await turso_store.delete_matching(file_name, file_size, mime_type)
+        except Exception:
+            logger.exception("Could not delete matching Turso records; MongoDB deletion still completed.")
     return total
 
 
@@ -382,14 +402,20 @@ async def delete_all_media():
     if MULTIPLE_DB:
         await Media2.collection.drop()
     if TURSO_ENABLED:
-        await turso_store.delete_all()
+        try:
+            await turso_store.delete_all()
+        except Exception:
+            logger.exception("Could not clear Turso media records.")
 
 
 async def dreamxbotz_fetch_media(limit: int) -> List[dict]:
-    try:
-        files = []
-        if TURSO_ENABLED:
+    files = []
+    if TURSO_ENABLED:
+        try:
             files.extend(await turso_store.recent_media(limit))
+        except Exception:
+            logger.exception("Turso recent-media lookup failed; continuing with MongoDB.")
+    try:
         if MULTIPLE_DB:
             secondary = await Media2.find().sort("$natural", -1).limit(limit).to_list(length=limit)
             files.extend(secondary)
@@ -397,7 +423,7 @@ async def dreamxbotz_fetch_media(limit: int) -> List[dict]:
         return files[:limit]
     except Exception as e:
         logger.error("Error in dreamxbotz_fetch_media: %s", e)
-        return []
+        return files[:limit]
 
 
 async def dreamxbotz_clean_title(filename: str, is_series: bool = False) -> str:
