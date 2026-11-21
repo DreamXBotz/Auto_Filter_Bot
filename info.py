@@ -92,10 +92,14 @@ COLLECTION_NAME = environ.get('COLLECTION_NAME', 'dreamcinezone_files')
 # Turso overflow storage (used only after primary MongoDB reaches this limit)
 TURSO_DATABASE_URL = environ.get('TURSO_DATABASE_URL', '').strip()
 TURSO_AUTH_TOKEN = environ.get('TURSO_AUTH_TOKEN', '').strip()
+if bool(TURSO_DATABASE_URL) != bool(TURSO_AUTH_TOKEN):
+    raise ValueError('Set both TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, or leave both empty.')
 TURSO_ENABLED = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)
 try:
     MONGO_MAX_SIZE_MB = float(environ.get('MONGO_MAX_SIZE_MB', '512'))
 except (TypeError, ValueError):
+    MONGO_MAX_SIZE_MB = 512.0
+if MONGO_MAX_SIZE_MB <= 0:
     MONGO_MAX_SIZE_MB = 512.0
 
 # Secondary MongoDB for multiple DB load balancing
