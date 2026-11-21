@@ -12,7 +12,9 @@ from utils import get_settings, save_group_settings, LimitedDict
 from info import (
     COLLECTION_NAME, COVERX, DATABASE_NAME, DATABASE_URI, DATABASE_URI2,
     INDEX_CAPTION, MAX_B_TN, MULTIPLE_DB, ULTRA_FAST_MODE, USE_CAPTION_FILTER,
+    TURSO_ENABLED, MONGO_MAX_SIZE_MB,
 )
+from database import turso_store
 from datetime import datetime, timedelta
 import asyncio
 from functools import lru_cache
@@ -80,92 +82,89 @@ class Media2(Document):
 
 
 async def check_db_size(db):
+    """Return primary MongoDB logical + index size in MiB."""
     try:
-        now = datetime.utcnow()
-        if _db_stats_cache["timestamp"] and (now - _db_stats_cache["timestamp"] < timedelta(minutes=10)):
-            return _db_stats_cache["primary_size"]
         stats = await db.command("dbstats")
-        db_logical_size = stats["dataSize"]
-        db_index_size = stats["indexSize"]
-        db_logical_size_mb = db_logical_size / (1024 * 1024)
-        db_index_size_mb = db_index_size / (1024 * 1024)
-        db_size_mb = db_logical_size_mb + db_index_size_mb
-        _db_stats_cache["primary_size"] = db_size_mb
-        _db_stats_cache["timestamp"] = now
-        return db_size_mb
+        return (float(stats.get("dataSize", 0)) + float(stats.get("indexSize", 0))) / (1024 * 1024)
     except Exception:
-        logger.exception("Error checking database size")
-        return 0
+        logger.exception("Error checking MongoDB size")
+        # Never route new records into a potentially full MongoDB when Turso
+        # overflow is enabled and its threshold cannot be verified.
+        if TURSO_ENABLED:
+            raise
+        return 0.0
 
 
 async def save_file(media):
-    """Save file in database, with detailed logging."""
+    """Save media metadata to MongoDB first, then Turso after the size limit."""
     file_id, file_ref = unpack_new_file_id(media.file_id)
     file_unique_id = getattr(media, "file_unique_id", None)
     file_name = re.sub(
-        r"[_\-\.#+$%^&*()!~`,;:\"'?/<>\[\]{}=|\\]", " ", str(media.file_name)
+        r"[_\-\.#+$%^&*()!~`,;:\\"'?/<>\[\]{}=|\\\\]", " ", str(media.file_name)
     )
     file_name = re.sub(r"\s+", " ", file_name).strip()
-    saveMedia = Media
-    target_db = "Primary"
     duplicate_filter = {"$or": [{"file_id": file_id}]}
     if file_unique_id:
         duplicate_filter["$or"].append({"file_unique_id": file_unique_id})
-    try:
-        exists = await Media.find_one(duplicate_filter)
-        if exists:
-            logger.info(f"[SKIP] '{file_name}' already in Primary DB.")
-            return False, 0
-        if MULTIPLE_DB:
-            exists = await Media2.find_one(duplicate_filter)
-            if exists:
-                logger.info(f"[SKIP] '{file_name}' already in Secondary DB.")
-                return False, 0
-    except Exception as e:
-        logger.error("Error during duplicate check; continuing with save.", exc_info=e)
 
-    if MULTIPLE_DB:
-        try:
-            primary_db_size = await check_db_size(db)
-            if primary_db_size >= 407:
-                saveMedia = Media2
-                target_db = "Secondary"
-                logger.warning("Switching to Secondary DB due to size threshold.")
-        except Exception as e:
-            logger.error(
-                "Error during MULTIPLE_DB check; defaulting to primary DB.", exc_info=e
-            )
     try:
-        cover_media = getattr(media, "video_cover", None) or getattr(media, "cover", None)
-        cover_to_use = getattr(cover_media, "file_id", None)
-        record = saveMedia(
-            file_id=file_id,
-            file_unique_id=file_unique_id,
-            file_ref=file_ref,
-            file_name=file_name,
-            file_size=media.file_size,
-            file_type=media.file_type,
-            mime_type=media.mime_type,
-            caption=(media.caption.html if media.caption and INDEX_CAPTION else None),
-            cover=cover_to_use if COVERX else None,
-        )
-    except Exception as e:
-        logger.exception(f"[ERROR] '{file_name}' → {e}")
-        return False, 2
-    try:
-        await record.commit()
-    except DuplicateKeyError:
-        logger.info(
-            f"[SKIP] DuplicateKey: '{file_name}' already exists in {target_db} DB."
-        )
-        return False, 0
-    except Exception as e:
-        logger.exception(
-            f"[ERROR] Failed commit of '{file_name}' to {target_db} DB.", exc_info=e
-        )
+        if await Media.find_one(duplicate_filter):
+            return False, 0
+        if MULTIPLE_DB and await Media2.find_one(duplicate_filter):
+            return False, 0
+        if TURSO_ENABLED and await turso_store.find_duplicate(file_id, file_unique_id):
+            return False, 0
+    except Exception:
+        logger.exception("Duplicate check failed; refusing save to avoid duplicate records.")
         return False, 3
-    #logger.info(f"[SUCCESS] '{file_name}' saved to {target_db} DB.")
-    return True, 1
+
+    cover_media = getattr(media, "video_cover", None) or getattr(media, "cover", None)
+    data = {
+        "file_id": file_id,
+        "file_unique_id": file_unique_id,
+        "file_ref": file_ref,
+        "file_name": file_name,
+        "file_size": media.file_size,
+        "file_type": media.file_type,
+        "mime_type": media.mime_type,
+        "caption": media.caption.html if media.caption and INDEX_CAPTION else None,
+        "cover": getattr(cover_media, "file_id", None) if COVERX else None,
+    }
+
+    if TURSO_ENABLED:
+        try:
+            primary_size = await check_db_size(db)
+        except Exception:
+            logger.error("MongoDB size could not be verified; not writing to MongoDB.", exc_info=True)
+            return False, 3
+        if primary_size >= MONGO_MAX_SIZE_MB:
+            try:
+                saved = await turso_store.insert_media(data)
+                return (True, 1) if saved else (False, 0)
+            except Exception:
+                logger.exception("Turso overflow insert failed; MongoDB is at its configured limit.")
+                return False, 3
+
+    save_media = Media
+    target_db = "Primary"
+    if not TURSO_ENABLED and MULTIPLE_DB:
+        try:
+            if await check_db_size(db) >= 407:
+                save_media = Media2
+                target_db = "Secondary"
+        except Exception:
+            logger.exception("Could not check MongoDB size; using primary as legacy fallback.")
+
+    try:
+        record = save_media(**data)
+        await record.commit()
+        return True, 1
+    except DuplicateKeyError:
+        return False, 0
+    except Exception:
+        logger.exception("Failed to save '%s' to %s database.", file_name, target_db)
+        return False, 3
+
 
 async def get_search_results(chat_id, query, file_type=None, max_results=None, offset=0, filter=False):
     if max_results is None:
@@ -207,44 +206,37 @@ async def get_search_results(chat_id, query, file_type=None, max_results=None, o
     if file_type:
         filter_mongo["file_type"] = file_type
 
-    if ULTRA_FAST_MODE:
-        limit = max_results + 1
-        if MULTIPLE_DB:
-            fetch_limit = offset + limit
-            results = await asyncio.gather(
-                Media.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit),
-                Media2.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit),
-            )
-            files = results[1] + results[0]
-            files = files[offset:offset + limit]
-        else:
-            files = await Media.find(filter_mongo).sort("$natural", -1).skip(offset).limit(limit).to_list(length=limit)
-        has_next_page = len(files) > max_results
-        if has_next_page:
-            files = files[:-1]
-        next_offset = offset + len(files) if has_next_page else ""
-        total_results = offset + len(files) + (1 if has_next_page else 0)
-    else:
-        if MULTIPLE_DB:
-            fetch_limit = offset + max_results
-            count_results, find_results = await asyncio.gather(
-                asyncio.gather(Media.count_documents(filter_mongo), Media2.count_documents(filter_mongo)),
-                asyncio.gather(
-                    Media.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit),
-                    Media2.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit),
-                )
-            )
-            total_results = sum(count_results)
-            files = find_results[1] + find_results[0]
-            files = files[offset:offset + max_results]
-        else:
-            total_results, files = await asyncio.gather(
-                Media.count_documents(filter_mongo),
-                Media.find(filter_mongo).sort("$natural", -1).skip(offset).limit(max_results).to_list(length=max_results)
-            )
-        next_offset = offset + len(files)
-        if next_offset >= total_results:
-            next_offset = ""
+    # Fetch candidates from MongoDB and (when configured) Turso. Turso is
+    # searched independently so files indexed after MongoDB filled remain visible.
+    fetch_limit = offset + max_results + 1
+    mongo_tasks = [
+        Media.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit)
+    ]
+    count_tasks = [Media.count_documents(filter_mongo)]
+    if MULTIPLE_DB and not TURSO_ENABLED:
+        mongo_tasks.append(
+            Media2.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit)
+        )
+        count_tasks.append(Media2.count_documents(filter_mongo))
+    mongo_results = await asyncio.gather(*mongo_tasks)
+    mongo_count = await asyncio.gather(*count_tasks)
+    files = []
+    if TURSO_ENABLED:
+        try:
+            turso_files = await turso_store.search_media(raw_pattern, file_type, USE_CAPTION_FILTER)
+            files.extend(turso_files)
+        except Exception:
+            logger.exception("Turso search failed; continuing with MongoDB results.")
+    if len(mongo_results) > 1:
+        files.extend(mongo_results[1])
+    files.extend(mongo_results[0])
+    total_results = sum(mongo_count) + (len(turso_files) if TURSO_ENABLED and 'turso_files' in locals() else 0)
+    # Turso records are newest overflow records, so they are placed before MongoDB.
+    page = files[offset:offset + max_results]
+    next_offset = offset + len(page)
+    if next_offset >= total_results:
+        next_offset = ""
+    files = page
     return files, next_offset, total_results
 
 async def get_bad_files(query, file_type=None):
@@ -273,24 +265,22 @@ async def get_bad_files(query, file_type=None):
         filter_mongo["file_type"] = file_type
 
     tasks = [
-        Media.find(filter_mongo)
-        .sort("$natural", -1)
-        .to_list(300)
+        Media.find(filter_mongo).sort("$natural", -1).to_list(300)
     ]
-
-    if MULTIPLE_DB:
-        tasks.append(
-            Media2.find(filter_mongo)
-            .sort("$natural", -1)
-            .to_list(300)
-        )
+    if MULTIPLE_DB and not TURSO_ENABLED:
+        tasks.append(Media2.find(filter_mongo).sort("$natural", -1).to_list(300))
     results = await asyncio.gather(*tasks)
-    if MULTIPLE_DB and len(results) > 1:
-        files = results[1] + results[0]
-    else:
-        files = results[0]
+    files = []
+    if TURSO_ENABLED:
+        try:
+            files.extend(await turso_store.search_media(raw_pattern, file_type, USE_CAPTION_FILTER))
+        except Exception:
+            logger.exception("Turso bad-file search failed.")
+    if len(results) > 1:
+        files.extend(results[1])
+    files.extend(results[0])
     files = files[:300]
-    return files, len(files)
+    return files, len(files)    return files, len(files)
 
 _FILE_DETAILS_CACHE = LimitedDict(maxsize=300)
 
@@ -300,15 +290,23 @@ async def get_file_details(query):
     if query in _FILE_DETAILS_CACHE:
         return _FILE_DETAILS_CACHE[query]
     filter = {"file_id": query}
+    if TURSO_ENABLED:
+        try:
+            found = await turso_store.get_media_by_id(query)
+            if found:
+                _FILE_DETAILS_CACHE[query] = found
+                return found
+        except Exception:
+            logger.exception("Turso file-details lookup failed.")
     tasks = [Media.find(filter).to_list(length=1)]
-    if MULTIPLE_DB:
-        tasks.append(Media2.find(filter).to_list(length=1))  
+    if MULTIPLE_DB and not TURSO_ENABLED:
+        tasks.append(Media2.find(filter).to_list(length=1))
     results = await asyncio.gather(*tasks)
     for filedetails in results:
         if filedetails:
             _FILE_DETAILS_CACHE[query] = filedetails
-            return filedetails       
-    return []
+            return filedetails
+    return []    return []
 
 def encode_file_id(s: bytes) -> str:
     r = b""
@@ -347,17 +345,16 @@ def unpack_new_file_id(new_file_id):
 
 async def dreamxbotz_fetch_media(limit: int) -> List[dict]:
     try:
-        if MULTIPLE_DB:
-            db_size = await check_db_size(db)
-            if db_size > 407:
-                cursor = Media2.find().sort("$natural", -1).limit(limit)
-                files = await cursor.to_list(length=limit)
-                return files
-        cursor = Media.find().sort("$natural", -1).limit(limit)
-        files = await cursor.to_list(length=limit)
-        return files
+        files = []
+        if TURSO_ENABLED:
+            files.extend(await turso_store.recent_media(limit))
+        if MULTIPLE_DB and not TURSO_ENABLED and await check_db_size(db) > 407:
+            files.extend(await Media2.find().sort("$natural", -1).limit(limit).to_list(length=limit))
+        else:
+            files.extend(await Media.find().sort("$natural", -1).limit(limit).to_list(length=limit))
+        return files[:limit]
     except Exception as e:
-        logger.error(f"Error in dreamxbotz_fetch_media: {e}")
+        logger.error("Error in dreamxbotz_fetch_media: %s", e)
         return []
 
 
