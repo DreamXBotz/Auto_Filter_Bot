@@ -152,19 +152,25 @@ Nᴀᴍᴇ - {}
 
 <blockquote expandable><b><i>ᴘʟᴇᴀꜱᴇ ꜰᴏʀᴡᴀʀᴅ ᴛʜɪꜱ ꜰɪʟᴇ ᴛᴏ ꜱᴏᴍᴇᴡʜᴇʀᴇ ᴇʟꜱᴇ & ꜱᴛᴀʀᴛ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴛʜᴇʀᴇ</i></b></blockquote>"""
 
-    I_CUDNT = """<b>No files were found for your search: <code>{}</code>.</b>
+    I_CUDNT = """<b>🔎 ᴡᴇ ᴄᴏᴜʟᴅɴ'ᴛ ꜰɪɴᴅ ᴀɴʏ ʀᴇꜱᴜʟᴛꜱ</b>
 
-Please check the spelling of the title and try searching again.
+<blockquote>😕 No files found for: <code>{}</code>
 
-<b>Movie request format</b>
-Example: <code>Jawan</code> or <code>Jawan 2023</code>
+💡 <b>Tip:</b> Check the spelling and try again.</blockquote>
 
-<b>Series request format</b>
-Example: <code>Loki S01</code>, <code>Loki S01E04</code>, or <code>Lucifer S03E24</code>
+<b>🎬 ᴍᴏᴠɪᴇ ʀᴇǫᴜᴇꜱᴛ</b>
+<code>Jawan</code>  or  <code>Jawan 2023</code>
 
-Please avoid special characters such as <code>: ( ! , . /</code> in your search.
+<b>📺 ꜱᴇʀɪᴇꜱ ʀᴇǫᴜᴇꜱᴛ</b>
+<code>Loki S01</code>
+<code>Loki S01E04</code>
+<code>Lucifer S03E24</code>
 
-If the title has already been released but is not available in our bot yet, you can submit a request <a href="https://t.me/dudhd7en8e6_bot?start=_tgr_eehnhuc5NWNl">here</a>.</b>"""
+<b>⚠️ ᴀᴠᴏɪᴅ ᴛʜᴇꜱᴇ ꜱᴘᴇᴄɪᴀʟ ᴄʜᴀʀᴀᴄᴛᴇʀꜱ</b>
+<code>: ( ! , . /</code>
+
+<blockquote>📩 <b>Still can't find a released title?</b>
+Send us a request <a href="https://t.me/dudhd7en8e6_bot?start=_tgr_eehnhuc5NWNl">ᴄʟɪᴄᴋ ʜᴇʀᴇ</a> and we'll look into it.</blockquote>"""
     
     MVE_NT_FND = NOT_FOUND_TXT = """<b>😌 ᴛʜɪꜱ ᴍᴏᴠɪᴇ ɪꜱ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ɪɴ ᴍʏ ᴅᴀᴛᴀʙᴀꜱᴇ.</b>
 
