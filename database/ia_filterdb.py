@@ -213,7 +213,7 @@ async def get_search_results(chat_id, query, file_type=None, max_results=None, o
         Media.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit)
     ]
     count_tasks = [Media.count_documents(filter_mongo)]
-    if MULTIPLE_DB and not TURSO_ENABLED:
+    if MULTIPLE_DB:
         mongo_tasks.append(
             Media2.find(filter_mongo).sort("$natural", -1).limit(fetch_limit).to_list(length=fetch_limit)
         )
@@ -267,7 +267,7 @@ async def get_bad_files(query, file_type=None):
     tasks = [
         Media.find(filter_mongo).sort("$natural", -1).to_list(300)
     ]
-    if MULTIPLE_DB and not TURSO_ENABLED:
+    if MULTIPLE_DB:
         tasks.append(Media2.find(filter_mongo).sort("$natural", -1).to_list(300))
     results = await asyncio.gather(*tasks)
     files = []
@@ -299,7 +299,7 @@ async def get_file_details(query):
         except Exception:
             logger.exception("Turso file-details lookup failed.")
     tasks = [Media.find(filter).to_list(length=1)]
-    if MULTIPLE_DB and not TURSO_ENABLED:
+    if MULTIPLE_DB:
         tasks.append(Media2.find(filter).to_list(length=1))
     results = await asyncio.gather(*tasks)
     for filedetails in results:
@@ -381,10 +381,10 @@ async def dreamxbotz_fetch_media(limit: int) -> List[dict]:
         files = []
         if TURSO_ENABLED:
             files.extend(await turso_store.recent_media(limit))
-        if MULTIPLE_DB and not TURSO_ENABLED and await check_db_size(db) > 407:
-            files.extend(await Media2.find().sort("$natural", -1).limit(limit).to_list(length=limit))
-        else:
-            files.extend(await Media.find().sort("$natural", -1).limit(limit).to_list(length=limit))
+        if MULTIPLE_DB:
+            secondary = await Media2.find().sort("$natural", -1).limit(limit).to_list(length=limit)
+            files.extend(secondary)
+        files.extend(await Media.find().sort("$natural", -1).limit(limit).to_list(length=limit))
         return files[:limit]
     except Exception as e:
         logger.error("Error in dreamxbotz_fetch_media: %s", e)
