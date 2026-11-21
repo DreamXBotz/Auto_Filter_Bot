@@ -189,6 +189,12 @@ async def _save_file_unlocked(media):
 
 _MEDIA_SAVE_LOCK = asyncio.Lock()
 
+
+async def save_file(media):
+    """Serialize size-check and insert so concurrent indexing doesn't overfill MongoDB."""
+    async with _MEDIA_SAVE_LOCK:
+        return await _save_file_unlocked(media)
+
 async def get_search_results(chat_id, query, file_type=None, max_results=None, offset=0, filter=False):
     if max_results is None:
         if chat_id is not None:
