@@ -89,7 +89,7 @@ DATABASE_URI = environ.get('DATABASE_URI', '')
 DATABASE_NAME = environ.get('DATABASE_NAME', 'Cluster0')
 COLLECTION_NAME = environ.get('COLLECTION_NAME', 'dreamcinezone_files')
 
-# Secondary MongoDB for multiple DB load balancing
+# Turso overflow storage (used only after primary MongoDB reaches this limit)\nTURSO_DATABASE_URL = environ.get('TURSO_DATABASE_URL', '').strip()\nTURSO_AUTH_TOKEN = environ.get('TURSO_AUTH_TOKEN', '').strip()\nTURSO_ENABLED = bool(TURSO_DATABASE_URL and TURSO_AUTH_TOKEN)\ntry:\n    MONGO_MAX_SIZE_MB = float(environ.get('MONGO_MAX_SIZE_MB', '512'))\nexcept (TypeError, ValueError):\n    MONGO_MAX_SIZE_MB = 512.0\n\n# Secondary MongoDB for multiple DB load balancing
 MULTIPLE_DB = is_enabled(os.environ.get('MULTIPLE_DB', "False"), False)
 DATABASE_URI2 = environ.get('DATABASE_URI2', '')
 
