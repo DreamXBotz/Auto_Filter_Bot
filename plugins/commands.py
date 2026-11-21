@@ -6,6 +6,7 @@ import random
 import asyncio
 import string
 import sys
+import dreamxbotz.Bot.clients as bot_clients
 from .pmfilter import auto_filter 
 from Script import script
 from datetime import datetime, timedelta
@@ -559,21 +560,28 @@ async def save_file_handler(client, message):
 
 _BIN_REINDEX_LOCK = asyncio.Lock()
 
-@Client.on_message(filters.private & filters.command("reindex_bin") & filters.user(ADMINS))
+@Client.on_message(filters.private & filters.command(["reindex_bin", "backfill_bin"]) & filters.user(ADMINS))
 async def reindex_bin_handler(client, message):
-    """Backfill missing supported media from BIN_CHANNEL into the search database."""
+    """Backfill missing BIN channel files using an authenticated user session."""
     if BIN_CHANNEL == -100:
         return await message.reply("Please set BIN_CHANNEL to your actual Telegram channel ID first.")
+
+    scanner = bot_clients.bin_history_client
+    if scanner is None:
+        return await message.reply(
+            "Historical scanning needs USER_SESSION_STRING. Add a Telegram user session string "
+            "to Render environment variables, restart the bot, and make sure that account has joined the BIN channel."
+        )
 
     if _BIN_REINDEX_LOCK.locked():
         return await message.reply("A BIN channel scan is already running.")
 
-    status = await message.reply("Starting BIN channel scan... I'll skip files already indexed.")
+    status = await message.reply("Starting BIN channel scan with the connected user session...")
     seen = saved = skipped = failed = 0
-    try:
-        await client.get_chat(BIN_CHANNEL)
-        async with _BIN_REINDEX_LOCK:
-            async for item in client.get_chat_history(BIN_CHANNEL):
+    async with _BIN_REINDEX_LOCK:
+        try:
+            await scanner.get_chat(BIN_CHANNEL)
+            async for item in scanner.get_chat_history(BIN_CHANNEL):
                 seen += 1
                 media = None
                 media_type = None
@@ -589,7 +597,7 @@ async def reindex_bin_handler(client, message):
                     media.file_type = media_type
                     media.caption = item.caption or ""
                     if not getattr(media, "file_name", None):
-                        media.file_name = (item.caption or "").strip() or f"telegram_file_{item.id}"
+                        media.file_name = (item.caption or "").strip() or ("telegram_file_" + str(item.id))
                     ok, result = await save_file(media)
                     if ok:
                         saved += 1
@@ -597,10 +605,20 @@ async def reindex_bin_handler(client, message):
                         skipped += 1
                     else:
                         failed += 1
-                        logger.warning(
-                            "BIN reindex failed for message %s (save status %s)",
-                            item.id, result
-                        )
+                        logger.warning("BIN reindex failed for message %s (save status %s)", item.id, result)
+                except FloodWait as e:
+                    await asyncio.sleep(e.value + 2)
+                    try:
+                        ok, result = await save_file(media)
+                        if ok:
+                            saved += 1
+                        elif result == 0:
+                            skipped += 1
+                        else:
+                            failed += 1
+                    except Exception:
+                        failed += 1
+                        logger.exception("BIN reindex retry failed for message %s", item.id)
                 except Exception:
                     failed += 1
                     logger.exception("BIN reindex error at message %s", item.id)
@@ -608,24 +626,23 @@ async def reindex_bin_handler(client, message):
                 if seen % 100 == 0:
                     try:
                         await status.edit_text(
-                            f"Scanning BIN channel...\nMessages checked: {seen}\n"
-                            f"New files indexed: {saved}\nAlready indexed: {skipped}\nErrors: {failed}"
+                            f"Scanning BIN channel...\\nMessages checked: {seen}\\n"
+                            f"New files indexed: {saved}\\nAlready indexed: {skipped}\\nErrors: {failed}"
                         )
                     except Exception:
                         pass
+                await asyncio.sleep(0.03)
 
-        await status.edit_text(
-            f"BIN scan completed ✅\nMessages checked: {seen}\n"
-            f"New files indexed: {saved}\nAlready indexed: {skipped}\nErrors: {failed}"
-        )
-    except Exception as e:
-        logger.exception("BIN channel backfill stopped")
-        await status.edit_text(
-            f"BIN scan stopped due to an error: {e}\n"
-            f"Messages checked: {seen}\nNew files indexed: {saved}\n"
-            f"Already indexed: {skipped}\nErrors: {failed}"
-        )
-
+            await status.edit_text(
+                f"BIN scan completed ✅\\nMessages checked: {seen}\\n"
+                f"New files indexed: {saved}\\nAlready indexed: {skipped}\\nErrors: {failed}"
+            )
+        except Exception as e:
+            logger.exception("BIN channel reindex stopped")
+            await status.edit_text(
+                f"BIN scan stopped: {type(e).__name__}: {e}\\nMessages checked: {seen}\\n"
+                f"New files indexed: {saved}\\nAlready indexed: {skipped}\\nErrors: {failed}"
+            )
 
 @Client.on_message(filters.command('delete') & filters.user(ADMINS))
 async def delete(client, message):
