@@ -6,7 +6,7 @@ from collections import defaultdict
 from plugins.Dreamxfutures.Imdbposter import get_movie_detailsx, fetch_image, get_movie_details
 from database.users_chats_db import db
 from pyrogram import Client, filters, enums
-from info import CHANNELS, BIN_CHANNEL, ADMINS, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, ABOVE_PREVIEW, BAD_WORDS, LANDSCAPE_POSTER, TMDB_POSTER
+from info import CHANNELS, BIN_CHANNEL, INDEX_STAGING_CHANNEL, ADMINS, MOVIE_UPDATE_CHANNEL, LINK_PREVIEW, ABOVE_PREVIEW, BAD_WORDS, LANDSCAPE_POSTER, TMDB_POSTER
 from Script import script
 from database.ia_filterdb import save_file
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, LinkPreviewOptions
@@ -93,7 +93,7 @@ SEPARATORS_REGEX = re.compile(r'[_\.\-]+')
 
 MEDIA_FILTER = filters.document | filters.video | filters.audio
 # Index uploads from both configured source channels and the BIN storage channel.
-INDEX_CHANNELS = list(dict.fromkeys(CHANNELS + [BIN_CHANNEL]))
+INDEX_CHANNELS = list(dict.fromkeys(CHANNELS + [BIN_CHANNEL] + ([INDEX_STAGING_CHANNEL] if INDEX_STAGING_CHANNEL != -100 else [])))
 locks = defaultdict(asyncio.Lock)
 pending_updates = {}
 error_tmdb = False
