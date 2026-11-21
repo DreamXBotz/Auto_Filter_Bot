@@ -361,26 +361,26 @@ async def backfill_bin_handler(client, message):
                 if scanned % 100 == 0:
                     try:
                         await status.edit_text(
-                            f"BIN backfill running...\\n"
-                            f"Scanned: {scanned}\\nSaved: {saved}\\n"
-                            f"Already indexed: {duplicates}\\nFailed: {failed}"
+                            f"BIN backfill running...\n"
+                            f"Scanned: {scanned}\nSaved: {saved}\n"
+                            f"Already indexed: {duplicates}\nFailed: {failed}"
                         )
                     except Exception:
                         pass
                 await asyncio.sleep(0.03)
 
             await status.edit_text(
-                "BIN channel backfill finished.\\n"
-                f"Scanned messages: {scanned}\\n"
-                f"New files indexed: {saved}\\n"
-                f"Already indexed: {duplicates}\\n"
-                f"Failed: {failed}\\n"
+                "BIN channel backfill finished.\n"
+                f"Scanned messages: {scanned}\n"
+                f"New files indexed: {saved}\n"
+                f"Already indexed: {duplicates}\n"
+                f"Failed: {failed}\n"
                 f"Non-media messages skipped: {unsupported}"
             )
         except Exception as e:
             logger.exception("BIN channel history scan failed")
             await status.edit_text(
-                f"Could not finish BIN channel scan: {type(e).__name__}: {e}\\n"
+                f"Could not finish BIN channel scan: {type(e).__name__}: {e}\n"
                 f"Scanned: {scanned} | Saved: {saved} | Duplicates: {duplicates} | Failed: {failed}"
             )
 
