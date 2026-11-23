@@ -252,6 +252,7 @@ OWNER_UPI_ID = ""
 # Streaming Mode (Keep False on Render free tier to conserve bandwidth)
 STREAM_MODE = is_enabled(environ.get('STREAM_MODE', "False"), False)
 PREMIUM_STREAM_MODE = False  # Paid premium streaming is disabled.
+PREMIUM_ACCESS_ENABLED = False  # Donations never grant premium access.
 
 # Server Binding & Host Configuration
 ON_HEROKU = 'DYNO' in environ
