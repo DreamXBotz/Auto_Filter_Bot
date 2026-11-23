@@ -20,7 +20,7 @@ from info import (
     LOG_CHANNEL, IMDB_TEMPLATE, IS_VERIFY, TUTORIAL, TUTORIAL_2, TUTORIAL_3, EMOJI_MODE, REACTIONS,
     VERIFY_IMG, TWO_VERIFY_GAP, UPDATE_CHNL_LNK, PICS, PICS_URL, ADMINS, SUBSCRIPTION, OWNER_LNK , 
     OWNER_UPI_ID, QR_CODE, AUTH_CHANNELS, AUTH_REQ_CHANNELS, FSUB_PICS, THREE_VERIFY_GAP, CUSTOM_FILE_CAPTION,
-    COVERX, PROTECT_CONTENT, DELETE_TIME, PREMIUM_STREAM_MODE, STREAM_MODE, SUPPORT_CHAT_ID, REQST_CHANNEL,
+    COVERX, PROTECT_CONTENT, DELETE_TIME, PREMIUM_STREAM_MODE, PREMIUM_ACCESS_ENABLED, STREAM_MODE, SUPPORT_CHAT_ID, REQST_CHANNEL,
     LOG_CHANNEL, SHORTENER_API, SHORTENER_API2, SHORTENER_API3, SHORTENER_WEBSITE, SHORTENER_WEBSITE2, SHORTENER_WEBSITE3,
     TZ, BIN_CHANNEL
 )
@@ -275,7 +275,7 @@ async def start(client, message):
                 pass
 
         file_details_task = asyncio.create_task(get_file_details(decoded_file_id))
-        if not await db.has_premium_access(message.from_user.id): 
+        if not PREMIUM_ACCESS_ENABLED or not await db.has_premium_access(message.from_user.id): 
             try:
                 btn = []
                 chat = grp_id
@@ -313,7 +313,7 @@ async def start(client, message):
                 logger.error(f"❗️ Force Sub Error:\n\n{repr(e)}")
 
         user_id = m.from_user.id
-        if not await db.has_premium_access(user_id):
+        if not PREMIUM_ACCESS_ENABLED or not await db.has_premium_access(user_id):
             try:
                 grp_id = int(grp_id)
                 settings = await get_settings(grp_id)
