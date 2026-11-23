@@ -1,9 +1,10 @@
 from pyrogram import enums
 
 import logging
+import re
 import datetime
 from Script import script 
-from info import ADMINS, PREMIUM_LOGS, STAR_PREMIUM_PLANS, SUBSCRIPTION, TZ
+from info import ADMINS, PREMIUM_LOGS, TZ
 from utils import get_seconds, temp
 from database.users_chats_db import db 
 import asyncio
@@ -164,105 +165,75 @@ async def donation_stars_invoice(client, callback_query: CallbackQuery):
         await callback_query.answer("Unable to create the donation invoice. Please try again.", show_alert=True)
 
 
-# Telegram Star Payment Method 👇
-# Credit - @BeingXAnonymous
-
-@Client.on_callback_query(filters.regex(r"buy_\d+"))
-async def premium_button(client, callback_query: CallbackQuery):
-    try:
-        amount = int(callback_query.data.split("_")[1])
-        if amount in STAR_PREMIUM_PLANS:
-            try:
-                buttons = [[
-                    InlineKeyboardButton("Pay with Stars ??", pay=True, style=enums.ButtonStyle.PRIMARY)
-                ], [
-                    InlineKeyboardButton("? Close ?", callback_data="close_data", style=enums.ButtonStyle.DANGER)
-                ]]
-                reply_markup = InlineKeyboardMarkup(buttons)
-                await client.send_invoice(
-                    chat_id=callback_query.message.chat.id,
-                    title="Premium Subscription",
-                    description=f"Pay {amount} Star And Get Premium For {STAR_PREMIUM_PLANS[amount]}",
-                    payload=f"dreamxpremium_{amount}",
-                    currency="XTR",
-                    prices=[
-                        LabeledPrice(
-                            label="Premium Subscription", 
-                            amount=amount
-                        ) 
-                    ],
-                    reply_markup=reply_markup
-                )
-                await callback_query.answer()
-            except Exception as e:
-                logger.error("Error sending invoice: %s", e)
-                await callback_query.answer("🚫 Error Processing Your Payment. Try again.", show_alert=True)
-        else:
-            await callback_query.answer("⚠️ Invalid Premium Package.", show_alert=True)
-    except Exception as e:
-        logger.error("Error In buy_: %s", e)
- 
 @Client.on_pre_checkout_query()
 async def pre_checkout_handler(client, query: PreCheckoutQuery):
+    """Approve only valid voluntary MovieFlix donations paid with Telegram Stars."""
     try:
-        if query.payload.startswith(("dreamxpremium_", "movieflix_donation_")):
+        payload = query.invoice_payload or ""
+        match = re.fullmatch(r"movieflix_donation_(10|25|50|100)", payload)
+        if (
+            match
+            and query.currency == "XTR"
+            and query.total_amount == int(match.group(1))
+        ):
             await query.answer(ok=True)
         else:
-            await query.answer(ok=False, error_message="⚠️ Invalid Purchase Type.")
-    except Exception as e:
-        logger.error("Pre-checkout error: %s", e)
-        await query.answer(ok=False, error_message="🚫 Unexpected Error Occurred.")
+            await query.answer(
+                ok=False,
+                error_message="This is not a valid Telegram Stars donation.",
+            )
+    except Exception:
+        logger.exception("Donation pre-checkout validation failed")
+        await query.answer(
+            ok=False,
+            error_message="Unable to validate this donation. Please try again.",
+        )
+
 
 @Client.on_message(filters.successful_payment)
-async def successful_premium_payment(client, message):
+async def successful_donation_payment(client, message):
+    """Record donations only; never grant premium access for a payment."""
+    payment = message.successful_payment
+    payload = payment.invoice_payload or ""
+    match = re.fullmatch(r"movieflix_donation_(10|25|50|100)", payload)
+
+    if not match:
+        logger.warning(
+            "Ignoring unrecognized successful payment payload for user_id=%s",
+            message.from_user.id if message.from_user else "unknown",
+        )
+        return
+
+    expected_amount = int(match.group(1))
+    amount = int(payment.total_amount)
+    user_id = message.from_user.id if message.from_user else 0
+
+    if payment.currency != "XTR" or amount != expected_amount:
+        logger.error(
+            "Donation payment mismatch: expected=%s received=%s currency=%s user_id=%s",
+            expected_amount,
+            amount,
+            payment.currency,
+            user_id,
+        )
+        await message.reply_text(
+            "⚠️ We could not verify this donation. Please contact support."
+        )
+        return
+
+    await message.reply_text(
+        f"💜 Thank you for supporting MovieFlix with {amount} Telegram Stars!\n\n"
+        "Your contribution is voluntary and does not unlock paid features."
+    )
+
     try:
-        amount = int(message.successful_payment.total_amount)
-        user_id = message.from_user.id
-        invoice_payload = message.successful_payment.invoice_payload or ""
-
-        if invoice_payload.startswith("movieflix_donation_"):
-            expected_amount = int(invoice_payload.rsplit("_", 1)[1])
-            if amount != expected_amount:
-                logger.error("Donation amount mismatch: expected=%s received=%s user_id=%s", expected_amount, amount, user_id)
-                await message.reply_text("⚠️ We could not verify this donation amount. Please contact support.")
-                return
-            await message.reply_text(
-                f"💜 Thank you for supporting MovieFlix with {amount} Telegram Stars!\n\n"
-                "Your contribution is voluntary and does not unlock paid features."
-            )
-            try:
-                await client.send_message(
-                    PREMIUM_LOGS,
-                    f"#MovieFlix_Donation\n\n"
-                    f"👤 User: {message.from_user.mention}\n"
-                    f"🆔 User ID: <code>{user_id}</code>\n"
-                    f"⭐ Donation: {amount} Stars\n"
-                    f"🧾 Charge ID: <code>{message.successful_payment.telegram_payment_charge_id}</code>",
-                )
-            except Exception:
-                logger.exception("Could not send donation log for user_id=%s", user_id)
-            return
-
-        time_zone = datetime.datetime.now(TZ)
-        current_time = time_zone.strftime("%d-%m-%Y | %I:%M:%S %p") 
-        if amount in STAR_PREMIUM_PLANS:
-            time = STAR_PREMIUM_PLANS[amount]
-            seconds = await get_seconds(time)
-            if seconds > 0:
-                expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
-                user_data = {"id": user_id, "expiry_time": expiry_time}
-                await db.update_user(user_data)
-                data = await db.get_user(user_id)
-                expiry = data.get("expiry_time")
-                expiry_str_in_ist = expiry.astimezone(TZ).strftime("%d-%m-%Y | %I:%M:%S %p")    
-                await message.reply(text=f"Thank you For Purchasing Premium Service Using Star ✅\n\nSubscription Time - {time}\nExpire In - {expiry_str_in_ist}", link_preview_options=LinkPreviewOptions(is_disabled=True))                
-                await client.send_message(PREMIUM_LOGS, text=f"#Purchase_Premium_With_Star\n\n👤 ᴜꜱᴇʀ - {message.from_user.mention}\n\n⚡ ᴜꜱᴇʀ ɪᴅ - <code>{user_id}</code>\n\n🚫 ꜱᴛᴀʀ ᴘᴀʏ - {amount}⭐\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ - {time}\n\n⌛️ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ - {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ - {expiry_str_in_ist}", link_preview_options=LinkPreviewOptions(is_disabled=True))
-            else:
-                await message.reply("⚠️ Invalid Premium Time.")
-        else:
-            await message.reply("⚠️ Invalid Premium Package.")
-    except Exception as e:
-        logger.error("Error Processing Premium Payment: %s", e)
-        await message.reply("✅ Thank You For Your Payment! (Error Logging Details)")
-
-
+        await client.send_message(
+            PREMIUM_LOGS,
+            f"#MovieFlix_Donation\n\n"
+            f"👤 User: {message.from_user.mention}\n"
+            f"🆔 User ID: <code>{user_id}</code>\n"
+            f"⭐ Donation: {amount} Stars\n"
+            f"🧾 Charge ID: <code>{payment.telegram_payment_charge_id}</code>",
+        )
+    except Exception:
+        logger.exception("Could not send donation log for user_id=%s", user_id)
