@@ -65,8 +65,6 @@ USER_GROUP_COMMANDS = [
     BotCommand("request", "Request a movie or series"),
     BotCommand("top_search", "Show popular searches"),
     BotCommand("trendlist", "Show today's trending searches"),
-    BotCommand("plan", "View premium plans and free trial"),
-    BotCommand("myplan", "Check your premium subscription"),
 ]
 
 # Extra commands visible only to users listed in ADMINS.
