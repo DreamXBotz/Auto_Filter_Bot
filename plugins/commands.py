@@ -216,7 +216,7 @@ async def start(client, message):
                 await client.send_message(
                     chat_id=user_id,
                     text=(
-                        f"<b>🎉 Congratulations {uss.mention}!</b>\\n\\n"
+                        f"<b>🎉 Congratulations {uss.mention}!</b>\n\n"
                         "You reached the 10-referral milestone. MovieFlix is free, "
                         "and referrals do not grant paid or premium features. "
                         "Thank you for helping the bot grow! 💜"
