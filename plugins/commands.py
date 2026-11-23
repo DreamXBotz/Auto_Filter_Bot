@@ -1461,4 +1461,28 @@ async def clean_groups_handler(client, message):
 
 @Client.on_callback_query(filters.regex(r"^donation_info$"))
 async def donation_info(client, query):
-    await query.answer("MovieFlix is free. We do not accept donations or offer paid subscriptions.", show_alert=True)
+    buttons = [
+        [
+            InlineKeyboardButton("⭐ 10 Stars", callback_data="donate_10"),
+            InlineKeyboardButton("⭐ 25 Stars", callback_data="donate_25"),
+        ],
+        [
+            InlineKeyboardButton("⭐ 50 Stars", callback_data="donate_50"),
+            InlineKeyboardButton("⭐ 100 Stars", callback_data="donate_100"),
+        ],
+        [InlineKeyboardButton("✖️ Close", callback_data="close_data")],
+    ]
+    text = (
+        "<b>💜 Support MovieFlix</b>\n\n"
+        "MovieFlix is free to use. If you enjoy the service, "
+        "you can optionally support its development with Telegram Stars.\n\n"
+        "<i>Donations are voluntary and do not unlock paid features.</i>\n\n"
+        "Choose an amount below:"
+    )
+    await query.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode=enums.ParseMode.HTML,
+        link_preview_options=LinkPreviewOptions(is_disabled=True),
+    )
+    await query.answer()
