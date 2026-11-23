@@ -1,156 +1,27 @@
-from pyrogram import enums
-
 import logging
 import re
-import datetime
-from Script import script 
-from info import ADMINS, PREMIUM_LOGS, TZ
-from utils import get_seconds, temp
-from database.users_chats_db import db 
-import asyncio
-from pyrogram import Client, filters 
-from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong
-from pyrogram.types import (
-    LinkPreviewOptions,
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    LabeledPrice,
-    PreCheckoutQuery
-)
+
+from pyrogram import Client, filters
+from pyrogram.types import CallbackQuery, LabeledPrice, PreCheckoutQuery
+
+from info import PREMIUM_LOGS
+
 
 logger = logging.getLogger(__name__)
 
-
-@Client.on_message(filters.command("remove_premium") & filters.user(ADMINS))
-async def remove_premium(client, message):
-    if len(message.command) == 2:
-        user_id = int(message.command[1])
-        user = await client.get_users(user_id)
-        if await db.remove_premium_access(user_id):
-            await message.reply_text("ᴜꜱᴇʀ ʀᴇᴍᴏᴠᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ !")
-            await client.send_message(
-                chat_id=user_id,
-                text=script.PREMIUM_END_TEXT.format(user.mention)
-            )
-        else:
-            await message.reply_text("ᴜɴᴀʙʟᴇ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴜꜱᴇʀ !\nᴀʀᴇ ʏᴏᴜ ꜱᴜʀᴇ, ɪᴛ ᴡᴀꜱ ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ ɪᴅ ?")
-    else:
-        await message.reply_text("ᴜꜱᴀɢᴇ : /remove_premium user_id") 
+DONATION_AMOUNTS = (10, 25, 50, 100)
+DONATION_PAYLOAD_RE = re.compile(r"movieflix_donation_(10|25|50|100)")
 
 
-@Client.on_message(filters.command("myplan"))
-async def myplan(client, message):
-    await message.reply_text("MovieFlix is free. We do not offer paid subscriptions.")
-
-@Client.on_message(filters.command("get_premium") & filters.user(ADMINS))
-async def get_premium(client, message):
-    if len(message.command) == 2:
-        user_id = int(message.command[1])
-        user = await client.get_users(user_id)
-        data = await db.get_user(user_id)  
-        if data and data.get("expiry_time"):
-            expiry = data.get("expiry_time") 
-            expiry_ist = expiry.astimezone(TZ)
-            expiry_str_in_ist = expiry_ist.strftime("%d-%m-%Y\n⏱️ ᴇxᴘɪʀʏ ᴛɪᴍᴇ : %I:%M:%S %p")            
-            current_time = datetime.datetime.now(TZ)
-            time_left = expiry_ist - current_time
-            days = time_left.days
-            if days < 0:
-                time_left_str = "Expired"
-            else:
-                hours, remainder = divmod(time_left.seconds, 3600)
-                minutes, seconds = divmod(remainder, 60)
-                time_left_str = f"{days} days, {hours} hours, {minutes} minutes"
-            await message.reply_text(f"⚜️ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ ᴅᴀᴛᴀ :\n\n👤 ᴜꜱᴇʀ : {user.mention}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n⏰ ᴛɪᴍᴇ ʟᴇꜰᴛ : {time_left_str}\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}")
-        else:
-            await message.reply_text("ɴᴏ ᴘʀᴇᴍɪᴜᴍ ᴅᴀᴛᴀ ᴏꜰ ᴛʜɪꜱ ᴜꜱᴇʀ ᴡᴀꜱ ꜰᴏᴜɴᴅ ɪɴ ᴅᴀᴛᴀʙᴀꜱᴇ !")
-    else:
-        await message.reply_text("ᴜꜱᴀɢᴇ : /get_premium user_id")
-
-@Client.on_message(filters.command("add_premium") & filters.user(ADMINS))
-async def give_premium_cmd_handler(client, message):
-    if len(message.command) == 4:
-        time_zone = datetime.datetime.now(TZ)
-        current_time = time_zone.strftime("%d-%m-%Y\n⏱️ ᴊᴏɪɴɪɴɢ ᴛɪᴍᴇ : %I:%M:%S %p") 
-        user_id = int(message.command[1])  
-        user = await client.get_users(user_id)
-        time = message.command[2]+" "+message.command[3]
-        seconds = await get_seconds(time)
-        if seconds > 0:
-            expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
-            user_data = {"id": user_id, "expiry_time": expiry_time}  
-            await db.update_user(user_data) 
-            data = await db.get_user(user_id)
-            expiry = data.get("expiry_time")   
-            expiry_str_in_ist = expiry.astimezone(TZ).strftime("%d-%m-%Y\n⏱️ ᴇxᴘɪʀʏ ᴛɪᴍᴇ : %I:%M:%S %p")         
-            await message.reply_text(f"ᴘʀᴇᴍɪᴜᴍ ᴀᴅᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ ✅\n\n👤 ᴜꜱᴇʀ : {user.mention}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ : <code>{time}</code>\n\n⏳ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ : {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}", link_preview_options=LinkPreviewOptions(is_disabled=True))
-            await client.send_message(
-                chat_id=user_id,
-                text=f"👋 ʜᴇʏ {user.mention},\nᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ᴘᴜʀᴄʜᴀꜱɪɴɢ ᴘʀᴇᴍɪᴜᴍ.\nᴇɴᴊᴏʏ !! ✨🎉\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ : <code>{time}</code>\n⏳ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ : {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}", link_preview_options=LinkPreviewOptions(is_disabled=True)              
-            )    
-            await client.send_message(PREMIUM_LOGS, text=f"#Added_Premium\n\n👤 ᴜꜱᴇʀ : {user.mention}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ : <code>{time}</code>\n\n⏳ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ : {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}", link_preview_options=LinkPreviewOptions(is_disabled=True))
-                    
-        else:
-            await message.reply_text(
-                "❌ ɪɴᴠᴀʟɪᴅ ᴛɪᴍᴇ ꜰᴏʀᴍᴀᴛ ❗\n"
-                "🕒 ᴘʟᴇᴀsᴇ ᴜsᴇ: <code>1 day</code>, <code>1 hour</code>, <code>1 min</code>, <code>1 month</code>, or <code>1 year</code>"
-            )
-    else:
-        await message.reply_text(
-            "📌 ᴜsᴀɢᴇ: <code>/add_premium user_id time</code>\n"
-            "📅 ᴇxᴀᴍᴘʟᴇ: <code>/add_premium 123456 1 month</code>\n"
-            "🧭 ᴀᴄᴄᴇᴘᴛᴇᴅ ꜰᴏʀᴍᴀᴛs: <code>1 day</code>, <code>1 hour</code>, <code>1 min</code>, <code>1 month</code>, <code>1 year</code>"
-            )
-
-@Client.on_message(filters.command("premium_users") & filters.user(ADMINS))
-async def premium_user(client, message):
-    aa = await message.reply_text("<i>ꜰᴇᴛᴄʜɪɴɢ...</i>")
-    new = " ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀꜱ ʟɪꜱᴛ :\n\n"
-    user_count = 1
-    users = await db.get_all_premium_user_data()
-    async for data in users:
-        expiry = data.get("expiry_time")
-        if not expiry:
-            continue
-        expiry_ist = expiry.astimezone(TZ)
-        expiry_str_in_ist = expiry_ist.strftime("%d-%m-%Y\n⏱️ ᴇxᴘɪʀʏ ᴛɪᴍᴇ : %I:%M:%S %p")            
-        current_time = datetime.datetime.now(TZ)
-        time_left = expiry_ist - current_time
-        days = time_left.days
-        if days < 0:
-            time_left_str = "Expired"
-        else:
-            hours, remainder = divmod(time_left.seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            time_left_str = f"{days} days, {hours} hours, {minutes} minutes"
-        
-        try:
-            user_obj = await client.get_users(data['id'])
-            mention = user_obj.mention
-        except Exception:
-            mention = f"<a href='tg://user?id={data['id']}'>User</a>"
-            
-        new += f"{user_count}. {mention}\n👤 ᴜꜱᴇʀ ɪᴅ : {data['id']}\n⏳ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}\n⏰ ᴛɪᴍᴇ ʟᴇꜰᴛ : {time_left_str}\n"
-        user_count += 1
-    try:    
-        await aa.edit_text(new)
-    except MessageTooLong:
-        with open('usersplan.txt', 'w+') as outfile:
-            outfile.write(new)
-        await message.reply_document('usersplan.txt', caption="Paid Users:")
-
-
-@Client.on_message(filters.command("plan"))
-async def plan(client, message):
-    await message.reply_text("MovieFlix is free. We do not offer paid subscriptions.")
-
-
-# Voluntary Telegram Stars donations (separate from premium purchases).
 @Client.on_callback_query(filters.regex(r"^donate_(10|25|50|100)$"))
 async def donation_stars_invoice(client, callback_query: CallbackQuery):
+    """Create a voluntary Telegram Stars donation invoice."""
     try:
-        amount = int(callback_query.data.split("_", 1)[1])
+        amount = int(callback_query.data.rsplit("_", 1)[1])
+        if amount not in DONATION_AMOUNTS:
+            await callback_query.answer("Invalid donation amount.", show_alert=True)
+            return
+
         await client.send_invoice(
             chat_id=callback_query.message.chat.id,
             title="Support MovieFlix",
@@ -159,18 +30,21 @@ async def donation_stars_invoice(client, callback_query: CallbackQuery):
             currency="XTR",
             prices=[LabeledPrice(label="MovieFlix donation", amount=amount)],
         )
-        await callback_query.answer("Your Stars invoice is ready.")
-    except Exception as e:
-        logger.exception("Could not create Telegram Stars donation invoice: %s", e)
-        await callback_query.answer("Unable to create the donation invoice. Please try again.", show_alert=True)
+        await callback_query.answer("Your Stars donation invoice is ready.")
+    except Exception:
+        logger.exception("Could not create Telegram Stars donation invoice")
+        await callback_query.answer(
+            "Unable to create the donation invoice. Please try again.",
+            show_alert=True,
+        )
 
 
 @Client.on_pre_checkout_query()
 async def pre_checkout_handler(client, query: PreCheckoutQuery):
-    """Approve only valid voluntary MovieFlix donations paid with Telegram Stars."""
+    """Approve only valid voluntary donations paid in Telegram Stars."""
     try:
-        payload = query.invoice_payload or ""
-        match = re.fullmatch(r"movieflix_donation_(10|25|50|100)", payload)
+        payload = query.payload or ""
+        match = DONATION_PAYLOAD_RE.fullmatch(payload)
         if (
             match
             and query.currency == "XTR"
@@ -192,10 +66,10 @@ async def pre_checkout_handler(client, query: PreCheckoutQuery):
 
 @Client.on_message(filters.successful_payment)
 async def successful_donation_payment(client, message):
-    """Record donations only; never grant premium access for a payment."""
+    """Acknowledge and log donations; payments never grant premium access."""
     payment = message.successful_payment
     payload = payment.invoice_payload or ""
-    match = re.fullmatch(r"movieflix_donation_(10|25|50|100)", payload)
+    match = DONATION_PAYLOAD_RE.fullmatch(payload)
 
     if not match:
         logger.warning(
