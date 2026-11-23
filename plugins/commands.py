@@ -232,7 +232,21 @@ async def start(client, message):
             return
 
         if len(message.command) == 2 and message.command[1] == "premium":
-            await message.reply_text("MovieFlix is free. We do not accept donations or offer paid subscriptions.")
+            buttons = [
+                [InlineKeyboardButton("⭐ 10 Stars", callback_data="donate_10"), InlineKeyboardButton("⭐ 25 Stars", callback_data="donate_25")],
+                [InlineKeyboardButton("⭐ 50 Stars", callback_data="donate_50"), InlineKeyboardButton("⭐ 100 Stars", callback_data="donate_100")],
+                [InlineKeyboardButton("✖️ Close", callback_data="close_data")],
+            ]
+            await message.reply_text(
+                "<b>💜 Support MovieFlix</b>\n\n"
+                "MovieFlix is free to use. If you enjoy the service, "
+                "you can optionally support its development with Telegram Stars.\n\n"
+                "<i>Donations are voluntary and do not unlock paid features.</i>\n\n"
+                "Choose an amount below:",
+                reply_markup=InlineKeyboardMarkup(buttons),
+                parse_mode=enums.ParseMode.HTML,
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
             return
 
         if len(message.command) == 2 and message.command[1].startswith('getfile'):
@@ -1457,6 +1471,25 @@ async def clean_groups_handler(client, message):
         except Exception as e:
             logger.error("Error in clean_groups loop: %s", e)
     await msg.edit(f'**Clean Groups Complete**\n\nTotal Processed: {processed}\nDeleted: {deleted_count}')
+
+
+@Client.on_message(filters.command("donate") & filters.private)
+async def donate_command(client, message):
+    buttons = [
+        [InlineKeyboardButton("⭐ 10 Stars", callback_data="donate_10"), InlineKeyboardButton("⭐ 25 Stars", callback_data="donate_25")],
+        [InlineKeyboardButton("⭐ 50 Stars", callback_data="donate_50"), InlineKeyboardButton("⭐ 100 Stars", callback_data="donate_100")],
+        [InlineKeyboardButton("✖️ Close", callback_data="close_data")],
+    ]
+    await message.reply_text(
+        "<b>💜 Support MovieFlix</b>\n\n"
+        "MovieFlix is free to use. If you enjoy the service, "
+        "you can optionally support its development with Telegram Stars.\n\n"
+        "<i>Donations are voluntary and do not unlock paid features.</i>\n\n"
+        "Choose an amount below:",
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode=enums.ParseMode.HTML,
+        link_preview_options=LinkPreviewOptions(is_disabled=True),
+    )
 
 
 @Client.on_callback_query(filters.regex(r"^donation_info$"))
