@@ -1473,7 +1473,7 @@ async def clean_groups_handler(client, message):
     await msg.edit(f'**Clean Groups Complete**\n\nTotal Processed: {processed}\nDeleted: {deleted_count}')
 
 
-@Client.on_message(filters.command("donate") & filters.private)
+@Client.on_message(filters.command(["donate", "plan", "myplan"]) & filters.private)
 async def donate_command(client, message):
     buttons = [
         [InlineKeyboardButton("⭐ 10 Stars", callback_data="donate_10"), InlineKeyboardButton("⭐ 25 Stars", callback_data="donate_25")],
