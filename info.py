@@ -241,6 +241,9 @@ THREE_VERIFY_GAP = int(environ.get('THREE_VERIFY_GAP', "54000"))   # 15 hours
 # ==============================================================================
 # Kept empty for compatibility with older imports; no premium plans are sold.
 STAR_PREMIUM_PLANS = {}
+# Legacy config names retained so older modules can import safely; no alternative payment UI uses them.
+QR_CODE = ""
+OWNER_UPI_ID = ""
 
 
 # ==============================================================================
