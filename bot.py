@@ -53,8 +53,8 @@ USER_PRIVATE_COMMANDS = [
     BotCommand("series", "Browse the latest series uploads"),
     BotCommand("top_search", "Show popular searches"),
     BotCommand("trendlist", "Show today's trending searches"),
-    BotCommand("plan", "View premium plans and free trial"),
-    BotCommand("myplan", "Check your premium subscription"),
+    BotCommand("donate", "Support the bot with Telegram Stars"),
+    
 ]
 
 # Commands available in groups (normal users).
@@ -106,10 +106,6 @@ OWNER_COMMANDS = USER_PRIVATE_COMMANDS + [
     BotCommand("clear_junk", "Clear junk user records"),
     BotCommand("junk_group", "Show or clear junk groups"),
     BotCommand("clear_junk_group", "Clear junk group records"),
-    BotCommand("remove_premium", "Remove a user's premium access"),
-    BotCommand("get_premium", "Check a user's premium status"),
-    BotCommand("add_premium", "Give premium access to a user"),
-    BotCommand("premium_users", "List premium users"),
     BotCommand("maintenance", "Open the maintenance controls"),
     BotCommand("banned", "Manage banned users and chats"),
     BotCommand("setskip", "Set the indexing skip number"),
