@@ -12,8 +12,8 @@ from pyrogram.types import LinkPreviewOptions, InlineKeyboardMarkup, InlineKeybo
 from info import (
     ADMINS, AUTH_CHANNELS, AUTH_REQ_CHANNELS, BIN_CHANNEL, DELETE_TIME,
     EMOJI_MODE, GRP_LNK, LANDSCAPE_POSTER, LANGUAGES, LOG_CHANNEL, MAX_B_TN, MSG_ALRT,
-    MULTIPLE_DB, NO_RESULTS_MSG, OWNER_LNK, OWNER_UPI_ID, PICS, PICS_URL, QR_CODE, QUALITIES,
-    REACTIONS, REQST_CHANNEL, SEASONS, STAR_PREMIUM_PLANS, SUBSCRIPTION, SUPPORT_CHAT_ID,
+    MULTIPLE_DB, NO_RESULTS_MSG, OWNER_LNK, PICS, PICS_URL, QUALITIES,
+    REACTIONS, REQST_CHANNEL, SEASONS, SUPPORT_CHAT_ID,
     TMDB_ON_SEARCH, TMDB_POSTER, ULTRA_FAST_MODE, UPDATE_CHNL_LNK, URL,
     TZ
 )
@@ -191,8 +191,7 @@ async def next_page(client, query):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton(
-                           "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                       InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
 
@@ -212,8 +211,7 @@ async def next_page(client, query):
                    ]
                    )
         btn.insert(0, [
-            InlineKeyboardButton(
-                "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+            InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
             InlineKeyboardButton("Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
         ])
     if ULTRA_FAST_MODE:
@@ -469,8 +467,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton(
-                           "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                       InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                    ])
@@ -488,8 +485,7 @@ async def filter_qualities_cb_handler(client: Client, query: CallbackQuery):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton(
-                           "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                       InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
 
@@ -627,8 +623,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
                    )
         btn.insert(0,
                    [
-                       InlineKeyboardButton(
-                           "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                       InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                    ]
@@ -646,8 +641,7 @@ async def filter_languages_cb_handler(client: Client, query: CallbackQuery):
                    ])
         btn.insert(0,
                    [
-                       InlineKeyboardButton(
-                           "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                       InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                        InlineKeyboardButton(
                            "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                    ])
@@ -782,8 +776,7 @@ async def filter_seasons_cb_handler(client: Client, query: CallbackQuery):
     btn.insert(
         0,
         [
-            InlineKeyboardButton(
-                "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+            InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
             InlineKeyboardButton("Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS),
         ],
     )
@@ -1296,34 +1289,25 @@ async def cb_handler(client: Client, query: CallbackQuery):
             )
 
     elif query.data in ("premium_info", "buy_info", "upi_info", "donation", "star_info"):
+        # Keep old callback names working, but route them to Telegram Stars only.
+        buttons = [
+            [InlineKeyboardButton("⭐ 10 Stars", callback_data="donate_10"), InlineKeyboardButton("⭐ 25 Stars", callback_data="donate_25")],
+            [InlineKeyboardButton("⭐ 50 Stars", callback_data="donate_50"), InlineKeyboardButton("⭐ 100 Stars", callback_data="donate_100")],
+            [InlineKeyboardButton("⇋ ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ ⇋", callback_data="start")],
+        ]
+        reply_markup = InlineKeyboardMarkup(buttons)
+        donation_text = (
+            "<b>💜 Support MovieFlix</b>\\n\\n"
+            "MovieFlix is free to use. If you enjoy the service, "
+            "you can optionally support its development with Telegram Stars.\\n\\n"
+            "<i>Donations are voluntary and do not unlock paid features.</i>\\n\\n"
+            "Choose an amount below:"
+        )
         try:
-            buttons = [
-                [InlineKeyboardButton("USDT · TRC20", copy_text=CopyTextButton(text="TGHgWpLCKgK19ca7BNgLMuYQfeyGTbTNvJ"))],
-                [InlineKeyboardButton("USDT · ERC20", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
-                [InlineKeyboardButton("USDT · BEP20", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
-                [InlineKeyboardButton("USDT · Solana", copy_text=CopyTextButton(text="A9dv5eegFPA1xxxH9xC1mcQxGtDPfFDQQhAp1k8qMfJT"))],
-                [InlineKeyboardButton("Ethereum · ETH", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
-                [InlineKeyboardButton("BNB", copy_text=CopyTextButton(text="0x6bC2F28f6812E7cA898615f9aBaEb546001f6Ca6"))],
-                [InlineKeyboardButton("Bitcoin · BTC", copy_text=CopyTextButton(text="bc1qekmdcfkvy3u2jhk6v92ha2xjkskfs732n4000e"))],
-                [InlineKeyboardButton("⇋ ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ ⇋", callback_data="start")]
-            ]
-            reply_markup = InlineKeyboardMarkup(buttons)
-            try:
-                await query.message.edit_caption(
-                    caption=script.CRYPTO_DONATION_TXT,
-                    reply_markup=reply_markup,
-                    parse_mode=enums.ParseMode.HTML
-                )
-            except Exception:
-                await query.message.edit_text(
-                    text=script.CRYPTO_DONATION_TXT,
-                    reply_markup=reply_markup,
-                    parse_mode=enums.ParseMode.HTML,
-                    link_preview_options=LinkPreviewOptions(is_disabled=True)
-                )
+            await query.message.edit_caption(caption=donation_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         except Exception:
-            logger.exception("Exception in crypto donation screen")
-
+            await query.message.edit_text(text=donation_text, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML, link_preview_options=LinkPreviewOptions(is_disabled=True))
+        await query.answer()
     elif query.data.startswith("grp_pm"):
         _, grp_id = query.data.split("#")
         user_id = query.from_user.id if query.from_user else None
@@ -1450,8 +1434,7 @@ async def auto_filter(client, msg, spoll=False):
                        )
             btn.insert(0,
                        [
-                           InlineKeyboardButton(
-                               "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                           InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                            InlineKeyboardButton(
                                "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
 
@@ -1470,8 +1453,7 @@ async def auto_filter(client, msg, spoll=False):
                        )
             btn.insert(0,
                        [
-                           InlineKeyboardButton(
-                               "ʀᴇᴍᴏᴠᴇ ᴀᴅs", url=f"https://t.me/{temp.U_NAME}?start=premium", style=enums.ButtonStyle.PRIMARY),
+                           InlineKeyboardButton("💜 Donate", callback_data="donation_info", style=enums.ButtonStyle.PRIMARY),
                            InlineKeyboardButton(
                                "Sᴇɴᴅ Aʟʟ", callback_data=f"sendfiles#{key}", style=enums.ButtonStyle.SUCCESS)
                        ])
