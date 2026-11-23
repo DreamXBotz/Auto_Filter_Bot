@@ -237,19 +237,10 @@ THREE_VERIFY_GAP = int(environ.get('THREE_VERIFY_GAP', "54000"))   # 15 hours
 
 
 # ==============================================================================
-# 8. PREMIUM PLANS & PAYMENT CONFIGURATION
+# 8. DONATIONS (ONLY VOLUNTARY TELEGRAM STARS DONATIONS ARE ACCEPTED)
 # ==============================================================================
-QR_CODE = environ.get('QR_CODE', 'https://graph.org/file/e419f801841c2ee3db0fc.jpg')
-OWNER_UPI_ID = environ.get('OWNER_UPI_ID', 'ɴᴏ ᴀᴠᴀɪʟᴀʙʟᴇ ʀɪɢʜᴛ ɴᴏᴡ')
-
-# Stars / Premium Pricing Structure {Amount: "Duration"}
-STAR_PREMIUM_PLANS = {
-    10: "7day",
-    20: "15day",
-    40: "1month",
-    55: "45day",
-    75: "60day",
-}
+# Kept empty for compatibility with older imports; no premium plans are sold.
+STAR_PREMIUM_PLANS = {}
 
 
 # ==============================================================================
@@ -257,7 +248,7 @@ STAR_PREMIUM_PLANS = {
 # ==============================================================================
 # Streaming Mode (Keep False on Render free tier to conserve bandwidth)
 STREAM_MODE = is_enabled(environ.get('STREAM_MODE', "False"), False)
-PREMIUM_STREAM_MODE = is_enabled(environ.get('PREMIUM_STREAM_MODE', "False"), False)
+PREMIUM_STREAM_MODE = False  # Paid premium streaming is disabled.
 
 # Server Binding & Host Configuration
 ON_HEROKU = 'DYNO' in environ
