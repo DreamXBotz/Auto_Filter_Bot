@@ -1297,10 +1297,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
         ]
         reply_markup = InlineKeyboardMarkup(buttons)
         donation_text = (
-            "<b>💜 Support MovieFlix</b>\\n\\n"
+            "<b>💜 Support MovieFlix</b>\n\n"
             "MovieFlix is free to use. If you enjoy the service, "
-            "you can optionally support its development with Telegram Stars.\\n\\n"
-            "<i>Donations are voluntary and do not unlock paid features.</i>\\n\\n"
+            "you can optionally support its development with Telegram Stars.\n\n"
+            "<i>Donations are voluntary and do not unlock paid features.</i>\n\n"
             "Choose an amount below:"
         )
         try:
