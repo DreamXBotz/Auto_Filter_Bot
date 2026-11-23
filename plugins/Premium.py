@@ -145,6 +145,25 @@ async def plan(client, message):
     await message.reply_text("MovieFlix is free. We do not offer paid subscriptions.")
 
 
+# Voluntary Telegram Stars donations (separate from premium purchases).
+@Client.on_callback_query(filters.regex(r"^donate_(10|25|50|100)$"))
+async def donation_stars_invoice(client, callback_query: CallbackQuery):
+    try:
+        amount = int(callback_query.data.split("_", 1)[1])
+        await client.send_invoice(
+            chat_id=callback_query.message.chat.id,
+            title="Support MovieFlix",
+            description=f"Voluntary donation of {amount} Telegram Stars to support MovieFlix.",
+            payload=f"movieflix_donation_{amount}",
+            currency="XTR",
+            prices=[LabeledPrice(label="MovieFlix donation", amount=amount)],
+        )
+        await callback_query.answer("Your Stars invoice is ready.")
+    except Exception as e:
+        logger.exception("Could not create Telegram Stars donation invoice: %s", e)
+        await callback_query.answer("Unable to create the donation invoice. Please try again.", show_alert=True)
+
+
 # Telegram Star Payment Method 👇
 # Credit - @BeingXAnonymous
 
@@ -186,7 +205,7 @@ async def premium_button(client, callback_query: CallbackQuery):
 @Client.on_pre_checkout_query()
 async def pre_checkout_handler(client, query: PreCheckoutQuery):
     try:
-        if query.payload.startswith("dreamxpremium_"):
+        if query.payload.startswith(("dreamxpremium_", "movieflix_donation_")):
             await query.answer(ok=True)
         else:
             await query.answer(ok=False, error_message="⚠️ Invalid Purchase Type.")
@@ -199,6 +218,31 @@ async def successful_premium_payment(client, message):
     try:
         amount = int(message.successful_payment.total_amount)
         user_id = message.from_user.id
+        invoice_payload = message.successful_payment.invoice_payload or ""
+
+        if invoice_payload.startswith("movieflix_donation_"):
+            expected_amount = int(invoice_payload.rsplit("_", 1)[1])
+            if amount != expected_amount:
+                logger.error("Donation amount mismatch: expected=%s received=%s user_id=%s", expected_amount, amount, user_id)
+                await message.reply_text("⚠️ We could not verify this donation amount. Please contact support.")
+                return
+            await message.reply_text(
+                f"💜 Thank you for supporting MovieFlix with {amount} Telegram Stars!\n\n"
+                "Your contribution is voluntary and does not unlock paid features."
+            )
+            try:
+                await client.send_message(
+                    PREMIUM_LOGS,
+                    f"#MovieFlix_Donation\n\n"
+                    f"👤 User: {message.from_user.mention}\n"
+                    f"🆔 User ID: <code>{user_id}</code>\n"
+                    f"⭐ Donation: {amount} Stars\n"
+                    f"🧾 Charge ID: <code>{message.successful_payment.telegram_payment_charge_id}</code>",
+                )
+            except Exception:
+                logger.exception("Could not send donation log for user_id=%s", user_id)
+            return
+
         time_zone = datetime.datetime.now(TZ)
         current_time = time_zone.strftime("%d-%m-%Y | %I:%M:%S %p") 
         if amount in STAR_PREMIUM_PLANS:
